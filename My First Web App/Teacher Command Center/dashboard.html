@@ -128,21 +128,20 @@
                             <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
                             <span>Up Next</span>
                         </div>
-                        <div class="empty-state">
-                            <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
-                            <p>All done for today</p>
-                        </div>
+                        <div id="up-next-content" class="up-next-content"></div>
                     </div>
                     
                     <div class="large-card schedule">
-                        <div class="card-header">
-                            <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
-                            <span>Today's Schedule</span>
+                        <div class="card-header" style="justify-content:space-between;">
+                            <span style="display:flex;align-items:center;gap:10px;">
+                                <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
+                                <span>Today's Schedule</span>
+                            </span>
+                            <button class="sched-add-btn" id="sched-add-btn" title="Add item" aria-label="Add schedule item">
+                                <i class="fa-solid fa-plus"></i> Add
+                            </button>
                         </div>
-                        <div class="empty-state">
-                            <i class="fa-solid fa-calendar-xmark" aria-hidden="true"></i>
-                            <p>No scheduled items for today</p>
-                        </div>
+                        <div id="schedule-list" class="schedule-list"></div>
                     </div>
                 </section>
 
@@ -211,6 +210,136 @@
                 fabContainer.classList.remove('active');
             });
         }
+
+        // ===================== SCHEDULE =====================
+        const SCHED_ICONS = ['📚','🎨','🧮','📖','🏃','🍽️','⏰','🎵','🧪','💬','🌟','✏️','🖥️','🤸','🧘','📝','🔬','🌍','🎭','❤️'];
+        let schedItems = JSON.parse(localStorage.getItem('dashboard-schedule') || '[]');
+        let schedEditIndex = -1;
+        let selectedIcon = '📚';
+
+        function saveSchedule() { localStorage.setItem('dashboard-schedule', JSON.stringify(schedItems)); }
+
+        function toMins(t) { const [h,m] = t.split(':').map(Number); return h*60+m; }
+        function fmt12(t) {
+            const [h,m] = t.split(':').map(Number);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            return ((h%12)||12) + ':' + String(m).padStart(2,'0') + ' ' + ampm;
+        }
+
+        function renderSchedule() {
+            const list = document.getElementById('schedule-list');
+            if (!list) return;
+            if (schedItems.length === 0) {
+                list.innerHTML = '<div class="sched-empty"><i class="fa-solid fa-calendar-xmark"></i><p>No items yet — click Add to build your day</p></div>';
+            } else {
+                const nowMins = new Date().getHours()*60 + new Date().getMinutes();
+                schedItems.sort((a,b) => toMins(a.start) - toMins(b.start));
+                list.innerHTML = '';
+                schedItems.forEach((item, i) => {
+                    const startM = toMins(item.start), endM = toMins(item.end);
+                    const done = nowMins > endM;
+                    const active = nowMins >= startM && nowMins <= endM;
+                    const pct = done ? 100 : active ? Math.round(((nowMins-startM)/(endM-startM))*100) : 0;
+                    const div = document.createElement('div');
+                    div.className = 'sched-item' + (active ? ' active' : '') + (done ? ' done' : '');
+                    div.innerHTML = `
+                        <span class="sched-icon">${item.icon}</span>
+                        <div class="sched-info">
+                            <div class="sched-name">${item.title}</div>
+                            <div class="sched-time">${fmt12(item.start)} – ${fmt12(item.end)}</div>
+                            <div class="sched-progress"><div class="sched-progress-fill" style="width:${pct}%"></div></div>
+                        </div>
+                    `;
+                    div.addEventListener('click', () => openSchedModal(i));
+                    list.appendChild(div);
+                });
+            }
+            renderUpNext();
+        }
+
+        function renderUpNext() {
+            const el = document.getElementById('up-next-content');
+            if (!el) return;
+            const nowMins = new Date().getHours()*60 + new Date().getMinutes();
+            const sorted = [...schedItems].sort((a,b) => toMins(a.start)-toMins(b.start));
+            const current = sorted.find(i => nowMins >= toMins(i.start) && nowMins <= toMins(i.end));
+            const next = sorted.find(i => toMins(i.start) > nowMins);
+            const item = current || next;
+            if (!item) {
+                el.innerHTML = '<div class="up-next-empty"><i class="fa-solid fa-calendar-check"></i><p>' + (schedItems.length > 0 ? 'All done for today! 🎉' : 'Add items to your schedule') + '</p></div>';
+                return;
+            }
+            const startM = toMins(item.start), endM = toMins(item.end);
+            const pct = current ? Math.round(((nowMins-startM)/(endM-startM))*100) : 0;
+            const label = current ? 'Happening now' : 'Coming up at ' + fmt12(item.start);
+            el.innerHTML = `
+                <div class="up-next-item">
+                    <div class="up-next-icon">${item.icon}</div>
+                    <div class="up-next-name">${item.title}</div>
+                    <div class="up-next-time">${label}</div>
+                    ${current ? `<div class="up-next-bar"><div class="up-next-bar-fill" style="width:${pct}%"></div></div>` : ''}
+                </div>
+            `;
+        }
+
+        function openSchedModal(editIndex = -1) {
+            schedEditIndex = editIndex;
+            const isEdit = editIndex >= 0;
+            document.getElementById('sched-modal-title').textContent = isEdit ? 'Edit Item' : 'Add Schedule Item';
+            document.getElementById('sched-delete-btn').classList.toggle('hidden', !isEdit);
+            const item = isEdit ? schedItems[editIndex] : null;
+            document.getElementById('sched-title').value = item ? item.title : '';
+            document.getElementById('sched-start').value = item ? item.start : '';
+            document.getElementById('sched-end').value = item ? item.end : '';
+            selectedIcon = item ? item.icon : '📚';
+            const iconsEl = document.getElementById('sched-icons');
+            iconsEl.innerHTML = '';
+            SCHED_ICONS.forEach(ic => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = ic;
+                btn.style.cssText = 'font-size:1.3rem;background:' + (ic===selectedIcon?'#ede9fe':'#f5f5f5') + ';border:2px solid ' + (ic===selectedIcon?'#6366f1':'transparent') + ';border-radius:8px;padding:4px 7px;cursor:pointer;';
+                btn.addEventListener('click', () => {
+                    selectedIcon = ic;
+                    iconsEl.querySelectorAll('button').forEach(b => { b.style.background='#f5f5f5'; b.style.borderColor='transparent'; });
+                    btn.style.background = '#ede9fe'; btn.style.borderColor = '#6366f1';
+                });
+                iconsEl.appendChild(btn);
+            });
+            document.getElementById('sched-modal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('sched-title').focus(), 50);
+        }
+
+        function closeSchedModal() { document.getElementById('sched-modal').classList.add('hidden'); }
+
+        function saveSchedItem() {
+            const title = document.getElementById('sched-title').value.trim();
+            const start = document.getElementById('sched-start').value;
+            const end = document.getElementById('sched-end').value;
+            if (!title) { document.getElementById('sched-title').focus(); return; }
+            if (!start || !end) { alert('Please set a start and end time.'); return; }
+            if (toMins(end) <= toMins(start)) { alert('End time must be after start time.'); return; }
+            const item = { title, start, end, icon: selectedIcon };
+            if (schedEditIndex >= 0) schedItems[schedEditIndex] = item;
+            else schedItems.push(item);
+            saveSchedule();
+            renderSchedule();
+            closeSchedModal();
+        }
+
+        function deleteSchedItem() {
+            if (schedEditIndex < 0) return;
+            schedItems.splice(schedEditIndex, 1);
+            saveSchedule();
+            renderSchedule();
+            closeSchedModal();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('sched-add-btn').addEventListener('click', () => openSchedModal());
+            renderSchedule();
+            setInterval(renderSchedule, 60000);
+        });
 
         // Notes auto-save
         const notesEl = document.getElementById('dashboard-notes');
@@ -322,6 +451,37 @@
         updateCountdown();
     </script>
 
+    <!-- Schedule Add/Edit Modal -->
+    <div id="sched-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2000;display:flex;align-items:center;justify-content:center;" onclick="if(event.target===this)closeSchedModal()">
+        <div style="background:#fff;border-radius:16px;padding:24px;width:360px;max-width:95vw;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:1.1rem;font-weight:600;"><i class="fa-solid fa-calendar-day" style="color:#6366f1;margin-right:8px;"></i><span id="sched-modal-title">Add Schedule Item</span></span>
+                <button onclick="closeSchedModal()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#999;">✕</button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <input id="sched-title" type="text" placeholder="Activity name (e.g. Morning Meeting)" style="padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;width:100%;box-sizing:border-box;">
+                <div style="display:flex;gap:10px;">
+                    <div style="flex:1;">
+                        <label style="font-size:0.78rem;color:#999;display:block;margin-bottom:4px;">Start time</label>
+                        <input id="sched-start" type="time" style="padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;width:100%;box-sizing:border-box;">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:0.78rem;color:#999;display:block;margin-bottom:4px;">End time</label>
+                        <input id="sched-end" type="time" style="padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;width:100%;box-sizing:border-box;">
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size:0.78rem;color:#999;display:block;margin-bottom:6px;">Icon</label>
+                    <div id="sched-icons" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button id="sched-delete-btn" class="hidden" onclick="deleteSchedItem()" style="background:#fee2e2;color:#ef4444;border:none;border-radius:10px;padding:10px 16px;cursor:pointer;font-size:0.9rem;">Delete</button>
+                <button onclick="saveSchedItem()" style="background:#6366f1;color:#fff;border:none;border-radius:10px;padding:10px 20px;cursor:pointer;font-size:0.9rem;font-weight:600;">Save</button>
+            </div>
+        </div>
+    </div>
+
     <!-- To-Do Modal -->
     <div id="todo-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2000;display:flex;align-items:center;justify-content:center;" onclick="if(event.target===this)closeTodos()">
         <div style="background:#fff;border-radius:16px;padding:24px;width:380px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 40px rgba(0,0,0,0.2);">
@@ -350,6 +510,33 @@
         .checkin-emojis { display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:10px; }
         .checkin-emoji { background:#f5f5f5;border:2px solid transparent;border-radius:10px;font-size:1.5rem;padding:6px 10px;cursor:pointer;transition:all 0.15s; }
         .checkin-emoji:hover, .checkin-emoji.selected { border-color:#6366f1;background:#ede9fe; }
+
+        /* Schedule styles */
+        .schedule-list { display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1; }
+        .sched-item { display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#f8f9fa;cursor:pointer;transition:background 0.15s;position:relative; }
+        .sched-item:hover { background:#ede9fe; }
+        .sched-item.active { background:#ede9fe;border-left:4px solid #6366f1; }
+        .sched-item.done { opacity:0.45; }
+        .sched-icon { font-size:1.3rem;flex-shrink:0; }
+        .sched-info { flex:1;min-width:0; }
+        .sched-name { font-size:0.88rem;font-weight:600;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+        .sched-time { font-size:0.76rem;color:#999;margin-top:1px; }
+        .sched-progress { height:3px;background:#e0e0e0;border-radius:2px;margin-top:5px; }
+        .sched-progress-fill { height:100%;background:#6366f1;border-radius:2px;transition:width 0.5s; }
+        .sched-add-btn { background:#6366f1;color:#fff;border:none;border-radius:8px;padding:5px 12px;font-size:0.8rem;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0; }
+        .sched-empty { flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#bbb;gap:10px; }
+        .sched-empty i { font-size:2.5rem;opacity:0.4; }
+        .sched-empty p { font-size:0.85rem; }
+        .up-next-content { flex:1;display:flex;flex-direction:column;justify-content:center; }
+        .up-next-item { padding:20px;border-radius:14px;background:#ede9fe;display:flex;flex-direction:column;gap:8px; }
+        .up-next-icon { font-size:2.2rem; }
+        .up-next-name { font-size:1.2rem;font-weight:700;color:#333; }
+        .up-next-time { font-size:0.85rem;color:#6366f1;font-weight:500; }
+        .up-next-bar { height:6px;background:#d8d4f7;border-radius:3px;margin-top:4px; }
+        .up-next-bar-fill { height:100%;background:#6366f1;border-radius:3px;transition:width 1s; }
+        .up-next-empty { flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#bbb;gap:10px; }
+        .up-next-empty i { font-size:2.5rem;opacity:0.4; }
+        .up-next-empty p { font-size:0.85rem; }
     </style>
 </body>
 </html>
