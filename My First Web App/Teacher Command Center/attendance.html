@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacherstack - Attendance</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .att-page-header { display:flex;align-items:center;justify-content:space-between;padding:24px 28px 0;flex-wrap:wrap;gap:12px; }
+        .att-page-title { font-size:1.4rem;font-weight:700;color:#222;display:flex;align-items:center;gap:10px; }
+        .att-date-label { font-size:0.85rem;color:#888; }
+        .att-summary-bar { display:flex;gap:12px;padding:16px 28px;flex-wrap:wrap; }
+        .att-stat-chip { display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:12px;font-weight:600;font-size:0.9rem;min-width:100px; }
+        .att-stat-chip.present { background:#dcfce7;color:#16a34a; }
+        .att-stat-chip.absent  { background:#fee2e2;color:#dc2626; }
+        .att-stat-chip.late    { background:#fef3c7;color:#d97706; }
+        .att-stat-chip.unmarked{ background:#f3f4f6;color:#888; }
+        .att-stat-chip span    { font-size:1.2rem;font-weight:800; }
+        .att-student-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;padding:0 28px 28px; }
+        .att-card { display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 10px;border-radius:14px;border:2px solid #e0e0e0;background:#fff;cursor:pointer;transition:all 0.15s;position:relative;user-select:none; }
+        .att-card:hover { transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,0.1); }
+        .att-card.present { border-color:#22c55e;background:#f0fdf4; }
+        .att-card.absent  { border-color:#ef4444;background:#fef2f2; }
+        .att-card.late    { border-color:#f59e0b;background:#fffbeb; }
+        .att-avatar { width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;flex-shrink:0; }
+        .att-name { font-size:0.82rem;font-weight:600;color:#333;text-align:center;line-height:1.2; }
+        .att-badge { position:absolute;top:6px;right:6px;font-size:0.7rem;padding:2px 6px;border-radius:6px;font-weight:700;text-transform:uppercase;letter-spacing:.04em; }
+        .att-badge.present { background:#22c55e;color:#fff; }
+        .att-badge.absent  { background:#ef4444;color:#fff; }
+        .att-badge.late    { background:#f59e0b;color:#fff; }
+        .att-actions { display:flex;gap:10px;padding:0 28px 16px;flex-wrap:wrap;align-items:center; }
+        .att-btn { display:flex;align-items:center;gap:7px;padding:10px 20px;border:none;border-radius:10px;font-family:inherit;font-size:0.88rem;font-weight:600;cursor:pointer;transition:background 0.15s; }
+        .att-btn.primary { background:#6366f1;color:#fff; }
+        .att-btn.primary:hover { background:#4f46e5; }
+        .att-btn.danger  { background:#fee2e2;color:#dc2626; }
+        .att-btn.secondary { background:#f3f4f6;color:#555; }
+        .att-btn.success { background:#dcfce7;color:#16a34a; }
+        .att-legend { display:flex;align-items:center;gap:16px;font-size:0.78rem;color:#888;padding:0 28px 8px; }
+        .att-legend span { display:flex;align-items:center;gap:5px; }
+        .att-dot { width:10px;height:10px;border-radius:50%;display:inline-block; }
+
+        /* History panel */
+        .history-panel { margin:0 28px 28px;border-radius:14px;border:1.5px solid #e0e0e0;overflow:hidden; }
+        .history-header { display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#f9fafb;border-bottom:1.5px solid #e0e0e0;cursor:pointer; }
+        .history-header h3 { font-size:0.9rem;font-weight:700;color:#333;margin:0; }
+        .history-rows { display:flex;flex-direction:column; }
+        .history-row { display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid #f0f0f0;font-size:0.82rem; }
+        .history-row:last-child { border-bottom:none; }
+        .history-date { font-weight:600;color:#555;min-width:110px; }
+        .history-chips { display:flex;gap:6px;flex-wrap:wrap; }
+        .h-chip { padding:2px 8px;border-radius:6px;font-size:0.75rem;font-weight:600; }
+        .h-chip.p { background:#dcfce7;color:#16a34a; }
+        .h-chip.a { background:#fee2e2;color:#dc2626; }
+        .h-chip.l { background:#fef3c7;color:#d97706; }
+        .toast { position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:12px 24px;border-radius:12px;font-size:0.9rem;font-weight:500;z-index:9999;opacity:1;transition:opacity 0.3s; }
+        .main-content { overflow-y:auto; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="profile-icon">R</div>
+            <div class="class-info">
+                <span class="class-name">Regulation Sta...</span>
+                <span class="grade">Grade K</span>
+            </div>
+            <i class="fa-solid fa-chevron-down toggle-icon" aria-hidden="true"></i>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="dashboard.html" class="nav-item">
+                <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="attendance.html" class="nav-item active">
+                <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+                <span>Attendance</span>
+            </a>
+            <a href="whiteboard.html" class="nav-item">
+                <i class="fa-solid fa-display" aria-hidden="true"></i>
+                <span>Display Tools</span>
+            </a>
+            <a href="students.html" class="nav-item">
+                <i class="fa-solid fa-users" aria-hidden="true"></i>
+                <span>Students</span>
+            </a>
+            <div class="nav-section">PLANNING</div>
+            <a href="planner.html" class="nav-item">
+                <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+                <span>Planner</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+                <span>Lessons</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i class="fa-solid fa-bookmark" aria-hidden="true"></i>
+                <span>Library</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer user-profile">
+            <div class="user-avatar">T</div>
+            <div class="user-info">
+                <span class="user-name">Kenzi Young</span>
+                <span class="user-email">kenzi@gmail.com</span>
+            </div>
+            <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content light-bg">
+        <header class="top-nav">
+            <div class="nav-left">
+                <i class="fa-solid fa-bars menu-toggle" aria-hidden="true"></i>
+                <span class="brand-name">Teacherstack</span>
+            </div>
+        </header>
+
+        <div class="att-page-header">
+            <div>
+                <div class="att-page-title"><i class="fa-solid fa-clipboard-user" style="color:#6366f1;"></i> Attendance</div>
+                <div class="att-date-label" id="att-today-label"></div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="att-btn success" onclick="markAll('present')"><i class="fa-solid fa-check"></i> All Present</button>
+                <button class="att-btn danger" onclick="markAll('absent')"><i class="fa-solid fa-xmark"></i> All Absent</button>
+                <button class="att-btn secondary" onclick="resetAll()"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+            </div>
+        </div>
+
+        <div class="att-summary-bar">
+            <div class="att-stat-chip present"><span id="count-present">0</span> Present</div>
+            <div class="att-stat-chip absent"><span id="count-absent">0</span> Absent</div>
+            <div class="att-stat-chip late"><span id="count-late">0</span> Late</div>
+            <div class="att-stat-chip unmarked"><span id="count-unmarked">22</span> Unmarked</div>
+        </div>
+
+        <div class="att-legend">
+            <span><span class="att-dot" style="background:#e0e0e0;"></span> Tap once = Present</span>
+            <span><span class="att-dot" style="background:#ef4444;"></span> Tap twice = Absent</span>
+            <span><span class="att-dot" style="background:#f59e0b;"></span> Tap three times = Late</span>
+            <span><span class="att-dot" style="background:#e0e0e0;"></span> Tap four times = Clear</span>
+        </div>
+
+        <div class="att-actions">
+            <button class="att-btn primary" onclick="saveAttendance()"><i class="fa-solid fa-floppy-disk"></i> Save Today's Attendance</button>
+        </div>
+
+        <div class="att-student-grid" id="att-student-grid"></div>
+
+        <!-- History -->
+        <div class="history-panel" id="history-panel">
+            <div class="history-header" onclick="toggleHistory()">
+                <h3><i class="fa-solid fa-clock-rotate-left" style="color:#6366f1;margin-right:8px;"></i>Attendance History</h3>
+                <i class="fa-solid fa-chevron-down" id="history-chevron"></i>
+            </div>
+            <div class="history-rows" id="history-rows" style="display:none;"></div>
+        </div>
+    </main>
+</div>
+
+<script src="students.js"></script>
+<script>
+    const STATUS_CYCLE = ['', 'present', 'absent', 'late'];
+    const STATUS_LABELS = { present: 'P', absent: 'A', late: 'L' };
+
+    // Today's date key e.g. "2026-04-21"
+    function todayKey() {
+        const d = new Date();
+        return d.toISOString().slice(0, 10);
+    }
+
+    // Load saved state for today
+    let attState = JSON.parse(localStorage.getItem('att-' + todayKey()) || '{}');
+
+    function saveState() {
+        localStorage.setItem('att-' + todayKey(), JSON.stringify(attState));
+    }
+
+    // Set today label
+    document.getElementById('att-today-label').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+    // Render grid
+    const grid = document.getElementById('att-student-grid');
+    students.forEach(s => {
+        const card = document.createElement('div');
+        card.className = 'att-card';
+        card.id = 'attcard-' + s.name;
+        const textColor = getContrastColor(s.color);
+        card.innerHTML = `
+            <div class="att-avatar" style="background:${s.color};color:${textColor};">${s.initials}</div>
+            <div class="att-name">${s.name}</div>
+            <div class="att-badge" id="attbadge-${s.name}"></div>
+        `;
+        card.addEventListener('click', () => cycleStatus(s.name));
+        grid.appendChild(card);
+        applyStatus(s.name);
+    });
+    updateCounts();
+
+    function cycleStatus(name) {
+        const current = attState[name] || '';
+        const idx = STATUS_CYCLE.indexOf(current);
+        const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+        if (next === '') delete attState[name];
+        else attState[name] = next;
+        saveState();
+        applyStatus(name);
+        updateCounts();
+    }
+
+    function applyStatus(name) {
+        const card = document.getElementById('attcard-' + name);
+        const badge = document.getElementById('attbadge-' + name);
+        if (!card) return;
+        const status = attState[name] || '';
+        card.className = 'att-card' + (status ? ' ' + status : '');
+        if (status) {
+            badge.className = 'att-badge ' + status;
+            badge.textContent = STATUS_LABELS[status];
+        } else {
+            badge.className = 'att-badge';
+            badge.textContent = '';
+        }
+    }
+
+    function updateCounts() {
+        const counts = { present: 0, absent: 0, late: 0 };
+        Object.values(attState).forEach(s => { if (counts[s] !== undefined) counts[s]++; });
+        document.getElementById('count-present').textContent = counts.present;
+        document.getElementById('count-absent').textContent = counts.absent;
+        document.getElementById('count-late').textContent = counts.late;
+        document.getElementById('count-unmarked').textContent = students.length - counts.present - counts.absent - counts.late;
+    }
+
+    function markAll(status) {
+        students.forEach(s => { attState[s.name] = status; applyStatus(s.name); });
+        saveState();
+        updateCounts();
+    }
+
+    function resetAll() {
+        attState = {};
+        saveState();
+        students.forEach(s => applyStatus(s.name));
+        updateCounts();
+    }
+
+    function saveAttendance() {
+        const key = 'att-history-' + todayKey();
+        const record = { date: todayKey(), state: { ...attState }, saved: new Date().toISOString() };
+        // Keep rolling history (last 60 days)
+        let history = JSON.parse(localStorage.getItem('att-history') || '[]');
+        history = history.filter(r => r.date !== todayKey());
+        history.unshift(record);
+        if (history.length > 60) history = history.slice(0, 60);
+        localStorage.setItem('att-history', JSON.stringify(history));
+        showToast('Attendance saved!');
+        renderHistory();
+    }
+
+    function showToast(msg) {
+        const existing = document.getElementById('att-toast');
+        if (existing) existing.remove();
+        const t = document.createElement('div');
+        t.id = 'att-toast';
+        t.className = 'toast';
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2000);
+    }
+
+    // History
+    function toggleHistory() {
+        const rows = document.getElementById('history-rows');
+        const chev = document.getElementById('history-chevron');
+        const open = rows.style.display !== 'none';
+        rows.style.display = open ? 'none' : 'flex';
+        rows.style.flexDirection = 'column';
+        chev.style.transform = open ? '' : 'rotate(180deg)';
+        if (!open) renderHistory();
+    }
+
+    function renderHistory() {
+        const history = JSON.parse(localStorage.getItem('att-history') || '[]');
+        const rows = document.getElementById('history-rows');
+        if (history.length === 0) {
+            rows.innerHTML = '<div style="padding:16px;color:#aaa;font-size:0.85rem;text-align:center;">No saved records yet</div>';
+            return;
+        }
+        rows.innerHTML = history.map(r => {
+            const counts = { present: 0, absent: 0, late: 0 };
+            Object.values(r.state).forEach(s => { if (counts[s] !== undefined) counts[s]++; });
+            const dateStr = new Date(r.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            return `<div class="history-row">
+                <div class="history-date">${dateStr}</div>
+                <div class="history-chips">
+                    <span class="h-chip p">${counts.present} Present</span>
+                    <span class="h-chip a">${counts.absent} Absent</span>
+                    ${counts.late > 0 ? `<span class="h-chip l">${counts.late} Late</span>` : ''}
+                </div>
+            </div>`;
+        }).join('');
+    }
+</script>
+</body>
+</html>

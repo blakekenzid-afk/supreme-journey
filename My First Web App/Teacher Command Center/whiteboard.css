@@ -311,6 +311,51 @@ body {
 .wb-canvas-area.mode-eraser { cursor: cell; }
 .wb-canvas-area.mode-text { cursor: text; }
 .wb-canvas-area.mode-shapes { cursor: crosshair; }
+/* ---- Canvas backgrounds ---- */
+.wb-canvas-area.bg-lined {
+  background-color:#fff;
+  background-image: repeating-linear-gradient(transparent,transparent 27px,#b0c4de 28px);
+}
+.wb-canvas-area.bg-grid {
+  background-color:#fff;
+  background-image: linear-gradient(rgba(100,130,200,.25) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(100,130,200,.25) 1px,transparent 1px);
+  background-size: 32px 32px;
+}
+.wb-canvas-area.bg-dotted {
+  background-color:#fff;
+  background-image: radial-gradient(circle,rgba(100,130,200,.5) 1.5px,transparent 1.5px);
+  background-size: 24px 24px;
+}
+.wb-canvas-area.bg-isometric {
+  background-color:#fff;
+  background-image:
+    linear-gradient(30deg,rgba(100,130,200,.25) 12%,transparent 12.5%,transparent 87%,rgba(100,130,200,.25) 87.5%,rgba(100,130,200,.25)),
+    linear-gradient(150deg,rgba(100,130,200,.25) 12%,transparent 12.5%,transparent 87%,rgba(100,130,200,.25) 87.5%,rgba(100,130,200,.25)),
+    linear-gradient(30deg,rgba(100,130,200,.25) 12%,transparent 12.5%,transparent 87%,rgba(100,130,200,.25) 87.5%,rgba(100,130,200,.25)),
+    linear-gradient(150deg,rgba(100,130,200,.25) 12%,transparent 12.5%,transparent 87%,rgba(100,130,200,.25) 87.5%,rgba(100,130,200,.25)),
+    linear-gradient(60deg,rgba(150,170,220,.18) 25%,transparent 25.5%,transparent 75%,rgba(150,170,220,.18) 75%,rgba(150,170,220,.18)),
+    linear-gradient(60deg,rgba(150,170,220,.18) 25%,transparent 25.5%,transparent 75%,rgba(150,170,220,.18) 75%,rgba(150,170,220,.18));
+  background-size: 40px 70px;
+  background-position: 0 0,0 0,20px 35px,20px 35px,0 0,20px 35px;
+}
+.wb-canvas-area.bg-music {
+  background-color:#fff;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0px, transparent 20px,
+    #bbb 20px, #bbb 21px,
+    transparent 21px, transparent 27px,
+    #bbb 27px, #bbb 28px,
+    transparent 28px, transparent 34px,
+    #bbb 34px, #bbb 35px,
+    transparent 35px, transparent 41px,
+    #bbb 41px, #bbb 42px,
+    transparent 42px, transparent 48px,
+    #bbb 48px, #bbb 49px,
+    transparent 49px, transparent 96px
+  );
+}
 
 #cursor-preview {
   position: absolute;

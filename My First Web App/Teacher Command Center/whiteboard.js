@@ -587,13 +587,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('#bg-lines .bg-option').forEach(opt => {
         opt.addEventListener('click', () => {
             const bg = opt.getAttribute('data-bg');
-            canvasArea.className = 'wb-canvas-area';
+            const modeClass = canvasArea.className.match(/mode-\S+/);
+            canvasArea.className = 'wb-canvas-area' + (modeClass ? ' ' + modeClass[0] : '');
+            canvasArea.style.background = '';
             if (bg === 'lined') canvasArea.classList.add('bg-lined');
             else if (bg === 'grid') canvasArea.classList.add('bg-grid');
             else if (bg === 'dotted') canvasArea.classList.add('bg-dotted');
-            App.closeModal('modal-background');
-        });
-    });
+            else if (bg === 'isometric') canvasArea.classList.add('bg-isometric');
+            else if (bg === 'music') canvasArea.classList.add('bg-music');
 
     // Color swatches
     const bgColors = [
@@ -1506,13 +1507,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('att-pick-btn')?.addEventListener('click', () => {
         const presentCards = Array.from(document.querySelectorAll('.att-card')).filter(c => c.dataset.status === 'present');
+        const resultEl = document.getElementById('att-pick-result');
         if (presentCards.length === 0) {
-            alert("There are no present students to pick from.");
+            if (resultEl) resultEl.textContent = 'No present students to pick from.';
             return;
         }
         const randomCard = presentCards[Math.floor(Math.random() * presentCards.length)];
         const studentName = randomCard.querySelector('.att-name').textContent;
-        alert(`Random Present Student: ${studentName}`);
+        if (resultEl) resultEl.innerHTML = `<i class="fa-solid fa-star" style="color:#f59e0b;margin-right:6px;"></i>${studentName}`;
+        presentCards.forEach(c => c.classList.remove('picked'));
+        randomCard.classList.add('picked');
     });
 
     // ===================== PART 3: CHARTS =====================

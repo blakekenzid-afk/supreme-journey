@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacherstack - Planner</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .planner-wrap { display:flex;flex-direction:column;height:100%;overflow:hidden; }
+        .planner-header { display:flex;align-items:center;justify-content:space-between;padding:20px 24px 12px;flex-wrap:wrap;gap:10px; }
+        .week-nav { display:flex;align-items:center;gap:10px; }
+        .week-nav button { background:none;border:1.5px solid #e0e0e0;border-radius:8px;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#555;font-size:0.9rem;transition:background 0.15s; }
+        .week-nav button:hover { background:#f3f4f6; }
+        .week-label { font-size:0.95rem;font-weight:700;color:#222;min-width:220px;text-align:center; }
+        .today-btn { background:#6366f1;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-family:inherit;font-size:0.82rem;font-weight:600;cursor:pointer; }
+        .planner-grid-wrap { flex:1;overflow:auto;padding:0 24px 24px; }
+        .planner-grid { display:grid;grid-template-columns:64px repeat(5,1fr);border:1.5px solid #e0e0e0;border-radius:14px;overflow:hidden;min-width:680px; }
+        .p-col-header { padding:10px 8px;font-size:0.78rem;font-weight:700;text-align:center;background:#f9fafb;border-bottom:1.5px solid #e0e0e0;color:#444;line-height:1.3; }
+        .p-col-header.today-col { background:#ede9fe;color:#6366f1; }
+        .p-time-label { padding:0 8px;font-size:0.7rem;color:#aaa;display:flex;align-items:flex-start;justify-content:flex-end;border-right:1.5px solid #e0e0e0;padding-top:6px;background:#fafafa; }
+        .p-cell { border-left:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;min-height:52px;position:relative;cursor:pointer;transition:background 0.12s; }
+        .p-cell:hover { background:#f5f3ff; }
+        .p-cell.today-col { background:#fdfcff; }
+        .p-cell.today-col:hover { background:#ede9fe; }
+        .p-entry { margin:2px 3px;padding:4px 7px;border-radius:6px;font-size:0.72rem;font-weight:600;line-height:1.3;cursor:pointer;position:relative;word-break:break-word; }
+        .p-entry:hover .p-del { display:flex; }
+        .p-del { display:none;position:absolute;top:2px;right:2px;width:14px;height:14px;background:rgba(0,0,0,0.2);border-radius:50%;align-items:center;justify-content:center;font-size:0.6rem;color:#fff;cursor:pointer; }
+        .p-add-btn { position:absolute;bottom:3px;right:3px;width:18px;height:18px;background:#e0e7ff;border-radius:5px;display:none;align-items:center;justify-content:center;font-size:0.75rem;color:#6366f1;cursor:pointer; }
+        .p-cell:hover .p-add-btn { display:flex; }
+
+        /* Subject colors */
+        .sc-reading   { background:#fce7f3;color:#be185d; }
+        .sc-math      { background:#dbeafe;color:#1e40af; }
+        .sc-science   { background:#d1fae5;color:#065f46; }
+        .sc-writing   { background:#fef3c7;color:#92400e; }
+        .sc-social    { background:#ede9fe;color:#5b21b6; }
+        .sc-art       { background:#fee2e2;color:#991b1b; }
+        .sc-pe        { background:#d1fae5;color:#065f46; }
+        .sc-music     { background:#fdf4ff;color:#86198f; }
+        .sc-lunch     { background:#f3f4f6;color:#374151; }
+        .sc-recess    { background:#ecfdf5;color:#065f46; }
+        .sc-specials  { background:#fff7ed;color:#c2410c; }
+        .sc-other     { background:#f9fafb;color:#374151; }
+
+        /* Entry modal */
+        .entry-modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:2000;align-items:center;justify-content:center; }
+        .entry-modal { background:#fff;border-radius:18px;padding:24px;width:380px;max-width:95vw;display:flex;flex-direction:column;gap:14px;box-shadow:0 24px 48px rgba(0,0,0,0.22); }
+        .subject-grid { display:flex;flex-wrap:wrap;gap:6px; }
+        .subj-btn { padding:5px 12px;border-radius:8px;border:2px solid transparent;font-size:0.78rem;font-weight:600;cursor:pointer;transition:border-color 0.12s; }
+        .main-content { overflow-y:auto; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="profile-icon">R</div>
+            <div class="class-info">
+                <span class="class-name">Regulation Sta...</span>
+                <span class="grade">Grade K</span>
+            </div>
+            <i class="fa-solid fa-chevron-down toggle-icon" aria-hidden="true"></i>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="dashboard.html" class="nav-item">
+                <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="attendance.html" class="nav-item">
+                <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+                <span>Attendance</span>
+            </a>
+            <a href="whiteboard.html" class="nav-item">
+                <i class="fa-solid fa-display" aria-hidden="true"></i>
+                <span>Display Tools</span>
+            </a>
+            <a href="students.html" class="nav-item">
+                <i class="fa-solid fa-users" aria-hidden="true"></i>
+                <span>Students</span>
+            </a>
+            <div class="nav-section">PLANNING</div>
+            <a href="planner.html" class="nav-item active">
+                <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+                <span>Planner</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+                <span>Lessons</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i class="fa-solid fa-bookmark" aria-hidden="true"></i>
+                <span>Library</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer user-profile">
+            <div class="user-avatar">T</div>
+            <div class="user-info">
+                <span class="user-name">Kenzi Young</span>
+                <span class="user-email">kenzi@gmail.com</span>
+            </div>
+            <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main-content light-bg">
+        <header class="top-nav">
+            <div class="nav-left">
+                <i class="fa-solid fa-bars menu-toggle" aria-hidden="true"></i>
+                <span class="brand-name">Teacherstack</span>
+            </div>
+        </header>
+
+        <div class="planner-wrap">
+            <div class="planner-header">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <span style="font-size:1.3rem;font-weight:700;color:#222;display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-calendar-days" style="color:#6366f1;"></i> Weekly Planner</span>
+                </div>
+                <div class="week-nav">
+                    <button onclick="shiftWeek(-1)" aria-label="Previous week"><i class="fa-solid fa-chevron-left"></i></button>
+                    <div class="week-label" id="week-label"></div>
+                    <button onclick="shiftWeek(1)" aria-label="Next week"><i class="fa-solid fa-chevron-right"></i></button>
+                    <button class="today-btn" onclick="goToday()">Today</button>
+                </div>
+            </div>
+            <div class="planner-grid-wrap">
+                <div class="planner-grid" id="planner-grid"></div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Entry Modal -->
+<div class="entry-modal-overlay" id="entry-modal" onclick="if(event.target===this)closeEntryModal()">
+    <div class="entry-modal">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:1rem;font-weight:700;color:#222;" id="entry-modal-title">Add Entry</span>
+            <button onclick="closeEntryModal()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#aaa;">✕</button>
+        </div>
+        <div>
+            <label style="font-size:0.78rem;color:#888;display:block;margin-bottom:5px;">Title</label>
+            <input id="entry-title" type="text" placeholder="e.g. Morning Meeting, Math Centers..." style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;">
+        </div>
+        <div>
+            <label style="font-size:0.78rem;color:#888;display:block;margin-bottom:6px;">Subject / Type</label>
+            <div class="subject-grid" id="subject-grid"></div>
+        </div>
+        <div>
+            <label style="font-size:0.78rem;color:#888;display:block;margin-bottom:5px;">Notes (optional)</label>
+            <textarea id="entry-notes" placeholder="Materials, objectives, reminders..." style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.85rem;outline:none;resize:vertical;min-height:70px;"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button id="entry-delete-btn" style="display:none;background:#fee2e2;color:#dc2626;border:none;border-radius:10px;padding:10px 16px;cursor:pointer;font-size:0.88rem;font-weight:600;" onclick="deleteEntry()">Delete</button>
+            <button onclick="saveEntry()" style="background:#6366f1;color:#fff;border:none;border-radius:10px;padding:10px 22px;cursor:pointer;font-size:0.9rem;font-weight:600;">Save</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+    const SLOTS = [
+        '7:30 AM','8:00 AM','8:30 AM','9:00 AM','9:30 AM','10:00 AM','10:30 AM',
+        '11:00 AM','11:30 AM','12:00 PM','12:30 PM','1:00 PM','1:30 PM',
+        '2:00 PM','2:30 PM','3:00 PM'
+    ];
+    const SUBJECTS = [
+        {key:'reading', label:'Reading', cls:'sc-reading'},
+        {key:'math',    label:'Math',    cls:'sc-math'},
+        {key:'writing', label:'Writing', cls:'sc-writing'},
+        {key:'science', label:'Science', cls:'sc-science'},
+        {key:'social',  label:'Social Studies', cls:'sc-social'},
+        {key:'art',     label:'Art',     cls:'sc-art'},
+        {key:'pe',      label:'P.E.',    cls:'sc-pe'},
+        {key:'music',   label:'Music',   cls:'sc-music'},
+        {key:'lunch',   label:'Lunch',   cls:'sc-lunch'},
+        {key:'recess',  label:'Recess',  cls:'sc-recess'},
+        {key:'specials',label:'Specials',cls:'sc-specials'},
+        {key:'other',   label:'Other',   cls:'sc-other'},
+    ];
+
+    // Week offset from current week (0 = this week)
+    let weekOffset = 0;
+    let selectedSubject = 'other';
+    let editKey = null; // "dayIndex-slotIndex-entryIndex"
+    let pendingCell = null; // {dayIndex, slotIndex}
+
+    function getWeekMonday(offset) {
+        const now = new Date();
+        const day = now.getDay(); // 0=Sun, 1=Mon...
+        const diff = (day === 0 ? -6 : 1 - day) + offset * 7;
+        const monday = new Date(now);
+        monday.setDate(now.getDate() + diff);
+        monday.setHours(0,0,0,0);
+        return monday;
+    }
+
+    function weekKey(monday) {
+        return monday.toISOString().slice(0, 10);
+    }
+
+    function loadWeek(monday) {
+        return JSON.parse(localStorage.getItem('planner-' + weekKey(monday)) || '{}');
+    }
+
+    function saveWeek(monday, data) {
+        localStorage.setItem('planner-' + weekKey(monday), JSON.stringify(data));
+    }
+
+    let mondayDate = getWeekMonday(0);
+    let plannerData = loadWeek(mondayDate);
+
+    function buildGrid() {
+        mondayDate = getWeekMonday(weekOffset);
+        plannerData = loadWeek(mondayDate);
+
+        const todayStr = new Date().toISOString().slice(0,10);
+        const grid = document.getElementById('planner-grid');
+        grid.innerHTML = '';
+
+        // Update week label
+        const friday = new Date(mondayDate);
+        friday.setDate(mondayDate.getDate() + 4);
+        const opts = {month:'short', day:'numeric'};
+        document.getElementById('week-label').textContent =
+            mondayDate.toLocaleDateString('en-US', opts) + ' – ' + friday.toLocaleDateString('en-US', opts) + ', ' + friday.getFullYear();
+
+        // Blank top-left corner
+        const corner = document.createElement('div');
+        corner.className = 'p-col-header';
+        grid.appendChild(corner);
+
+        // Day headers
+        DAYS.forEach((day, di) => {
+            const date = new Date(mondayDate);
+            date.setDate(mondayDate.getDate() + di);
+            const dateStr = date.toISOString().slice(0,10);
+            const isToday = dateStr === todayStr;
+            const hdr = document.createElement('div');
+            hdr.className = 'p-col-header' + (isToday ? ' today-col' : '');
+            hdr.innerHTML = `<div>${day}</div><div style="font-size:0.7rem;font-weight:400;color:${isToday?'#6366f1':'#aaa'}">${date.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>`;
+            grid.appendChild(hdr);
+        });
+
+        // Rows
+        SLOTS.forEach((slot, si) => {
+            const timeCell = document.createElement('div');
+            timeCell.className = 'p-time-label';
+            timeCell.textContent = slot;
+            grid.appendChild(timeCell);
+
+            DAYS.forEach((day, di) => {
+                const date = new Date(mondayDate);
+                date.setDate(mondayDate.getDate() + di);
+                const dateStr = date.toISOString().slice(0,10);
+                const isToday = dateStr === todayStr;
+
+                const cell = document.createElement('div');
+                cell.className = 'p-cell' + (isToday ? ' today-col' : '');
+
+                const cellKey = di + '-' + si;
+                const entries = plannerData[cellKey] || [];
+                entries.forEach((entry, ei) => {
+                    const subj = SUBJECTS.find(s => s.key === (entry.subject || 'other')) || SUBJECTS[SUBJECTS.length-1];
+                    const div = document.createElement('div');
+                    div.className = 'p-entry ' + subj.cls;
+                    div.textContent = entry.title;
+                    div.title = entry.notes || '';
+                    const del = document.createElement('div');
+                    del.className = 'p-del';
+                    del.innerHTML = '✕';
+                    del.addEventListener('click', (e) => { e.stopPropagation(); openEntryModal(di, si, ei); });
+                    div.appendChild(del);
+                    div.addEventListener('click', (e) => { e.stopPropagation(); openEntryModal(di, si, ei); });
+                    cell.appendChild(div);
+                });
+
+                const addBtn = document.createElement('div');
+                addBtn.className = 'p-add-btn';
+                addBtn.innerHTML = '<i class="fa-solid fa-plus"></i>';
+                addBtn.addEventListener('click', (e) => { e.stopPropagation(); openEntryModal(di, si, -1); });
+                cell.appendChild(addBtn);
+
+                cell.addEventListener('click', () => openEntryModal(di, si, -1));
+                grid.appendChild(cell);
+            });
+        });
+    }
+
+    function shiftWeek(dir) { weekOffset += dir; buildGrid(); }
+    function goToday() { weekOffset = 0; buildGrid(); }
+
+    // ===== Entry modal =====
+    function openEntryModal(dayIndex, slotIndex, entryIndex) {
+        pendingCell = {dayIndex, slotIndex};
+        const cellKey = dayIndex + '-' + slotIndex;
+        const entries = plannerData[cellKey] || [];
+        const isEdit = entryIndex >= 0;
+        editKey = isEdit ? cellKey + '-' + entryIndex : null;
+
+        document.getElementById('entry-modal-title').textContent = isEdit ? 'Edit Entry' : 'Add Entry — ' + SLOTS[slotIndex] + ', ' + DAYS[dayIndex];
+        document.getElementById('entry-title').value = isEdit ? entries[entryIndex].title : '';
+        document.getElementById('entry-notes').value = isEdit ? (entries[entryIndex].notes || '') : '';
+        selectedSubject = isEdit ? (entries[entryIndex].subject || 'other') : 'other';
+        document.getElementById('entry-delete-btn').style.display = isEdit ? 'inline-block' : 'none';
+
+        // Populate subjects
+        const sg = document.getElementById('subject-grid');
+        sg.innerHTML = SUBJECTS.map(s =>
+            `<button type="button" class="subj-btn ${s.cls}" data-key="${s.key}" style="border-color:${selectedSubject===s.key?'#333':'transparent'}">${s.label}</button>`
+        ).join('');
+        sg.querySelectorAll('.subj-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                selectedSubject = btn.dataset.key;
+                sg.querySelectorAll('.subj-btn').forEach(b => b.style.borderColor = 'transparent');
+                btn.style.borderColor = '#333';
+            });
+        });
+
+        document.getElementById('entry-modal').style.display = 'flex';
+        setTimeout(() => document.getElementById('entry-title').focus(), 50);
+    }
+
+    function closeEntryModal() { document.getElementById('entry-modal').style.display = 'none'; editKey = null; }
+
+    function saveEntry() {
+        const title = document.getElementById('entry-title').value.trim();
+        if (!title) { document.getElementById('entry-title').focus(); return; }
+        const notes = document.getElementById('entry-notes').value.trim();
+        const cellKey = pendingCell.dayIndex + '-' + pendingCell.slotIndex;
+        if (!plannerData[cellKey]) plannerData[cellKey] = [];
+
+        if (editKey) {
+            const idx = parseInt(editKey.split('-')[2]);
+            plannerData[cellKey][idx] = { title, subject: selectedSubject, notes };
+        } else {
+            plannerData[cellKey].push({ title, subject: selectedSubject, notes });
+        }
+        saveWeek(mondayDate, plannerData);
+        closeEntryModal();
+        buildGrid();
+    }
+
+    function deleteEntry() {
+        if (!editKey) return;
+        const parts = editKey.split('-');
+        const cellKey = parts[0] + '-' + parts[1];
+        const idx = parseInt(parts[2]);
+        plannerData[cellKey].splice(idx, 1);
+        if (plannerData[cellKey].length === 0) delete plannerData[cellKey];
+        saveWeek(mondayDate, plannerData);
+        closeEntryModal();
+        buildGrid();
+    }
+
+    buildGrid();
+</script>
+</body>
+</html>

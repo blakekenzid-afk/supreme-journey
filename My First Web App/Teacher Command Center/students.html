@@ -29,11 +29,11 @@
                     <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
                     <span>Dashboard</span>
                 </a>
-                <a href="#" class="nav-item">
+                <a href="attendance.html" class="nav-item">
                     <i class="fa-solid fa-user-check" aria-hidden="true"></i>
                     <span>Attendance</span>
                 </a>
-                <a href="#" class="nav-item">
+                <a href="whiteboard.html" class="nav-item">
                     <i class="fa-solid fa-display" aria-hidden="true"></i>
                     <span>Display Tools</span>
                 </a>
@@ -43,7 +43,7 @@
                 </a>
                 
                 <div class="nav-section">PLANNING</div>
-                <a href="#" class="nav-item">
+                <a href="planner.html" class="nav-item">
                     <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
                     <span>Planner</span>
                 </a>
@@ -97,8 +97,74 @@
         </main>
     </div>
 
+
+<!-- ===== Student Detail Modal ===== -->
+<div id="student-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)closeStudentModal()">
+  <div style="background:#fff;border-radius:18px;padding:0;width:420px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,0.22);overflow:hidden;">
+    <div id="student-modal-header" style="padding:24px 24px 16px;display:flex;align-items:center;gap:16px;">
+      <div id="sm-avatar" style="width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:700;flex-shrink:0;"></div>
+      <div style="flex:1;">
+        <div id="sm-name" style="font-size:1.2rem;font-weight:700;color:#222;"></div>
+        <div id="sm-stats" style="font-size:0.8rem;color:#888;margin-top:2px;"></div>
+      </div>
+      <button onclick="closeStudentModal()" style="background:none;border:none;cursor:pointer;font-size:1.3rem;color:#aaa;padding:4px;">✕</button>
+    </div>
+    <div style="display:flex;gap:8px;padding:0 24px 12px;">
+      <button onclick="openLogBehavior(currentStudent)" style="flex:1;background:#ede9fe;color:#6366f1;border:none;border-radius:10px;padding:9px;font-size:0.85rem;font-weight:600;cursor:pointer;"><i class="fa-solid fa-clipboard-user"></i> Log Behavior</button>
+      <button onclick="openStudentNote(currentStudent)" style="flex:1;background:#fef3c7;color:#d97706;border:none;border-radius:10px;padding:9px;font-size:0.85rem;font-weight:600;cursor:pointer;"><i class="fa-solid fa-pen-nib"></i> Add Note</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:0 24px 20px;">
+      <div style="font-size:0.78rem;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Recent Activity</div>
+      <div id="sm-activity" style="display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Log Behavior Modal ===== -->
+<div id="behavior-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center;" onclick="if(event.target===this)closeBehaviorModal()">
+  <div style="background:#fff;border-radius:18px;padding:24px;width:400px;max-width:96vw;display:flex;flex-direction:column;gap:14px;box-shadow:0 24px 48px rgba(0,0,0,0.22);">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:1.05rem;font-weight:700;"><i class="fa-solid fa-clipboard-user" style="color:#6366f1;margin-right:8px;"></i>Log Behavior</span>
+      <button onclick="closeBehaviorModal()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#aaa;">✕</button>
+    </div>
+    <div>
+      <label style="font-size:0.78rem;color:#888;display:block;margin-bottom:5px;">Student</label>
+      <select id="beh-student" style="width:100%;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;"></select>
+    </div>
+    <div>
+      <label style="font-size:0.78rem;color:#888;display:block;margin-bottom:6px;">Behavior</label>
+      <div id="beh-options" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
+    <div>
+      <label style="font-size:0.78rem;color:#888;display:block;margin-bottom:5px;">Note (optional)</label>
+      <input id="beh-note" type="text" placeholder="Add a note..." style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;">
+    </div>
+    <button onclick="saveBehavior()" style="background:#6366f1;color:#fff;border:none;border-radius:10px;padding:11px;font-size:0.95rem;font-weight:600;cursor:pointer;">Save</button>
+  </div>
+</div>
+
+<!-- ===== Student Note Modal ===== -->
+<div id="note-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center;" onclick="if(event.target===this)closeNoteModal()">
+  <div style="background:#fff;border-radius:18px;padding:24px;width:400px;max-width:96vw;display:flex;flex-direction:column;gap:14px;box-shadow:0 24px 48px rgba(0,0,0,0.22);">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:1.05rem;font-weight:700;"><i class="fa-solid fa-pen-nib" style="color:#d97706;margin-right:8px;"></i>Student Note</span>
+      <button onclick="closeNoteModal()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#aaa;">✕</button>
+    </div>
+    <div>
+      <label style="font-size:0.78rem;color:#888;display:block;margin-bottom:5px;">Student</label>
+      <select id="note-student" style="width:100%;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;"></select>
+    </div>
+    <div>
+      <label style="font-size:0.78rem;color:#888;display:block;margin-bottom:5px;">Note</label>
+      <textarea id="note-text" placeholder="Write a note about this student..." style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;resize:vertical;min-height:90px;"></textarea>
+    </div>
+    <button onclick="saveStudentNote()" style="background:#d97706;color:#fff;border:none;border-radius:10px;padding:11px;font-size:0.95rem;font-weight:600;cursor:pointer;">Save Note</button>
+  </div>
+</div>
+
     <script src="students.js"></script>
     <script>
+        // ===== Render student grid =====
         const grid = document.getElementById('student-grid');
         students.forEach(s => {
             const card = document.createElement('button');
@@ -109,21 +175,134 @@
                 <div class="student-avatar" style="background-color: ${s.color}; color: ${textColor}" aria-hidden="true">${s.initials}</div>
                 <div class="student-name">${s.name}</div>
             `;
+            card.addEventListener('click', () => openStudentModal(s));
             grid.appendChild(card);
         });
 
-        // FAB toggle functionality
+        // FAB toggle
         const fabContainer = document.getElementById('fab-container');
         const fabOpen = document.getElementById('fab-toggle-open');
         const fabClose = document.getElementById('fab-toggle-close');
-
         if (fabOpen && fabClose && fabContainer) {
-            fabOpen.addEventListener('click', () => {
-                fabContainer.classList.add('active');
-            });
-            fabClose.addEventListener('click', () => {
+            fabOpen.addEventListener('click', () => fabContainer.classList.add('active'));
+            fabClose.addEventListener('click', () => fabContainer.classList.remove('active'));
+        }
+        document.querySelectorAll('.fab-text').forEach(btn => {
+            btn.addEventListener('click', () => {
                 fabContainer.classList.remove('active');
+                if (btn.querySelector('.fa-clipboard-user')) openLogBehavior(null);
+                else openStudentNote(null);
             });
+        });
+
+        // ===== Student data helpers =====
+        let currentStudent = null;
+        const BEHAVIORS_POS = [
+            {label:'Great listener',icon:'👂'},{label:'Good helper',icon:'🤝'},
+            {label:'Kind friend',icon:'❤️'},{label:'Hard worker',icon:'💪'},
+            {label:'Good effort',icon:'⭐'},{label:'Following directions',icon:'✅'}
+        ];
+        const BEHAVIORS_NEG = [
+            {label:'Off task',icon:'😶'},{label:'Disruptive',icon:'📢'},
+            {label:'Not following directions',icon:'🚫'},{label:'Unkind',icon:'😠'},
+            {label:'Out of seat',icon:'🪑'}
+        ];
+        let selectedBehavior = null;
+
+        function getStudentLog(name) { return JSON.parse(localStorage.getItem('slog-' + name) || '[]'); }
+        function saveStudentLog(name, log) { localStorage.setItem('slog-' + name, JSON.stringify(log)); }
+
+        // ===== Student detail modal =====
+        function openStudentModal(s) {
+            currentStudent = s;
+            const textColor = getContrastColor(s.color);
+            document.getElementById('sm-avatar').style.cssText = `width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:700;flex-shrink:0;background:${s.color};color:${textColor}`;
+            document.getElementById('sm-avatar').textContent = s.initials;
+            document.getElementById('sm-name').textContent = s.name;
+            renderStudentActivity(s.name);
+            document.getElementById('student-modal').style.display = 'flex';
+        }
+        function closeStudentModal() { document.getElementById('student-modal').style.display = 'none'; }
+
+        function renderStudentActivity(name) {
+            const log = getStudentLog(name).slice().reverse();
+            const el = document.getElementById('sm-activity');
+            const pos = log.filter(e => e.type === 'pos').length;
+            const neg = log.filter(e => e.type === 'neg').length;
+            document.getElementById('sm-stats').textContent = `${pos} positive · ${neg} needs work · ${log.filter(e=>e.type==='note').length} notes`;
+            if (log.length === 0) {
+                el.innerHTML = '<p style="color:#bbb;font-size:0.85rem;text-align:center;padding:16px 0;">No entries yet</p>';
+                return;
+            }
+            el.innerHTML = log.slice(0, 20).map(e => {
+                const colors = {pos:'#dcfce7',neg:'#fee2e2',note:'#fef3c7'};
+                const tcolors = {pos:'#16a34a',neg:'#dc2626',note:'#d97706'};
+                const icons = {pos:'fa-circle-check',neg:'fa-circle-exclamation',note:'fa-note-sticky'};
+                return `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:10px;background:${colors[e.type]};">
+                    <i class="fa-solid ${icons[e.type]}" style="color:${tcolors[e.type]};margin-top:2px;flex-shrink:0;"></i>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:0.85rem;font-weight:600;color:#333;">${e.icon||''} ${e.label||e.text}</div>
+                        ${e.note ? `<div style="font-size:0.78rem;color:#666;margin-top:2px;">${e.note}</div>`:''}
+                        <div style="font-size:0.72rem;color:#aaa;margin-top:2px;">${new Date(e.date).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // ===== Log Behavior modal =====
+        function populateStudentSelect(selectId, preselect) {
+            const sel = document.getElementById(selectId);
+            sel.innerHTML = students.map(s => `<option value="${s.name}" ${s.name===preselect?'selected':''}>${s.name}</option>`).join('');
+        }
+        function openLogBehavior(s) {
+            selectedBehavior = null;
+            populateStudentSelect('beh-student', s ? s.name : null);
+            document.getElementById('beh-note').value = '';
+            const opts = document.getElementById('beh-options');
+            opts.innerHTML = [
+                '<div style="width:100%;font-size:0.75rem;color:#16a34a;font-weight:600;margin-bottom:2px;">Positive</div>',
+                ...BEHAVIORS_POS.map(b => `<button type="button" class="beh-btn pos" data-label="${b.label}" data-icon="${b.icon}" data-type="pos" style="background:#f0fdf4;border:2px solid #bbf7d0;border-radius:8px;padding:5px 10px;font-size:0.78rem;cursor:pointer;">${b.icon} ${b.label}</button>`),
+                '<div style="width:100%;font-size:0.75rem;color:#dc2626;font-weight:600;margin:6px 0 2px;">Needs Work</div>',
+                ...BEHAVIORS_NEG.map(b => `<button type="button" class="beh-btn neg" data-label="${b.label}" data-icon="${b.icon}" data-type="neg" style="background:#fff0f0;border:2px solid #fecaca;border-radius:8px;padding:5px 10px;font-size:0.78rem;cursor:pointer;">${b.icon} ${b.label}</button>`)
+            ].join('');
+            opts.querySelectorAll('.beh-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    opts.querySelectorAll('.beh-btn').forEach(b => b.style.borderColor = b.dataset.type==='pos'?'#bbf7d0':'#fecaca');
+                    btn.style.borderColor = btn.dataset.type==='pos' ? '#16a34a' : '#dc2626';
+                    selectedBehavior = {label:btn.dataset.label, icon:btn.dataset.icon, type:btn.dataset.type};
+                });
+            });
+            document.getElementById('behavior-modal').style.display = 'flex';
+        }
+        function closeBehaviorModal() { document.getElementById('behavior-modal').style.display = 'none'; }
+        function saveBehavior() {
+            if (!selectedBehavior) { alert('Please select a behavior.'); return; }
+            const name = document.getElementById('beh-student').value;
+            const note = document.getElementById('beh-note').value.trim();
+            const log = getStudentLog(name);
+            log.push({ type: selectedBehavior.type, label: selectedBehavior.label, icon: selectedBehavior.icon, note, date: new Date().toISOString() });
+            saveStudentLog(name, log);
+            closeBehaviorModal();
+            if (currentStudent && currentStudent.name === name) renderStudentActivity(name);
+        }
+
+        // ===== Student Note modal =====
+        function openStudentNote(s) {
+            populateStudentSelect('note-student', s ? s.name : null);
+            document.getElementById('note-text').value = '';
+            document.getElementById('note-modal').style.display = 'flex';
+            setTimeout(() => document.getElementById('note-text').focus(), 50);
+        }
+        function closeNoteModal() { document.getElementById('note-modal').style.display = 'none'; }
+        function saveStudentNote() {
+            const name = document.getElementById('note-student').value;
+            const text = document.getElementById('note-text').value.trim();
+            if (!text) { document.getElementById('note-text').focus(); return; }
+            const log = getStudentLog(name);
+            log.push({ type: 'note', text, date: new Date().toISOString() });
+            saveStudentLog(name, log);
+            closeNoteModal();
+            if (currentStudent && currentStudent.name === name) renderStudentActivity(name);
         }
     </script>
 </body>
