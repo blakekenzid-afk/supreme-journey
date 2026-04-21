@@ -1184,3 +1184,89 @@ body {
   }
 }
 
+
+/* ===== CANVAS FLOATING WIDGETS ===== */
+.wb-canvas-widget {
+  position: absolute;
+  background: var(--wb-sidebar-bg, #fff);
+  border-radius: 14px;
+  box-shadow: 0 6px 28px rgba(0,0,0,0.18);
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 160px;
+  border: 1.5px solid rgba(0,0,0,0.07);
+}
+.wb-canvas-widget .cwid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  cursor: grab;
+  user-select: none;
+  flex-shrink: 0;
+  gap: 8px;
+}
+.wb-canvas-widget .cwid-header:active { cursor: grabbing; }
+.wb-canvas-widget .cwid-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+.wb-canvas-widget .cwid-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  opacity: 0.6;
+  flex-shrink: 0;
+  transition: opacity 0.1s;
+}
+.wb-canvas-widget .cwid-close:hover { opacity: 1; }
+.wb-canvas-widget .cwid-body {
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* drag-over highlight on canvas area */
+.wb-canvas-area.drag-over { outline: 3px dashed var(--accent, #6366f1); outline-offset: -6px; }
+/* Traffic Light widget */
+.cwid-traffic { display: flex; flex-direction: column; align-items: center; gap: 6px; background: #222; border-radius: 10px; padding: 10px 16px; }
+.cwid-tl { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; opacity: 0.25; transition: opacity 0.2s, box-shadow 0.2s; }
+.cwid-tl.active { opacity: 1; }
+.cwid-tl.red { background: #ef4444; }
+.cwid-tl.red.active { box-shadow: 0 0 16px #ef4444; }
+.cwid-tl.yellow { background: #f59e0b; }
+.cwid-tl.yellow.active { box-shadow: 0 0 16px #f59e0b; }
+.cwid-tl.green { background: #22c55e; }
+.cwid-tl.green.active { box-shadow: 0 0 16px #22c55e; }
+/* Timer widget */
+.cwid-timer-display { font-size: 2.2rem; font-weight: 900; text-align: center; letter-spacing: -1px; color: var(--wb-text-main,#1a2332); line-height: 1; }
+.cwid-timer-display.running { color: #22c55e; }
+.cwid-timer-display.done { color: #ef4444; }
+.cwid-timer-btns { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.cwid-preset { font-size: 0.72rem; padding: 3px 8px; border: 1.5px solid #e0e0e0; background: #f5f5f5; border-radius: 6px; cursor: pointer; font-family: inherit; }
+.cwid-preset:hover { background: #ede9fe; border-color: #6366f1; }
+.cwid-ctrl { background: none; border: 1.5px solid #e0e0e0; border-radius: 8px; width: 32px; height: 32px; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; }
+.cwid-ctrl:hover { background: #ede9fe; border-color: #6366f1; }
+/* Name picker widget */
+.cwid-name-result { font-size: 1.5rem; font-weight: 800; text-align: center; color: var(--accent,#6366f1); min-height: 38px; padding: 4px 0; }
+/* Sound meter widget */
+.cwid-sound-bars { display: flex; align-items: flex-end; gap: 3px; height: 48px; justify-content: center; }
+.cwid-sound-bars .sb { width: 8px; border-radius: 3px 3px 0 0; background: #22c55e; min-height: 4px; transition: height 0.1s; }
+.cwid-sound-label { font-size: 0.78rem; text-align: center; color: var(--wb-text-muted, #888); }
+/* Stopwatch widget */
+.cwid-sw-display { font-size: 1.8rem; font-weight: 900; text-align: center; font-variant-numeric: tabular-nums; letter-spacing: -1px; color: var(--wb-text-main,#1a2332); }
+/* QR widget */
+.cwid-qr-output { display: flex; justify-content: center; padding-top: 4px; }
+/* Clock widget */
+.cwid-clock-time { font-size: 2rem; font-weight: 900; text-align: center; letter-spacing: -1px; color: var(--wb-text-main,#1a2332); line-height: 1; }
+.cwid-clock-date { font-size: 0.72rem; text-align: center; color: var(--wb-text-muted,#888); margin-top: 3px; }

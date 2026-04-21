@@ -949,6 +949,246 @@ document.addEventListener('DOMContentLoaded', () => {
         ],
     };
 
+    // ===================== CANVAS WIDGET SYSTEM =====================
+    let canvasWidgetZ = 80;
+
+    const CANVAS_WIDGET_DEFS = {
+        'Traffic Light': {
+            icon: '🚦', headerBg: '#1a1a1a', headerColor: '#fff', width: 140,
+            render(body) {
+                body.innerHTML = `<div class="cwid-traffic">
+                    <div class="cwid-tl red active" data-tl="red"></div>
+                    <div class="cwid-tl yellow" data-tl="yellow"></div>
+                    <div class="cwid-tl green" data-tl="green"></div>
+                </div><div style="font-size:0.72rem;text-align:center;color:#888;margin-top:6px;" id="tl-wlabel">🔴 Stop / Quiet</div>`;
+                const labels = { red: '🔴 Stop / Quiet', yellow: '🟡 Whisper', green: '🟢 Talk Freely' };
+                body.querySelectorAll('.cwid-tl').forEach(light => {
+                    light.addEventListener('click', () => {
+                        body.querySelectorAll('.cwid-tl').forEach(l => l.classList.remove('active'));
+                        light.classList.add('active');
+                        body.querySelector('#tl-wlabel').textContent = labels[light.dataset.tl];
+                    });
+                });
+            }
+        },
+        'Timer': {
+            icon: '⏱️', headerBg: '#1a2332', headerColor: '#fff', width: 200,
+            render(body, el) {
+                let secs = 300, remaining = 300, iv = null, running = false;
+                body.innerHTML = `<div class="cwid-timer-display" id="cwtd">05:00</div>
+                    <div class="cwid-timer-btns">
+                        <button class="cwid-preset" data-s="60">1m</button>
+                        <button class="cwid-preset" data-s="180">3m</button>
+                        <button class="cwid-preset" data-s="300">5m</button>
+                        <button class="cwid-preset" data-s="600">10m</button>
+                    </div>
+                    <div class="cwid-timer-btns" style="margin-top:4px;">
+                        <button class="cwid-ctrl" id="cwt-play">▶</button>
+                        <button class="cwid-ctrl" id="cwt-pause">⏸</button>
+                        <button class="cwid-ctrl" id="cwt-reset">↺</button>
+                    </div>`;
+                const disp = body.querySelector('#cwtd');
+                const fmt = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+                const tick = () => {
+                    if (remaining <= 0) { clearInterval(iv); running = false; disp.className='cwid-timer-display done'; disp.textContent='00:00'; return; }
+                    remaining--; disp.textContent = fmt(remaining);
+                };
+                body.querySelectorAll('.cwid-preset').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        clearInterval(iv); running = false;
+                        secs = remaining = parseInt(btn.dataset.s);
+                        disp.className = 'cwid-timer-display'; disp.textContent = fmt(remaining);
+                    });
+                });
+                body.querySelector('#cwt-play').addEventListener('click', () => {
+                    if (running) return; running = true;
+                    disp.className = 'cwid-timer-display running';
+                    iv = setInterval(tick, 1000);
+                });
+                body.querySelector('#cwt-pause').addEventListener('click', () => { clearInterval(iv); running = false; disp.className = 'cwid-timer-display'; });
+                body.querySelector('#cwt-reset').addEventListener('click', () => { clearInterval(iv); running = false; remaining = secs; disp.className = 'cwid-timer-display'; disp.textContent = fmt(remaining); });
+                el._cwCleanup = () => clearInterval(iv);
+            }
+        },
+        'Stopwatch': {
+            icon: '⏱️', headerBg: '#2e7d6b', headerColor: '#fff', width: 190,
+            render(body, el) {
+                let ms = 0, iv = null, running = false;
+                body.innerHTML = `<div class="cwid-sw-display" id="cwsw">00:00.00</div>
+                    <div class="cwid-timer-btns" style="margin-top:6px;">
+                        <button class="cwid-ctrl" id="cwsw-start">▶</button>
+                        <button class="cwid-ctrl" id="cwsw-stop">⏸</button>
+                        <button class="cwid-ctrl" id="cwsw-reset">↺</button>
+                    </div>`;
+                const disp = body.querySelector('#cwsw');
+                const fmt = () => { const t=ms; const m=Math.floor(t/60000); const s=Math.floor((t%60000)/1000); const cs=Math.floor((t%1000)/10); return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`; };
+                body.querySelector('#cwsw-start').addEventListener('click', () => { if(running)return; running=true; const start=Date.now()-ms; iv=setInterval(()=>{ms=Date.now()-start;disp.textContent=fmt();},50); });
+                body.querySelector('#cwsw-stop').addEventListener('click', () => { clearInterval(iv); running=false; });
+                body.querySelector('#cwsw-reset').addEventListener('click', () => { clearInterval(iv); running=false; ms=0; disp.textContent='00:00.00'; });
+                el._cwCleanup = () => clearInterval(iv);
+            }
+        },
+        'Clock': {
+            icon: '🕐', headerBg: '#1a2332', headerColor: '#fff', width: 180,
+            render(body, el) {
+                body.innerHTML = `<div class="cwid-clock-time" id="cwclock-t"></div><div class="cwid-clock-date" id="cwclock-d"></div>`;
+                const tick = () => {
+                    const n = new Date();
+                    const t = body.querySelector('#cwclock-t'), d = body.querySelector('#cwclock-d');
+                    if(t) t.textContent = n.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
+                    if(d) d.textContent = n.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+                };
+                tick(); const iv = setInterval(tick, 1000);
+                el._cwCleanup = () => clearInterval(iv);
+            }
+        },
+        'Name Picker': {
+            icon: '🙋', headerBg: '#6366f1', headerColor: '#fff', width: 200,
+            render(body) {
+                body.innerHTML = `<div class="cwid-name-result" id="cwnp-result">?</div>
+                    <button class="primary-action-btn big" id="cwnp-btn" style="font-size:0.82rem;padding:8px 12px;"><i class="fa-solid fa-shuffle"></i> Pick</button>
+                    <div style="font-size:0.7rem;color:#999;text-align:center;" id="cwnp-hist"></div>`;
+                const names = getStudentNames();
+                let used = [];
+                body.querySelector('#cwnp-btn').addEventListener('click', () => {
+                    if (used.length >= names.length) used = [];
+                    const remaining = names.filter(n => !used.includes(n));
+                    const picked = remaining[Math.floor(Math.random()*remaining.length)];
+                    used.push(picked);
+                    body.querySelector('#cwnp-result').textContent = picked;
+                    body.querySelector('#cwnp-hist').textContent = `${used.length} / ${names.length} picked`;
+                });
+            }
+        },
+        'Sound Meter': {
+            icon: '🎤', headerBg: '#7c3aed', headerColor: '#fff', width: 180,
+            render(body, el) {
+                body.innerHTML = `<div class="cwid-sound-bars" id="cwsb">${Array(8).fill('<div class="sb" style="height:4px"></div>').join('')}</div>
+                    <div class="cwid-sound-label" id="cwsl">Tap Start</div>
+                    <div class="cwid-timer-btns"><button class="cwid-ctrl" id="cwsound-start">🎙</button><button class="cwid-ctrl" id="cwsound-stop">⏹</button></div>`;
+                let stream = null, analyser = null, raf = null;
+                const bars = body.querySelectorAll('.sb');
+                const labels = ['🤫 Silence','🤫 Very Quiet','🗣 Quiet','💬 Low','💬 Medium','📢 Loud','📢 Very Loud','🔊 Too Loud!'];
+                const draw = () => {
+                    if (!analyser) return;
+                    const data = new Uint8Array(analyser.frequencyBinCount);
+                    analyser.getByteFrequencyData(data);
+                    const avg = data.reduce((a,b)=>a+b,0)/data.length;
+                    const level = Math.min(7, Math.floor(avg/8));
+                    bars.forEach((b,i) => { b.style.height = (4 + (i<=level ? (i+1)*6 : 4))+'px'; b.style.background = level>=6?'#ef4444':level>=4?'#f59e0b':'#22c55e'; });
+                    body.querySelector('#cwsl').textContent = labels[level];
+                    raf = requestAnimationFrame(draw);
+                };
+                body.querySelector('#cwsound-start').addEventListener('click', () => {
+                    navigator.mediaDevices.getUserMedia({audio:true}).then(s => {
+                        stream = s;
+                        const ctx = new AudioContext();
+                        analyser = ctx.createAnalyser();
+                        ctx.createMediaStreamSource(s).connect(analyser);
+                        draw();
+                    }).catch(() => body.querySelector('#cwsl').textContent = 'Mic denied');
+                });
+                body.querySelector('#cwsound-stop').addEventListener('click', () => {
+                    cancelAnimationFrame(raf); if(stream) stream.getTracks().forEach(t=>t.stop()); stream=null; analyser=null;
+                    bars.forEach(b=>{b.style.height='4px';}); body.querySelector('#cwsl').textContent='Stopped';
+                });
+                el._cwCleanup = () => { cancelAnimationFrame(raf); if(stream) stream.getTracks().forEach(t=>t.stop()); };
+            }
+        },
+        'QR Code': {
+            icon: '📝', headerBg: '#0f766e', headerColor: '#fff', width: 220,
+            render(body) {
+                body.innerHTML = `<input type="text" id="cwqr-input" placeholder="Enter URL or text..." style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.82rem;outline:none;">
+                    <button class="primary-action-btn" id="cwqr-btn" style="font-size:0.82rem;padding:7px;">Generate</button>
+                    <div class="cwid-qr-output" id="cwqr-out"></div>`;
+                body.querySelector('#cwqr-btn').addEventListener('click', () => {
+                    const val = body.querySelector('#cwqr-input').value.trim();
+                    if (!val) return;
+                    const out = body.querySelector('#cwqr-out');
+                    out.innerHTML = '';
+                    if (typeof QRCode !== 'undefined') new QRCode(out, {text: val, width: 140, height: 140});
+                    else out.textContent = 'QR library not loaded';
+                });
+            }
+        },
+        'Attendance': {
+            icon: '📋', headerBg: '#b45309', headerColor: '#fff', width: 260,
+            render(body) {
+                const names = getStudentNames();
+                const state = {};
+                names.forEach(n => state[n] = 'present');
+                const render = () => {
+                    body.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:4px;max-height:200px;overflow-y:auto;">' +
+                        names.map(n => `<button data-n="${n}" style="font-size:0.72rem;padding:3px 8px;border-radius:6px;border:1.5px solid;cursor:pointer;font-family:inherit;background:${state[n]==='present'?'#dcfce7':state[n]==='absent'?'#fee2e2':'#fef9c3'};border-color:${state[n]==='present'?'#22c55e':state[n]==='absent'?'#ef4444':'#f59e0b'};color:${state[n]==='present'?'#15803d':state[n]==='absent'?'#b91c1c':'#92400e'};">${n}</button>`).join('') +
+                        '</div><div style="font-size:0.72rem;color:#888;margin-top:6px;text-align:center;">Click to cycle: present → absent → late</div>';
+                    body.querySelectorAll('[data-n]').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const cycle = {present:'absent',absent:'late',late:'present'};
+                            state[btn.dataset.n] = cycle[state[btn.dataset.n]];
+                            render();
+                        });
+                    });
+                };
+                render();
+            }
+        },
+        'Text Box': {
+            icon: '📝', width: 220,
+            render(body) {
+                body.innerHTML = `<textarea placeholder="Type here..." style="width:100%;box-sizing:border-box;height:100px;border:none;outline:none;resize:both;font-family:inherit;font-size:1rem;background:transparent;color:inherit;"></textarea>`;
+            }
+        },
+    };
+
+    // Map toolsData names that should spawn widgets vs open modals
+    const WIDGET_TOOL_NAMES = new Set([
+        'Traffic Light','Timer','Stopwatch','Clock','Name Picker','Sound Meter','QR Code','Attendance','Text Box'
+    ]);
+
+    function spawnCanvasWidget(name, x, y) {
+        const def = CANVAS_WIDGET_DEFS[name];
+        if (!def) return;
+        const widgetsLayer = document.getElementById('widgets-layer');
+        if (!widgetsLayer) return;
+        canvasWidgetZ++;
+        const el = document.createElement('div');
+        el.className = 'wb-canvas-widget';
+        el.style.left = (x || 60) + 'px';
+        el.style.top = (y || 60) + 'px';
+        el.style.zIndex = canvasWidgetZ;
+        if (def.width) el.style.width = def.width + 'px';
+        const hBg = def.headerBg ? `background:${def.headerBg};` : 'background:var(--accent,#6366f1);';
+        const hCol = def.headerColor ? `color:${def.headerColor};` : 'color:#fff;';
+        el.innerHTML = `<div class="cwid-header" style="${hBg}${hCol}">
+            <div class="cwid-title">${def.icon} ${name}</div>
+            <button class="cwid-close" style="${hCol}">✕</button>
+        </div><div class="cwid-body"></div>`;
+        widgetsLayer.appendChild(el);
+        def.render(el.querySelector('.cwid-body'), el);
+        el.querySelector('.cwid-close').addEventListener('click', () => {
+            if (el._cwCleanup) el._cwCleanup();
+            el.remove();
+        });
+        App.makeDraggable(el, el.querySelector('.cwid-header'));
+        el.addEventListener('mousedown', () => { canvasWidgetZ++; el.style.zIndex = canvasWidgetZ; });
+        return el;
+    }
+
+    // Wire canvas area as drop target
+    const canvasDropArea = document.getElementById('wb-canvas-area');
+    canvasDropArea.addEventListener('dragover', e => { e.preventDefault(); canvasDropArea.classList.add('drag-over'); });
+    canvasDropArea.addEventListener('dragleave', () => canvasDropArea.classList.remove('drag-over'));
+    canvasDropArea.addEventListener('drop', e => {
+        e.preventDefault();
+        canvasDropArea.classList.remove('drag-over');
+        const name = e.dataTransfer.getData('text/plain');
+        if (!name) return;
+        const rect = canvasDropArea.getBoundingClientRect();
+        const x = Math.max(0, e.clientX - rect.left - 80);
+        const y = Math.max(0, e.clientY - rect.top - 20);
+        spawnCanvasWidget(name, x, y);
+    });
+
     function renderToolsGrid(category) {
         const grid = document.getElementById('tp-tools-grid');
         grid.innerHTML = '';
@@ -956,8 +1196,22 @@ document.addEventListener('DOMContentLoaded', () => {
         tools.forEach(t => {
             const card = document.createElement('div');
             card.className = 'tp-tool-card';
+            card.draggable = WIDGET_TOOL_NAMES.has(t.name);
             card.innerHTML = `<span class="tp-tool-icon">${t.icon}</span><span class="tp-tool-name">${t.name}</span>`;
-            card.addEventListener('click', t.action);
+            if (WIDGET_TOOL_NAMES.has(t.name)) {
+                card.title = 'Drag onto board or click to add';
+                card.addEventListener('dragstart', e => {
+                    e.dataTransfer.setData('text/plain', t.name);
+                    e.dataTransfer.effectAllowed = 'copy';
+                });
+                card.addEventListener('click', () => {
+                    // Click: spawn at a staggered default position
+                    const existing = document.querySelectorAll('.wb-canvas-widget').length;
+                    spawnCanvasWidget(t.name, 40 + existing * 24, 40 + existing * 20);
+                });
+            } else {
+                card.addEventListener('click', t.action);
+            }
             grid.appendChild(card);
         });
     }
