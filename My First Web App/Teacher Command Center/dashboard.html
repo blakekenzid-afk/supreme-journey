@@ -132,61 +132,6 @@
             });
         });
 
-        // ===================== SCHEDULE =====================
-        const SCHED_ICONS = ['📚','🎨','🧮','📖','🏃','🍽️','⏰','🎵','🧪','💬','🌟','✏️','🖥️','🤸','🧘','📝','🔬','🌍','🎭','❤️'];
-        let schedItems = JSON.parse(localStorage.getItem('dashboard-schedule') || '[]');
-        let schedEditIndex = -1;
-        let selectedIcon = '📚';
-
-        function saveSchedule() { localStorage.setItem('dashboard-schedule', JSON.stringify(schedItems)); }
-
-        function toMins(t) { const [h,m] = t.split(':').map(Number); return h*60+m; }
-        function fmt12(t) {
-            const [h,m] = t.split(':').map(Number);
-            const ampm = h >= 12 ? 'PM' : 'AM';
-            return ((h%12)||12) + ':' + String(m).padStart(2,'0') + ' ' + ampm;
-        }
-
-        function renderSchedule() {
-            const list = document.getElementById('schedule-list');
-            if (!list) return;
-            if (schedItems.length === 0) {
-                list.innerHTML = '<div class="sched-empty"><i class="fa-solid fa-calendar-xmark"></i><p>No items yet — click Add to build your day</p></div>';
-            } else {
-                const nowMins = new Date().getHours()*60 + new Date().getMinutes();
-                schedItems.sort((a,b) => toMins(a.start) - toMins(b.start));
-                list.innerHTML = '';
-                schedItems.forEach((item, i) => {
-                    const startM = toMins(item.start), endM = toMins(item.end);
-                    const done = nowMins > endM;
-                    const active = nowMins >= startM && nowMins <= endM;
-                    const pct = done ? 100 : active ? Math.round(((nowMins-startM)/(endM-startM))*100) : 0;
-                    const div = document.createElement('div');
-                    div.className = 'sched-item' + (active ? ' active' : '') + (done ? ' done' : '');
-                    div.innerHTML = `
-                        <span class="sched-icon">${item.icon}</span>
-                        <div class="sched-info">
-                            <div class="sched-name">${item.title}</div>
-                            <div class="sched-time">${fmt12(item.start)} – ${fmt12(item.end)}</div>
-                            <div class="sched-progress"><div class="sched-progress-fill" style="width:${pct}%"></div></div>
-                        </div>
-                    `;
-                    div.addEventListener('click', () => openSchedModal(i));
-                    list.appendChild(div);
-                });
-            }
-            renderUpNext();
-        }
-
-        function renderUpNext() {
-            const el = document.getElementById('up-next-content');
-            if (!el) return;
-            const nowMins = new Date().getHours()*60 + new Date().getMinutes();
-            const sorted = [...schedItems].sort((a,b) => toMins(a.start)-toMins(b.start));
-            const current = sorted.find(i => nowMins >= toMins(i.start) && nowMins <= toMins(i.end));
-            const next = sorted.find(i => toMins(i.start) > nowMins);
-            const item = current || next;
-            if (!item) {
         // ===== SCHEDULE HELPERS =====
         const SCHED_ICONS = ['📚','🎨','🧮','📖','🏃','🍽️','⏰','🎵','🧪','💬','🌟','✏️','🖥️','🤸','🧘','📝','🔬','🌍','🎭','❤️'];
         let schedItems = JSON.parse(localStorage.getItem('dashboard-schedule') || '[]');
