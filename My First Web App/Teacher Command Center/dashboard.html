@@ -286,7 +286,7 @@
             schedEditIndex = editIndex;
             const isEdit = editIndex >= 0;
             document.getElementById('sched-modal-title').textContent = isEdit ? 'Edit Item' : 'Add Schedule Item';
-            document.getElementById('sched-delete-btn').classList.toggle('hidden', !isEdit);
+            document.getElementById('sched-delete-btn').style.display = isEdit ? 'inline-block' : 'none';
             const item = isEdit ? schedItems[editIndex] : null;
             document.getElementById('sched-title').value = item ? item.title : '';
             document.getElementById('sched-start').value = item ? item.start : '';
@@ -306,11 +306,12 @@
                 });
                 iconsEl.appendChild(btn);
             });
-            document.getElementById('sched-modal').classList.remove('hidden');
+            const m = document.getElementById('sched-modal');
+            m.style.display = 'flex';
             setTimeout(() => document.getElementById('sched-title').focus(), 50);
         }
 
-        function closeSchedModal() { document.getElementById('sched-modal').classList.add('hidden'); }
+        function closeSchedModal() { document.getElementById('sched-modal').style.display = 'none'; }
 
         function saveSchedItem() {
             const title = document.getElementById('sched-title').value.trim();
@@ -352,11 +353,11 @@
 
         // To-Dos
         function openTodos() {
-            document.getElementById('todo-modal').classList.remove('hidden');
+            document.getElementById('todo-modal').style.display = 'flex';
             renderTodos();
         }
         function closeTodos() {
-            document.getElementById('todo-modal').classList.add('hidden');
+            document.getElementById('todo-modal').style.display = 'none';
         }
         let todos = JSON.parse(localStorage.getItem('dashboard-todos') || '[]');
         function saveTodos() { localStorage.setItem('dashboard-todos', JSON.stringify(todos)); }
@@ -452,7 +453,7 @@
     </script>
 
     <!-- Schedule Add/Edit Modal -->
-    <div id="sched-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2000;display:flex;align-items:center;justify-content:center;" onclick="if(event.target===this)closeSchedModal()">
+    <div id="sched-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)closeSchedModal()">
         <div style="background:#fff;border-radius:16px;padding:24px;width:360px;max-width:95vw;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 40px rgba(0,0,0,0.2);">
             <div style="display:flex;align-items:center;justify-content:space-between;">
                 <span style="font-size:1.1rem;font-weight:600;"><i class="fa-solid fa-calendar-day" style="color:#6366f1;margin-right:8px;"></i><span id="sched-modal-title">Add Schedule Item</span></span>
@@ -476,14 +477,14 @@
                 </div>
             </div>
             <div style="display:flex;gap:8px;justify-content:flex-end;">
-                <button id="sched-delete-btn" class="hidden" onclick="deleteSchedItem()" style="background:#fee2e2;color:#ef4444;border:none;border-radius:10px;padding:10px 16px;cursor:pointer;font-size:0.9rem;">Delete</button>
+                <button id="sched-delete-btn" onclick="deleteSchedItem()" style="display:none;background:#fee2e2;color:#ef4444;border:none;border-radius:10px;padding:10px 16px;cursor:pointer;font-size:0.9rem;">Delete</button>
                 <button onclick="saveSchedItem()" style="background:#6366f1;color:#fff;border:none;border-radius:10px;padding:10px 20px;cursor:pointer;font-size:0.9rem;font-weight:600;">Save</button>
             </div>
         </div>
     </div>
 
     <!-- To-Do Modal -->
-    <div id="todo-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2000;display:flex;align-items:center;justify-content:center;" onclick="if(event.target===this)closeTodos()">
+    <div id="todo-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)closeTodos()">
         <div style="background:#fff;border-radius:16px;padding:24px;width:380px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 40px rgba(0,0,0,0.2);">
             <div style="display:flex;align-items:center;justify-content:space-between;">
                 <span style="font-size:1.1rem;font-weight:600;"><i class="fa-solid fa-list-ul" style="color:#6366f1;margin-right:8px;"></i>To-Dos</span>
