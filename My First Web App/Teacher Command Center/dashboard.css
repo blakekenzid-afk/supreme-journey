@@ -1,3 +1,5 @@
+.hidden { display: none !important; }
+
 :root {
     --sidebar-width: 260px;
     --sidebar-bg: #ffffff;
