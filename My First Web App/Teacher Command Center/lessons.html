@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacherstack - Lessons</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .lessons-wrap { display:flex;flex-direction:column;height:100%;overflow:hidden; }
+        .lessons-header { display:flex;align-items:center;justify-content:space-between;padding:20px 24px 12px;flex-wrap:wrap;gap:10px; }
+        .lessons-title { font-size:1.4rem;font-weight:700;color:#222;display:flex;align-items:center;gap:10px; }
+        .lesson-btn { display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border:none;border-radius:10px;font-family:inherit;font-size:0.88rem;font-weight:600;cursor:pointer;transition:background 0.15s; }
+        .lesson-btn.primary { background:#6366f1;color:#fff; }
+        .lesson-btn.primary:hover { background:#4f46e5; }
+        .lesson-btn.secondary { background:#f3f4f6;color:#555; }
+        .lesson-btn.secondary:hover { background:#e5e7eb; }
+        .lesson-btn.danger { background:#fee2e2;color:#dc2626; }
+
+        /* Lesson list */
+        .lessons-body { flex:1;overflow-y:auto;padding:0 24px 24px;display:flex;flex-direction:column;gap:12px; }
+        .lesson-card { background:#fff;border-radius:14px;border:1.5px solid #e0e0e0;padding:18px 20px;display:flex;align-items:flex-start;gap:14px;cursor:pointer;transition:box-shadow 0.15s,border-color 0.15s; }
+        .lesson-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.09);border-color:#c7d2fe; }
+        .lesson-icon { width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0; }
+        .lesson-info { flex:1;min-width:0; }
+        .lesson-name { font-size:0.98rem;font-weight:700;color:#222;margin-bottom:4px; }
+        .lesson-meta { font-size:0.78rem;color:#888;display:flex;gap:12px;flex-wrap:wrap; }
+        .lesson-tag { display:inline-block;padding:2px 8px;border-radius:6px;font-size:0.72rem;font-weight:600; }
+        .lesson-actions { display:flex;gap:6px;flex-shrink:0; }
+        .icon-btn { background:none;border:none;cursor:pointer;color:#bbb;font-size:0.9rem;padding:6px;border-radius:8px;transition:color 0.15s,background 0.15s; }
+        .icon-btn:hover { color:#6366f1;background:#ede9fe; }
+        .icon-btn.red:hover { color:#dc2626;background:#fee2e2; }
+
+        .empty-state { flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#bbb;gap:12px;padding:40px; }
+        .empty-state i { font-size:3rem;opacity:0.35; }
+        .empty-state p { font-size:0.9rem;text-align:center; }
+
+        /* Subject color dots */
+        .subj-reading { background:#fce7f3;color:#be185d; }
+        .subj-math    { background:#dbeafe;color:#1e40af; }
+        .subj-science { background:#d1fae5;color:#065f46; }
+        .subj-writing { background:#fef3c7;color:#92400e; }
+        .subj-social  { background:#ede9fe;color:#5b21b6; }
+        .subj-art     { background:#fee2e2;color:#991b1b; }
+        .subj-pe      { background:#dcfce7;color:#166534; }
+        .subj-music   { background:#fdf4ff;color:#86198f; }
+        .subj-other   { background:#f3f4f6;color:#374151; }
+
+        .main-content { overflow-y:auto; }
+
+        /* Modal */
+        .lm-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:2000;align-items:center;justify-content:center; }
+        .lm-box { background:#fff;border-radius:18px;padding:0;width:540px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,0.22);overflow:hidden; }
+        .lm-header { padding:20px 24px;border-bottom:1.5px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0; }
+        .lm-body { flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:14px; }
+        .lm-footer { padding:16px 24px;border-top:1.5px solid #f0f0f0;display:flex;gap:8px;justify-content:flex-end;flex-shrink:0; }
+        .lm-label { font-size:0.78rem;color:#888;display:block;margin-bottom:5px;font-weight:500; }
+        .lm-input { width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none; }
+        .lm-input:focus { border-color:#6366f1; }
+        textarea.lm-input { resize:vertical;min-height:80px; }
+        .subj-picker { display:flex;flex-wrap:wrap;gap:6px; }
+        .subj-pick-btn { padding:5px 12px;border-radius:8px;border:2px solid transparent;font-size:0.78rem;font-weight:600;cursor:pointer;transition:border-color 0.12s; }
+        .subj-pick-btn.selected { border-color:#6366f1 !important; }
+
+        /* View modal */
+        .section-block { background:#f9fafb;border-radius:10px;padding:12px 14px; }
+        .section-label { font-size:0.72rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px; }
+        .section-text { font-size:0.88rem;color:#333;white-space:pre-wrap;line-height:1.5; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="profile-icon">R</div>
+            <div class="class-info">
+                <span class="class-name">Regulation Sta...</span>
+                <span class="grade">Grade K</span>
+            </div>
+            <i class="fa-solid fa-chevron-down toggle-icon" aria-hidden="true"></i>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="dashboard.html" class="nav-item"><i class="fa-solid fa-table-columns"></i><span>Dashboard</span></a>
+            <a href="attendance.html" class="nav-item"><i class="fa-solid fa-user-check"></i><span>Attendance</span></a>
+            <a href="whiteboard.html" class="nav-item"><i class="fa-solid fa-display"></i><span>Display Tools</span></a>
+            <a href="students.html" class="nav-item"><i class="fa-solid fa-users"></i><span>Students</span></a>
+            <div class="nav-section">PLANNING</div>
+            <a href="planner.html" class="nav-item"><i class="fa-solid fa-calendar-days"></i><span>Planner</span></a>
+            <a href="lessons.html" class="nav-item active"><i class="fa-solid fa-book-open"></i><span>Lessons</span></a>
+            <a href="library.html" class="nav-item"><i class="fa-solid fa-bookmark"></i><span>Library</span></a>
+        </nav>
+        <div class="sidebar-footer user-profile">
+            <div class="user-avatar">T</div>
+            <div class="user-info">
+                <span class="user-name">Kenzi Young</span>
+                <span class="user-email">kenzi@gmail.com</span>
+            </div>
+            <i class="fa-solid fa-chevron-up"></i>
+        </div>
+    </aside>
+
+    <main class="main-content light-bg">
+        <header class="top-nav">
+            <div class="nav-left">
+                <i class="fa-solid fa-bars menu-toggle"></i>
+                <span class="brand-name">Teacherstack</span>
+            </div>
+        </header>
+
+        <div class="lessons-wrap">
+            <div class="lessons-header">
+                <div class="lessons-title"><i class="fa-solid fa-book-open" style="color:#6366f1;"></i> Lesson Plans</div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <select id="filter-subject" style="padding:8px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.85rem;outline:none;cursor:pointer;" onchange="renderLessons()">
+                        <option value="">All Subjects</option>
+                        <option value="reading">Reading</option>
+                        <option value="math">Math</option>
+                        <option value="science">Science</option>
+                        <option value="writing">Writing</option>
+                        <option value="social">Social Studies</option>
+                        <option value="art">Art</option>
+                        <option value="pe">PE</option>
+                        <option value="music">Music</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <button class="lesson-btn primary" onclick="openLessonModal()"><i class="fa-solid fa-plus"></i> New Lesson</button>
+                </div>
+            </div>
+            <div class="lessons-body" id="lessons-body"></div>
+        </div>
+    </main>
+</div>
+
+<!-- Create / Edit Modal -->
+<div id="lesson-modal" class="lm-overlay" onclick="if(event.target===this)closeLessonModal()">
+    <div class="lm-box">
+        <div class="lm-header">
+            <span style="font-size:1.05rem;font-weight:700;"><i class="fa-solid fa-book-open" style="color:#6366f1;margin-right:8px;"></i><span id="lm-modal-title">New Lesson</span></span>
+            <button onclick="closeLessonModal()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#aaa;">✕</button>
+        </div>
+        <div class="lm-body">
+            <div>
+                <label class="lm-label">Lesson Title *</label>
+                <input id="lm-title" class="lm-input" type="text" placeholder="e.g. Letter Sounds — Short A">
+            </div>
+            <div>
+                <label class="lm-label">Subject</label>
+                <div class="subj-picker" id="lm-subject-picker"></div>
+            </div>
+            <div style="display:flex;gap:10px;">
+                <div style="flex:1;">
+                    <label class="lm-label">Grade Level</label>
+                    <input id="lm-grade" class="lm-input" type="text" placeholder="e.g. K">
+                </div>
+                <div style="flex:1;">
+                    <label class="lm-label">Duration</label>
+                    <input id="lm-duration" class="lm-input" type="text" placeholder="e.g. 30 min">
+                </div>
+            </div>
+            <div>
+                <label class="lm-label">Objective</label>
+                <textarea id="lm-objective" class="lm-input" placeholder="Students will be able to..."></textarea>
+            </div>
+            <div>
+                <label class="lm-label">Materials</label>
+                <textarea id="lm-materials" class="lm-input" placeholder="List materials needed..."></textarea>
+            </div>
+            <div>
+                <label class="lm-label">Instructions / Activity</label>
+                <textarea id="lm-instructions" class="lm-input" style="min-height:110px;" placeholder="Step-by-step lesson plan..."></textarea>
+            </div>
+            <div>
+                <label class="lm-label">Assessment / Notes</label>
+                <textarea id="lm-assessment" class="lm-input" placeholder="How will you assess understanding?"></textarea>
+            </div>
+        </div>
+        <div class="lm-footer">
+            <button id="lm-delete-btn" class="lesson-btn danger" style="display:none;margin-right:auto;" onclick="deleteLessonConfirm()"><i class="fa-solid fa-trash"></i> Delete</button>
+            <button class="lesson-btn secondary" onclick="closeLessonModal()">Cancel</button>
+            <button class="lesson-btn primary" onclick="saveLesson()"><i class="fa-solid fa-floppy-disk"></i> Save Lesson</button>
+        </div>
+    </div>
+</div>
+
+<!-- View Modal -->
+<div id="view-modal" class="lm-overlay" onclick="if(event.target===this)closeViewModal()">
+    <div class="lm-box">
+        <div class="lm-header">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div id="view-icon" style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;"></div>
+                <div>
+                    <div id="view-title" style="font-size:1.05rem;font-weight:700;color:#222;"></div>
+                    <div id="view-meta" style="font-size:0.78rem;color:#888;margin-top:2px;"></div>
+                </div>
+            </div>
+            <div style="display:flex;gap:6px;">
+                <button id="view-edit-btn" class="lesson-btn secondary" style="padding:7px 14px;font-size:0.82rem;" onclick="editFromView()"><i class="fa-solid fa-pencil"></i> Edit</button>
+                <button onclick="closeViewModal()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#aaa;">✕</button>
+            </div>
+        </div>
+        <div class="lm-body" id="view-body"></div>
+    </div>
+</div>
+
+<script>
+    const SUBJECTS = [
+        {key:'reading',label:'Reading'},
+        {key:'math',label:'Math'},
+        {key:'science',label:'Science'},
+        {key:'writing',label:'Writing'},
+        {key:'social',label:'Social Studies'},
+        {key:'art',label:'Art'},
+        {key:'pe',label:'PE'},
+        {key:'music',label:'Music'},
+        {key:'other',label:'Other'},
+    ];
+
+    let lessons = JSON.parse(localStorage.getItem('teacherstack-lessons') || '[]');
+    let editingId = null;
+    let viewingId = null;
+    let selectedSubject = '';
+
+    function saveLessons() { localStorage.setItem('teacherstack-lessons', JSON.stringify(lessons)); }
+
+    function subjectClass(key) { return 'subj-' + (key || 'other'); }
+    function subjectLabel(key) { return (SUBJECTS.find(s => s.key === key) || {label:'Other'}).label; }
+
+    function renderLessons() {
+        const body = document.getElementById('lessons-body');
+        const filter = document.getElementById('filter-subject').value;
+        const list = filter ? lessons.filter(l => l.subject === filter) : lessons;
+        if (list.length === 0) {
+            body.innerHTML = `<div class="empty-state"><i class="fa-solid fa-book-open"></i><p>${filter ? 'No lessons for this subject yet.' : 'No lesson plans yet — click <strong>New Lesson</strong> to create your first one.'}</p></div>`;
+            return;
+        }
+        body.innerHTML = '';
+        list.slice().reverse().forEach(lesson => {
+            const card = document.createElement('div');
+            card.className = 'lesson-card';
+            const scls = subjectClass(lesson.subject);
+            card.innerHTML = `
+                <div class="lesson-icon ${scls}">${subjectEmoji(lesson.subject)}</div>
+                <div class="lesson-info">
+                    <div class="lesson-name">${lesson.title}</div>
+                    <div class="lesson-meta">
+                        <span class="lesson-tag ${scls}">${subjectLabel(lesson.subject)}</span>
+                        ${lesson.grade ? `<span>Grade ${lesson.grade}</span>` : ''}
+                        ${lesson.duration ? `<span><i class="fa-regular fa-clock"></i> ${lesson.duration}</span>` : ''}
+                        <span>${new Date(lesson.created).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>
+                    </div>
+                </div>
+                <div class="lesson-actions">
+                    <button class="icon-btn" title="Edit" onclick="event.stopPropagation();openLessonModal('${lesson.id}')"><i class="fa-solid fa-pencil"></i></button>
+                    <button class="icon-btn red" title="Delete" onclick="event.stopPropagation();deleteLesson('${lesson.id}')"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            `;
+            card.addEventListener('click', () => openViewModal(lesson.id));
+            body.appendChild(card);
+        });
+    }
+
+    function subjectEmoji(key) {
+        const map = {reading:'📖',math:'🔢',science:'🔬',writing:'✏️',social:'🌍',art:'🎨',pe:'🏃',music:'🎵',other:'📋'};
+        return map[key] || '📋';
+    }
+
+    // ===== Create / Edit Modal =====
+    function buildSubjectPicker(selected) {
+        const picker = document.getElementById('lm-subject-picker');
+        picker.innerHTML = '';
+        selectedSubject = selected || '';
+        SUBJECTS.forEach(s => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'subj-pick-btn ' + subjectClass(s.key) + (s.key === selectedSubject ? ' selected' : '');
+            btn.textContent = subjectEmoji(s.key) + ' ' + s.label;
+            btn.addEventListener('click', () => {
+                selectedSubject = s.key;
+                picker.querySelectorAll('.subj-pick-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+            });
+            picker.appendChild(btn);
+        });
+    }
+
+    function openLessonModal(id) {
+        editingId = id || null;
+        const lesson = id ? lessons.find(l => l.id === id) : null;
+        document.getElementById('lm-modal-title').textContent = lesson ? 'Edit Lesson' : 'New Lesson';
+        document.getElementById('lm-delete-btn').style.display = lesson ? 'inline-flex' : 'none';
+        document.getElementById('lm-title').value = lesson ? lesson.title : '';
+        document.getElementById('lm-grade').value = lesson ? (lesson.grade || '') : '';
+        document.getElementById('lm-duration').value = lesson ? (lesson.duration || '') : '';
+        document.getElementById('lm-objective').value = lesson ? (lesson.objective || '') : '';
+        document.getElementById('lm-materials').value = lesson ? (lesson.materials || '') : '';
+        document.getElementById('lm-instructions').value = lesson ? (lesson.instructions || '') : '';
+        document.getElementById('lm-assessment').value = lesson ? (lesson.assessment || '') : '';
+        buildSubjectPicker(lesson ? lesson.subject : '');
+        document.getElementById('lesson-modal').style.display = 'flex';
+        setTimeout(() => document.getElementById('lm-title').focus(), 50);
+    }
+
+    function closeLessonModal() { document.getElementById('lesson-modal').style.display = 'none'; }
+
+    function saveLesson() {
+        const title = document.getElementById('lm-title').value.trim();
+        if (!title) { document.getElementById('lm-title').focus(); return; }
+        const data = {
+            id: editingId || ('lesson-' + Date.now()),
+            title,
+            subject: selectedSubject,
+            grade: document.getElementById('lm-grade').value.trim(),
+            duration: document.getElementById('lm-duration').value.trim(),
+            objective: document.getElementById('lm-objective').value.trim(),
+            materials: document.getElementById('lm-materials').value.trim(),
+            instructions: document.getElementById('lm-instructions').value.trim(),
+            assessment: document.getElementById('lm-assessment').value.trim(),
+            created: editingId ? (lessons.find(l => l.id === editingId) || {}).created || new Date().toISOString() : new Date().toISOString(),
+        };
+        if (editingId) {
+            const idx = lessons.findIndex(l => l.id === editingId);
+            if (idx >= 0) lessons[idx] = data;
+        } else {
+            lessons.push(data);
+        }
+        saveLessons();
+        renderLessons();
+        closeLessonModal();
+    }
+
+    function deleteLesson(id) {
+        if (!confirm('Delete this lesson plan?')) return;
+        lessons = lessons.filter(l => l.id !== id);
+        saveLessons();
+        renderLessons();
+    }
+    function deleteLessonConfirm() { if (editingId) { deleteLesson(editingId); closeLessonModal(); } }
+
+    // ===== View Modal =====
+    function openViewModal(id) {
+        const lesson = lessons.find(l => l.id === id);
+        if (!lesson) return;
+        viewingId = id;
+        document.getElementById('view-title').textContent = lesson.title;
+        const meta = [subjectLabel(lesson.subject), lesson.grade ? 'Grade ' + lesson.grade : '', lesson.duration].filter(Boolean).join(' · ');
+        document.getElementById('view-meta').textContent = meta;
+        const scls = subjectClass(lesson.subject);
+        document.getElementById('view-icon').className = 'subj-' + (lesson.subject || 'other');
+        document.getElementById('view-icon').style.cssText = `width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;`;
+        document.getElementById('view-icon').textContent = subjectEmoji(lesson.subject);
+
+        const sections = [
+            {label:'Objective', text:lesson.objective},
+            {label:'Materials', text:lesson.materials},
+            {label:'Instructions', text:lesson.instructions},
+            {label:'Assessment / Notes', text:lesson.assessment},
+        ].filter(s => s.text);
+
+        document.getElementById('view-body').innerHTML = sections.length
+            ? sections.map(s => `<div class="section-block"><div class="section-label">${s.label}</div><div class="section-text">${s.text}</div></div>`).join('')
+            : '<p style="color:#bbb;font-size:0.88rem;text-align:center;padding:20px 0;">No details added yet.</p>';
+
+        document.getElementById('view-modal').style.display = 'flex';
+    }
+    function closeViewModal() { document.getElementById('view-modal').style.display = 'none'; }
+    function editFromView() { closeViewModal(); openLessonModal(viewingId); }
+
+    renderLessons();
+</script>
+</body>
+</html>

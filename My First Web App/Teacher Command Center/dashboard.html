@@ -46,11 +46,11 @@
                     <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
                     <span>Planner</span>
                 </a>
-                <a href="#" class="nav-item">
+                <a href="lessons.html" class="nav-item">
                     <i class="fa-solid fa-book-open" aria-hidden="true"></i>
                     <span>Lessons</span>
                 </a>
-                <a href="#" class="nav-item">
+                <a href="library.html" class="nav-item">
                     <i class="fa-solid fa-bookmark" aria-hidden="true"></i>
                     <span>Library</span>
                 </a>
@@ -82,7 +82,7 @@
                         </label>
                         <span>Make this my landing page</span>
                     </div>
-                    <button class="edit-btn"><i class="fa-solid fa-pencil" aria-hidden="true"></i> Edit Dashboard</button>
+                    <button class="edit-btn" onclick="openDashSettings()"><i class="fa-solid fa-pencil" aria-hidden="true"></i> Edit Dashboard</button>
                 </div>
             </header>
 
@@ -93,7 +93,7 @@
                         <i class="fa-solid fa-chalkboard" aria-hidden="true"></i>
                         <span>Boards</span>
                     </button>
-                    <button class="action-card border-red" onclick="window.location.href='whiteboard.html'">
+                    <button class="action-card border-red" onclick="openStationsModal()">
                         <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
                         <span>Stations</span>
                     </button>
@@ -543,6 +543,51 @@
         .up-next-empty p { font-size:0.85rem; }
     </style>
 
+<!-- ===== Edit Dashboard Settings Modal ===== -->
+<div id="ds-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center;" onclick="if(event.target===this)closeDashSettings()">
+  <div style="background:#fff;border-radius:18px;padding:24px;width:400px;max-width:96vw;display:flex;flex-direction:column;gap:14px;box-shadow:0 24px 48px rgba(0,0,0,0.22);">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:1.05rem;font-weight:700;"><i class="fa-solid fa-pencil" style="color:#6366f1;margin-right:8px;"></i>Edit Dashboard</span>
+      <button onclick="closeDashSettings()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#aaa;">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div>
+        <label style="font-size:0.78rem;color:#888;display:block;margin-bottom:4px;">Class Name</label>
+        <input id="ds-class-name" type="text" placeholder="e.g. Regulation Station" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;">
+      </div>
+      <div>
+        <label style="font-size:0.78rem;color:#888;display:block;margin-bottom:4px;">Grade</label>
+        <input id="ds-grade" type="text" placeholder="e.g. Grade K" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;">
+      </div>
+      <div>
+        <label style="font-size:0.78rem;color:#888;display:block;margin-bottom:4px;">Teacher Name</label>
+        <input id="ds-teacher" type="text" placeholder="e.g. Ms. Young" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;">
+      </div>
+      <div>
+        <label style="font-size:0.78rem;color:#888;display:block;margin-bottom:4px;">Email</label>
+        <input id="ds-email" type="email" placeholder="e.g. kenzi@gmail.com" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;">
+      </div>
+    </div>
+    <button onclick="saveDashSettings()" style="background:#6366f1;color:#fff;border:none;border-radius:10px;padding:11px;font-size:0.95rem;font-weight:600;cursor:pointer;">Save Changes</button>
+  </div>
+</div>
+
+<!-- ===== Stations Modal ===== -->
+<div id="stations-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center;" onclick="if(event.target===this)closeStationsModal()">
+  <div style="background:#fff;border-radius:18px;padding:24px;width:560px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;gap:14px;box-shadow:0 24px 48px rgba(0,0,0,0.22);overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:1.05rem;font-weight:700;"><i class="fa-solid fa-arrows-rotate" style="color:#ef4444;margin-right:8px;"></i>Stations</span>
+      <button onclick="closeStationsModal()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#aaa;">✕</button>
+    </div>
+    <div style="font-size:0.82rem;color:#888;">Student groups for station rotations. Click a group label to rename it.</div>
+    <div id="stations-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;overflow-y:auto;flex:1;"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+      <button onclick="rotateStations()" style="background:#fef3c7;color:#d97706;border:none;border-radius:10px;padding:10px 18px;font-size:0.88rem;font-weight:600;cursor:pointer;"><i class="fa-solid fa-rotate"></i> Rotate Groups</button>
+      <button onclick="window.location.href='whiteboard.html#random'" style="background:#ede9fe;color:#6366f1;border:none;border-radius:10px;padding:10px 18px;font-size:0.88rem;font-weight:600;cursor:pointer;"><i class="fa-solid fa-shuffle"></i> Random Picker</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== Log Behavior Modal ===== -->
 <div id="behavior-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center;" onclick="if(event.target===this)closeBehaviorModal()">
   <div style="background:#fff;border-radius:18px;padding:24px;width:400px;max-width:96vw;display:flex;flex-direction:column;gap:14px;box-shadow:0 24px 48px rgba(0,0,0,0.22);">
@@ -649,6 +694,89 @@
         log.push({ type: 'note', text, date: new Date().toISOString() });
         saveStudentLog(name, log);
         closeNoteModal();
+    }
+
+    // ===== Edit Dashboard Settings =====
+    function openDashSettings() {
+        // Load saved values
+        const cn = localStorage.getItem('dash-class-name') || 'Regulation Station';
+        const gd = localStorage.getItem('dash-grade') || 'Grade K';
+        const te = localStorage.getItem('dash-teacher') || 'Kenzi Young';
+        const em = localStorage.getItem('dash-email') || 'kenzi@gmail.com';
+        document.getElementById('ds-class-name').value = cn;
+        document.getElementById('ds-grade').value = gd;
+        document.getElementById('ds-teacher').value = te;
+        document.getElementById('ds-email').value = em;
+        document.getElementById('ds-modal').style.display = 'flex';
+    }
+    function closeDashSettings() { document.getElementById('ds-modal').style.display = 'none'; }
+    function saveDashSettings() {
+        const cn = document.getElementById('ds-class-name').value.trim();
+        const gd = document.getElementById('ds-grade').value.trim();
+        const te = document.getElementById('ds-teacher').value.trim();
+        const em = document.getElementById('ds-email').value.trim();
+        if (cn) { localStorage.setItem('dash-class-name','dash-class-name'); localStorage.setItem('dash-class-name', cn); }
+        if (gd) localStorage.setItem('dash-grade', gd);
+        if (te) localStorage.setItem('dash-teacher', te);
+        if (em) localStorage.setItem('dash-email', em);
+        // Apply live
+        document.querySelectorAll('.class-name').forEach(el => el.textContent = cn || el.textContent);
+        document.querySelectorAll('.grade').forEach(el => el.textContent = gd || el.textContent);
+        document.querySelectorAll('.user-name').forEach(el => el.textContent = te || el.textContent);
+        document.querySelectorAll('.user-email').forEach(el => el.textContent = em || el.textContent);
+        closeDashSettings();
+    }
+    // Apply saved settings on load
+    (function applyDashSettings() {
+        const cn = localStorage.getItem('dash-class-name');
+        const gd = localStorage.getItem('dash-grade');
+        const te = localStorage.getItem('dash-teacher');
+        const em = localStorage.getItem('dash-email');
+        if (cn) document.querySelectorAll('.class-name').forEach(el => el.textContent = cn);
+        if (gd) document.querySelectorAll('.grade').forEach(el => el.textContent = gd);
+        if (te) document.querySelectorAll('.user-name').forEach(el => el.textContent = te);
+        if (em) document.querySelectorAll('.user-email').forEach(el => el.textContent = em);
+    })();
+
+    // ===== Stations Modal =====
+    const STATION_GROUPS = ['Group 1','Group 2','Group 3','Group 4','Group 5','Group 6'];
+    let stationGroups = JSON.parse(localStorage.getItem('station-groups') || 'null');
+    if (!stationGroups) {
+        // Default: split students evenly
+        const names = typeof students !== 'undefined' ? students.map(s => s.name) : [];
+        stationGroups = STATION_GROUPS.map((label, i) => ({
+            label,
+            members: names.filter((_, ni) => ni % STATION_GROUPS.length === i)
+        }));
+    }
+    function openStationsModal() {
+        renderStations();
+        document.getElementById('stations-modal').style.display = 'flex';
+    }
+    function closeStationsModal() { document.getElementById('stations-modal').style.display = 'none'; }
+    function renderStations() {
+        const grid = document.getElementById('stations-grid');
+        const COLORS = ['#e0e7ff','#fce7f3','#d1fae5','#fef3c7','#fee2e2','#e0f2fe'];
+        const TCOLORS = ['#3730a3','#9d174d','#065f46','#92400e','#991b1b','#0c4a6e'];
+        grid.innerHTML = '';
+        stationGroups.forEach((group, gi) => {
+            const card = document.createElement('div');
+            card.style.cssText = `background:${COLORS[gi%COLORS.length]};border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;`;
+            card.innerHTML = `
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <input value="${group.label}" style="font-size:0.9rem;font-weight:700;color:${TCOLORS[gi%TCOLORS.length]};background:none;border:none;outline:none;width:100%;font-family:inherit;" onchange="stationGroups[${gi}].label=this.value;saveStations();">
+                </div>
+                <div style="font-size:0.8rem;color:#555;min-height:40px;">${group.members.join(', ') || '<em style="color:#aaa">No members</em>'}</div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+    function saveStations() { localStorage.setItem('station-groups', JSON.stringify(stationGroups)); }
+    function rotateStations() {
+        const last = stationGroups.pop();
+        stationGroups.unshift(last);
+        saveStations();
+        renderStations();
     }
 </script>
 </body>

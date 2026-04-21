@@ -193,17 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     setupTabs('.bg-tab', 'bg-');
     
-    // Toggle aria states for bg-img-cat
-    document.querySelectorAll('.bg-img-cat').forEach(cat => {
-        cat.addEventListener('click', () => {
-            document.querySelectorAll('.bg-img-cat').forEach(c => {
-                c.classList.remove('active');
-                c.setAttribute('aria-selected', 'false');
-            });
-            cat.classList.add('active');
-            cat.setAttribute('aria-selected', 'true');
-        });
-    });
+    // Toggle aria states for bg-img-cat — grid rendering handled in bg image section below
 
     // Toggle aria states for bg-option
     document.querySelectorAll('.bg-option').forEach(opt => {
@@ -323,18 +313,66 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function searchYouTube(query) {
         if (!query) return;
-        // Show classroom-relevant educational suggestions as clickable shortcuts
+        let apiKey = localStorage.getItem('yt-api-key');
+        if (!apiKey) {
+            apiKey = prompt(
+                'To search YouTube, you need a free YouTube Data API key.\n\n' +
+                '1. Go to console.cloud.google.com (free Google account)\n' +
+                '2. Create a project → Enable "YouTube Data API v3"\n' +
+                '3. Go to Credentials → Create API Key\n' +
+                '4. Paste it here:\n\n' +
+                '(Or leave blank to see educational suggestions instead)'
+            );
+            if (apiKey && apiKey.trim()) {
+                localStorage.setItem('yt-api-key', apiKey.trim());
+            } else {
+                // Fall back to curated suggestions
+                showYtSuggestions(query);
+                return;
+            }
+        }
+        ytResults.innerHTML = '<div class="media-hint">Searching YouTube...</div>';
+        fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&safeSearch=strict&maxResults=8&key=${encodeURIComponent(apiKey.trim())}`)
+            .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+            .then(data => {
+                ytResults.innerHTML = '';
+                if (!data.items || data.items.length === 0) {
+                    ytResults.innerHTML = '<div class="media-hint">No results found. Try different words.</div>';
+                    return;
+                }
+                data.items.forEach(item => {
+                    const vid = item.id.videoId;
+                    const title = item.snippet.title;
+                    const thumb = item.snippet.thumbnails.default.url;
+                    const div = document.createElement('div');
+                    div.className = 'yt-result-item';
+                    div.innerHTML = `<img src="${thumb}" alt="${title}"><span>${title}</span>`;
+                    div.addEventListener('click', () => playVideo(vid));
+                    ytResults.appendChild(div);
+                });
+            })
+            .catch(err => {
+                localStorage.removeItem('yt-api-key');
+                ytResults.innerHTML = '<div class="media-hint">Search failed — your API key may be invalid or quota exceeded. It has been cleared. Click Search again to re-enter it.</div>';
+            });
+    }
+
+    function showYtSuggestions(query) {
         const suggestions = [
-            { id: 'RF4WHkOHivQ', title: 'Counting to 100 - Kindergarten', thumb: 'https://img.youtube.com/vi/RF4WHkOHivQ/mqdefault.jpg' },
-            { id: '1v24noaXuFg', title: 'Phonics Song for Kids', thumb: 'https://img.youtube.com/vi/1v24noaXuFg/mqdefault.jpg' },
-            { id: 'tuFd8C8AFSQ', title: 'Brain Break - Move & Freeze', thumb: 'https://img.youtube.com/vi/tuFd8C8AFSQ/mqdefault.jpg' },
-            { id: 'BELlZKpi1Zs', title: 'Alphabet Song A-Z', thumb: 'https://img.youtube.com/vi/BELlZKpi1Zs/mqdefault.jpg' }
+            { id: 'RF4WHkOHivQ', title: 'Counting to 100 — Kindergarten' },
+            { id: '1v24noaXuFg', title: 'Phonics Song for Kids' },
+            { id: 'tuFd8C8AFSQ', title: 'Brain Break — Move & Freeze' },
+            { id: 'BELlZKpi1Zs', title: 'Alphabet Song A-Z' },
+            { id: '6Cv8SOfmBMw', title: 'Days of the Week Song' },
+            { id: 'pnUMy0exTXQ', title: 'Shapes Song for Kids' },
+            { id: 'DR-cfDsHx7A', title: 'Colors Song — Learn Colors' },
+            { id: 'W1XRkRWFbkk', title: 'Sight Words — Pre-K & K' },
         ];
-        ytResults.innerHTML = '<div class="media-hint" style="font-size:0.78rem;margin-bottom:8px;">💡 Tip: Paste any YouTube link in the box above to play it directly. Or click a suggestion below:</div>';
+        ytResults.innerHTML = '<div class="media-hint" style="font-size:0.78rem;margin-bottom:8px;">No API key set — showing educational suggestions. Add a YouTube API key to search freely.<br><button style="margin-top:6px;background:#6366f1;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;" onclick="localStorage.removeItem(\'yt-api-key\');document.getElementById(\'yt-search-btn\').click()">Set API Key</button></div>';
         suggestions.forEach(v => {
             const div = document.createElement('div');
             div.className = 'yt-result-item';
-            div.innerHTML = `<img src="${v.thumb}" alt="${v.title}"><span>${v.title}</span>`;
+            div.innerHTML = `<img src="https://img.youtube.com/vi/${v.id}/mqdefault.jpg" alt="${v.title}"><span>${v.title}</span>`;
             div.addEventListener('click', () => playVideo(v.id));
             ytResults.appendChild(div);
         });
@@ -367,8 +405,11 @@ document.addEventListener('DOMContentLoaded', () => {
     imgSearchBtn?.addEventListener('click', () => searchImages(imgSearchInput.value));
     imgSearchInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchImages(imgSearchInput.value); });
     
-    ytSearchBtn?.addEventListener('click', () => searchYouTube(ytSearchInput.value));
-    ytSearchInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchYouTube(ytSearchInput.value); });
+    ytSearchBtn?.addEventListener('click', () => {
+        const q = ytSearchInput.value.trim();
+        if (q) searchYouTube(q); else showYtSuggestions('');
+    });
+    ytSearchInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchYouTube(e.currentTarget.value.trim()); });
 
     document.getElementById('yt-fw-close')?.addEventListener('click', () => {
         ytFloatWidget.classList.add('hidden');
@@ -627,37 +668,82 @@ document.addEventListener('DOMContentLoaded', () => {
         App.closeModal('modal-background');
     });
 
-    // Background image grid — themed gradient backgrounds
+    // Background image grid — themed backgrounds by category
     const bgImageGrid = document.getElementById('bg-image-grid');
     if (bgImageGrid) {
-        const bgThemes = [
-            { label: 'Sunny Day',    bg: 'linear-gradient(to bottom, #87CEEB 0%, #fffde7 60%, #a5d6a7 100%)' },
-            { label: 'Night Sky',    bg: 'linear-gradient(to bottom, #0d1b2a 0%, #1a237e 50%, #283593 100%)' },
-            { label: 'Ocean',        bg: 'linear-gradient(to bottom, #29b6f6 0%, #0277bd 60%, #01579b 100%)' },
-            { label: 'Sunset',       bg: 'linear-gradient(to bottom right, #ff7043, #ffa726, #ffee58)' },
-            { label: 'Forest',       bg: 'linear-gradient(to bottom, #a5d6a7 0%, #388e3c 100%)' },
-            { label: 'Lavender',     bg: 'linear-gradient(135deg, #e8d5ff 0%, #c39bd3 100%)' },
-            { label: 'Chalkboard',   bg: 'linear-gradient(135deg, #2d5016 0%, #3a6020 100%)' },
-            { label: 'Arctic',       bg: 'linear-gradient(to bottom, #e3f2fd 0%, #bbdefb 100%)' },
-            { label: 'Rainbow',      bg: 'linear-gradient(to right, #ef5350, #ff7043, #ffca28, #66bb6a, #42a5f5, #7e57c2)' },
-            { label: 'Cozy Library', bg: 'linear-gradient(135deg, #8d6e63 0%, #5d4037 100%)' },
-            { label: 'Pastel',       bg: 'linear-gradient(135deg, #fce4ec 0%, #e3f2fd 50%, #f1f8e9 100%)' },
-            { label: 'Outer Space',  bg: 'radial-gradient(ellipse at center, #1a237e 0%, #0d1b2a 70%)' },
-        ];
-        bgThemes.forEach(theme => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'bg-image-thumb';
-            btn.title = theme.label;
-            btn.innerHTML = `<div class="bg-img-preview" style="background:${theme.bg}"></div><span>${theme.label}</span>`;
-            btn.addEventListener('click', () => {
-                canvasArea.style.backgroundImage = theme.bg.startsWith('linear') || theme.bg.startsWith('radial') ? 'none' : '';
-                canvasArea.className = 'wb-canvas-area';
-                canvasArea.style.background = theme.bg;
-                App.closeModal('modal-background');
+        const bgThemesByCategory = {
+            simple: [
+                { label: 'White',        bg: '#ffffff' },
+                { label: 'Cream',        bg: '#fffdf5' },
+                { label: 'Light Blue',   bg: '#e3f2fd' },
+                { label: 'Light Green',  bg: '#f1f8e9' },
+                { label: 'Light Yellow', bg: '#fffde7' },
+                { label: 'Light Pink',   bg: '#fce4ec' },
+                { label: 'Light Purple', bg: '#f3e5f5' },
+                { label: 'Light Grey',   bg: '#f5f5f5' },
+                { label: 'Pastel',       bg: 'linear-gradient(135deg, #fce4ec 0%, #e3f2fd 50%, #f1f8e9 100%)' },
+                { label: 'Soft Peach',   bg: 'linear-gradient(135deg, #ffe0b2, #fff9c4)' },
+                { label: 'Mint',         bg: 'linear-gradient(135deg, #e0f7fa, #b2dfdb)' },
+                { label: 'Lavender',     bg: 'linear-gradient(135deg, #e8d5ff 0%, #c39bd3 100%)' },
+            ],
+            photos: [
+                { label: 'Sunny Day',    bg: 'linear-gradient(to bottom, #87CEEB 0%, #fffde7 60%, #a5d6a7 100%)' },
+                { label: 'Night Sky',    bg: 'linear-gradient(to bottom, #0d1b2a 0%, #1a237e 50%, #283593 100%)' },
+                { label: 'Ocean',        bg: 'linear-gradient(to bottom, #29b6f6 0%, #0277bd 60%, #01579b 100%)' },
+                { label: 'Sunset',       bg: 'linear-gradient(to bottom right, #ff7043, #ffa726, #ffee58)' },
+                { label: 'Forest',       bg: 'linear-gradient(to bottom, #a5d6a7 0%, #388e3c 100%)' },
+                { label: 'Arctic',       bg: 'linear-gradient(to bottom, #e3f2fd 0%, #bbdefb 100%)' },
+                { label: 'Rainbow',      bg: 'linear-gradient(to right, #ef5350, #ff7043, #ffca28, #66bb6a, #42a5f5, #7e57c2)' },
+                { label: 'Outer Space',  bg: 'radial-gradient(ellipse at center, #1a237e 0%, #0d1b2a 70%)' },
+                { label: 'Desert',       bg: 'linear-gradient(to bottom, #87CEEB 0%, #ffe082 50%, #d7a86e 100%)' },
+                { label: 'Autumn',       bg: 'linear-gradient(to bottom, #ff8f00 0%, #e65100 100%)' },
+                { label: 'Underwater',   bg: 'linear-gradient(to bottom, #00acc1 0%, #006064 100%)' },
+                { label: 'Volcano',      bg: 'linear-gradient(to bottom, #37474f 0%, #bf360c 80%, #ff6f00 100%)' },
+            ],
+            textures: [
+                { label: 'Chalkboard',   bg: 'linear-gradient(135deg, #2d5016 0%, #3a6020 100%)' },
+                { label: 'Cozy Library', bg: 'linear-gradient(135deg, #8d6e63 0%, #5d4037 100%)' },
+                { label: 'Dark Wood',    bg: 'linear-gradient(135deg, #4e342e 0%, #3e2723 100%)' },
+                { label: 'Charcoal',     bg: 'linear-gradient(135deg, #424242, #212121)' },
+                { label: 'Navy',         bg: 'linear-gradient(135deg, #1a237e, #283593)' },
+                { label: 'Deep Purple',  bg: 'linear-gradient(135deg, #4a148c, #6a1b9a)' },
+                { label: 'Slate',        bg: 'linear-gradient(135deg, #546e7a, #37474f)' },
+                { label: 'Rust',         bg: 'linear-gradient(135deg, #bf360c, #8d2800)' },
+                { label: 'Gold',         bg: 'linear-gradient(135deg, #f9a825, #f57f17)' },
+                { label: 'Teal',         bg: 'linear-gradient(135deg, #00695c, #004d40)' },
+                { label: 'Rose',         bg: 'linear-gradient(135deg, #c2185b, #880e4f)' },
+                { label: 'Indigo',       bg: 'linear-gradient(135deg, #3949ab, #1a237e)' },
+            ],
+        };
+
+        let currentBgCat = 'simple';
+
+        function renderBgGrid(cat) {
+            bgImageGrid.innerHTML = '';
+            (bgThemesByCategory[cat] || bgThemesByCategory.simple).forEach(theme => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'bg-image-thumb';
+                btn.title = theme.label;
+                btn.innerHTML = `<div class="bg-img-preview" style="background:${theme.bg}"></div><span>${theme.label}</span>`;
+                btn.addEventListener('click', () => {
+                    canvasArea.className = 'wb-canvas-area';
+                    canvasArea.style.background = theme.bg;
+                    App.closeModal('modal-background');
+                });
+                bgImageGrid.appendChild(btn);
             });
-            bgImageGrid.appendChild(btn);
+        }
+
+        // Wire sub-tab buttons
+        document.querySelectorAll('.bg-img-cat').forEach(cat => {
+            cat.addEventListener('click', () => {
+                currentBgCat = cat.dataset.imgcat;
+                renderBgGrid(currentBgCat);
+            });
         });
+
+        renderBgGrid(currentBgCat);
     }
 
     // Layout backgrounds
