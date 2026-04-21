@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacherstack - Interactive Whiteboard</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="whiteboard.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+<!-- ========== MAIN LAYOUT ========== -->
+<div class="wb-app" id="wb-app">
+
+    <!-- Top bar -->
+    <div class="wb-topbar">
+        <a href="dashboard.html" class="wb-back-btn" aria-label="Back to dashboard"><i class="fa-solid fa-arrow-left"></i></a>
+        <span class="wb-title"><i class="fa-solid fa-chalkboard-user"></i> Interactive Whiteboard</span>
+        <div class="wb-topbar-actions">
+            <button type="button" class="wb-top-btn" id="btn-export" title="Export as Image" aria-label="Export as Image"><i class="fa-solid fa-download"></i></button>
+            <button type="button" class="wb-top-btn" id="btn-fullscreen" title="Fullscreen" aria-label="Fullscreen"><i class="fa-solid fa-expand"></i></button>
+            <button type="button" class="wb-top-btn" id="btn-clear-canvas" title="Clear Canvas" aria-label="Clear Canvas"><i class="fa-solid fa-trash"></i></button>
+        </div>
+    </div>
+
+    <!-- Main area -->
+    <div class="wb-main">
+
+        <!-- LEFT: Drawing Tools -->
+        <div class="wb-draw-toolbar">
+            <button type="button" class="draw-tool active" id="tool-cursor" title="Cursor" aria-label="Cursor" data-tool="cursor"><i class="fa-solid fa-arrow-pointer"></i></button>
+            <button type="button" class="draw-tool" id="tool-pen" title="Draw" aria-label="Draw" data-tool="pen"><i class="fa-solid fa-pencil"></i></button>
+            <button type="button" class="draw-tool" id="tool-eraser" title="Eraser" aria-label="Eraser" data-tool="eraser"><i class="fa-solid fa-eraser"></i></button>
+            <button type="button" class="draw-tool" id="tool-text" title="Text" aria-label="Text" data-tool="text"><i class="fa-solid fa-t"></i></button>
+            <button type="button" class="draw-tool" id="tool-shapes" title="Shapes" aria-label="Shapes" data-tool="shapes"><i class="fa-regular fa-square"></i></button>
+            <div class="draw-divider"></div>
+            <label for="color-picker" class="sr-only">Brush Color</label>
+            <input type="color" id="color-picker" class="color-picker-input" value="#e74c3c" title="Color">
+            <div class="draw-size-label">Size</div>
+            <label for="brush-size" class="sr-only">Brush Size</label>
+            <input type="range" id="brush-size" min="1" max="30" value="4" class="brush-slider">
+            <div class="draw-divider"></div>
+            <button type="button" class="draw-tool" id="btn-undo" title="Undo" aria-label="Undo"><i class="fa-solid fa-rotate-left"></i></button>
+            <button type="button" class="draw-tool" id="btn-redo" title="Redo" aria-label="Redo"><i class="fa-solid fa-rotate-right"></i></button>
+        </div>
+
+        <!-- CENTER: Canvas -->
+        <div class="wb-canvas-area" id="wb-canvas-area">
+            <canvas id="wb-canvas"></canvas>
+            <div id="cursor-preview" class="hidden"></div>
+
+            <!-- Widgets dropped on board -->
+            <div id="widgets-layer"></div>
+
+            <!-- Schedule Widget (always visible) -->
+            <div class="schedule-widget" id="schedule-widget">
+                <div class="sw-header">What's going on today</div>
+                <div id="schedule-items"></div>
+                <button type="button" class="sw-add-btn" id="sw-add-btn"><i class="fa-solid fa-plus"></i> Add Item</button>
+            </div>
+        </div>
+
+        <!-- RIGHT: Tools Panel -->
+        <div class="wb-tools-panel" id="wb-tools-panel">
+            <div class="tp-header">Tools</div>
+            <div class="tp-categories">
+                <button type="button" class="tp-cat active" data-cat="classroom" aria-selected="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="cat-icon">
+                        <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
+                    </svg>
+                    Classroom Management
+                </button>
+                <button type="button" class="tp-cat" data-cat="randomizers" aria-selected="false"><i class="fa-solid fa-shuffle cat-icon-fa"></i> Randomizers</button>
+                <button type="button" class="tp-cat" data-cat="lessons" aria-selected="false"><i class="fa-solid fa-layer-group cat-icon-fa"></i> Lesson Builders</button>
+                <button type="button" class="tp-cat" data-cat="games" aria-selected="false"><i class="fa-solid fa-puzzle-piece cat-icon-fa"></i> Games &amp; Activities</button>
+                <button type="button" class="tp-cat" data-cat="charts" aria-selected="false"><i class="fa-solid fa-chart-bar cat-icon-fa"></i> Charts &amp; Graphs</button>
+                <button type="button" class="tp-cat" data-cat="math" aria-selected="false"><i class="fa-solid fa-calculator cat-icon-fa"></i> Math Tools</button>
+                <button type="button" class="tp-cat" data-cat="clocks" aria-selected="false"><i class="fa-solid fa-clock cat-icon-fa"></i> Clocks &amp; Timers</button>
+                <button type="button" class="tp-cat" data-cat="money" aria-selected="false"><i class="fa-solid fa-coins cat-icon-fa"></i> Money</button>
+            </div>
+            <div class="tp-tools-grid" id="tp-tools-grid">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTTOM TOOLBAR -->
+    <div class="wb-bottom-bar">
+        <button type="button" class="bb-btn" id="bb-background" title="Background" aria-label="Background"><i class="fa-solid fa-image"></i><span>Background</span></button>
+        <button type="button" class="bb-btn" id="bb-random" title="Randomizer" aria-label="Randomizer"><i class="fa-solid fa-shuffle"></i><span>Random</span></button>
+        <button type="button" class="bb-btn" id="bb-sound" title="Sound Meter" aria-label="Sound Meter"><i class="fa-solid fa-microphone-lines"></i><span>Sound Level</span></button>
+        <button type="button" class="bb-btn" id="bb-media" title="Media" aria-label="Media"><i class="fa-solid fa-photo-film"></i><span>Image</span></button>
+        <button type="button" class="bb-btn" id="bb-video" title="Video" aria-label="Video"><i class="fa-brands fa-youtube"></i><span>Video</span></button>
+        <button type="button" class="bb-btn" id="bb-text" title="Text Box" aria-label="Text Box"><i class="fa-solid fa-font"></i><span>Text</span></button>
+        <button type="button" class="bb-btn" id="bb-traffic" title="Traffic Light" aria-label="Traffic Light"><i class="fa-solid fa-traffic-light"></i><span>Traffic Light</span></button>
+        <button type="button" class="bb-btn" id="bb-timer" title="Timer" aria-label="Timer"><i class="fa-solid fa-stopwatch"></i><span>Timer</span></button>
+        <button type="button" class="bb-btn" id="bb-namepick" title="Name Picker" aria-label="Name Picker"><i class="fa-solid fa-person-circle-question"></i><span>Name Picker</span></button>
+        <button type="button" class="bb-btn" id="bb-qr" title="QR Code" aria-label="QR Code"><i class="fa-solid fa-qrcode"></i><span>QR Code</span></button>
+        <button type="button" class="bb-btn" id="bb-tts" title="Text to Speech" aria-label="Text to Speech"><i class="fa-solid fa-volume-high"></i><span>Text-to-Speech</span></button>
+        <button type="button" class="bb-btn" id="bb-more" title="More Tools" aria-label="More Tools"><i class="fa-solid fa-ellipsis"></i><span>More</span></button>
+    </div>
+
+</div>
+
+<!-- ===================== MODALS ===================== -->
+
+<!-- Background Modal -->
+<div class="modal-overlay hidden" id="modal-background">
+    <div class="modal-box modal-large">
+        <div class="modal-header"><span>Background</span><button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-background">✕</button></div>
+        <div class="bg-tabs">
+            <button type="button" class="bg-tab active" data-tab="bg-lines"><i class="fa-solid fa-grip-lines"></i> Lines</button>
+            <button type="button" class="bg-tab" data-tab="bg-image"><i class="fa-solid fa-image"></i> Image</button>
+            <button type="button" class="bg-tab" data-tab="bg-color"><i class="fa-solid fa-palette"></i> Color</button>
+            <button type="button" class="bg-tab" data-tab="bg-layout"><i class="fa-regular fa-square"></i> Layout</button>
+        </div>
+        <div class="bg-tab-content active" id="bg-lines">
+            <div class="bg-grid">
+                <button type="button" class="bg-option" data-bg="none" aria-pressed="false"><div class="bg-preview plain"></div><span>None</span></button>
+                <button type="button" class="bg-option" data-bg="lined" aria-pressed="false"><div class="bg-preview lined"></div><span>Lined</span></button>
+                <button type="button" class="bg-option" data-bg="grid" aria-pressed="false"><div class="bg-preview grid-bg"></div><span>Grid</span></button>
+                <button type="button" class="bg-option" data-bg="dotted" aria-pressed="false"><div class="bg-preview dotted"></div><span>Dotted</span></button>
+                <button type="button" class="bg-option" data-bg="isometric" aria-pressed="false"><div class="bg-preview isometric"></div><span>Isometric</span></button>
+                <button type="button" class="bg-option" data-bg="music" aria-pressed="false"><div class="bg-preview music"></div><span>Music</span></button>
+            </div>
+        </div>
+        <div class="bg-tab-content" id="bg-image">
+            <div class="bg-image-sidebar">
+                <button type="button" class="bg-img-cat active" data-imgcat="thematic" aria-selected="true">🎨 Thematic</button>
+                <button type="button" class="bg-img-cat" data-imgcat="simple" aria-selected="false">🟦 Simple</button>
+                <button type="button" class="bg-img-cat" data-imgcat="photos" aria-selected="false">🌄 Photos</button>
+                <button type="button" class="bg-img-cat" data-imgcat="textures" aria-selected="false">🧱 Textures</button>
+            </div>
+            <div class="bg-image-grid" id="bg-image-grid">
+                <!-- populated by JS -->
+            </div>
+        </div>
+        <div class="bg-tab-content" id="bg-color">
+            <div class="bg-color-grid" id="bg-color-grid">
+                <!-- color swatches -->
+            </div>
+            <div class="modal-form">
+                <div class="modal-row center">
+                    <label for="bg-custom-color">Custom Color:</label>
+                    <input type="color" id="bg-custom-color" value="#f3e5f5" class="color-picker-input">
+                    <button type="button" class="primary-action-btn" id="bg-apply-custom">Apply</button>
+                </div>
+            </div>
+        </div>
+        <div class="bg-tab-content" id="bg-layout">
+            <div class="bg-grid">
+                <button type="button" class="bg-option" data-layout="blank" aria-pressed="false"><div class="bg-preview plain"></div><span>Blank</span></button>
+                <button type="button" class="bg-option" data-layout="t-chart" aria-pressed="false"><div class="bg-preview t-chart-p"></div><span>T-Chart</span></button>
+                <button type="button" class="bg-option" data-layout="kwl" aria-pressed="false"><div class="bg-preview kwl-p"></div><span>KWL Chart</span></button>
+                <button type="button" class="bg-option" data-layout="venn" aria-pressed="false"><div class="bg-preview venn-p"></div><span>Venn Diagram</span></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Media/Image Modal -->
+<div class="modal-overlay hidden" id="modal-media">
+    <div class="modal-box modal-large">
+        <div class="modal-header"><span>Media</span><button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-media">✕</button></div>
+        <div class="bg-tabs">
+            <button type="button" class="bg-tab active" data-tab="media-images"><i class="fa-solid fa-image"></i> Images</button>
+            <button type="button" class="bg-tab" data-tab="media-videos"><i class="fa-brands fa-youtube"></i> Videos</button>
+            <button type="button" class="bg-tab" data-tab="media-audio"><i class="fa-solid fa-music"></i> Audio</button>
+        </div>
+        <div class="bg-tab-content active" id="media-images">
+            <div class="media-sidebar">
+                <button type="button" class="media-src active" data-src="search"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
+                <button type="button" class="media-src" data-src="gifs"><i class="fa-solid fa-film"></i> GIFs</button>
+                <button type="button" class="media-src" data-src="creative"><i class="fa-brands fa-creative-commons"></i> Creative Commons</button>
+            </div>
+            <div class="media-main">
+                <div class="media-search-bar">
+                    <label for="img-search-input" class="sr-only">Search Images</label>
+                    <input type="text" id="img-search-input" placeholder="Search images..." class="media-search-input">
+                    <button type="button" class="media-search-btn" id="img-search-btn" title="Search" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
+                </div>
+                <div class="media-results" id="img-results">
+                    <p class="media-hint">Search for images to use on your whiteboard</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-tab-content" id="media-videos">
+            <div class="media-sidebar">
+                <button type="button" class="media-src active"><i class="fa-brands fa-youtube"></i> YouTube</button>
+            </div>
+            <div class="media-main">
+                <div class="media-search-bar">
+                    <label for="yt-url-input" class="sr-only">Paste YouTube URL</label>
+                    <input type="text" id="yt-url-input" placeholder="Paste a YouTube link or video ID here..." class="media-search-input">
+                    <button type="button" class="media-search-btn" id="yt-url-btn" title="Play Video" aria-label="Play Video"><i class="fa-solid fa-play"></i></button>
+                </div>
+                <p class="media-hint" style="font-size:0.78rem;margin:0 0 8px;">Paste any YouTube URL above to play it instantly — no account needed</p>
+                <div class="media-search-bar">
+                    <label for="yt-search-input" class="sr-only">Search YouTube</label>
+                    <input type="text" id="yt-search-input" placeholder="Or search for suggestions..." class="media-search-input">
+                    <button type="button" class="media-search-btn" id="yt-search-btn" title="Search" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
+                </div>
+                <div class="media-results" id="yt-results">
+                    <p class="media-hint">Search for videos — great for Brain Breaks!</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-tab-content" id="media-audio">
+            <div class="modal-form">
+                <h3>Text to Speech</h3>
+                <textarea id="tts-text-area" placeholder="Type something to speak..." class="field-textarea"></textarea>
+                <div class="modal-row wrap">
+                    <label for="tts-voice-select">Voice:</label>
+                    <select id="tts-voice-select" class="field-select w-auto"></select>
+                    <label for="tts-rate">Rate:</label>
+                    <input type="range" id="tts-rate" min="0.5" max="2" step="0.1" value="1" class="brush-slider horizontal-range h-auto w-100">
+                </div>
+                <div class="modal-row">
+                    <button type="button" class="primary-action-btn" id="tts-speak-btn"><i class="fa-solid fa-volume-high"></i> Speak</button>
+                    <button type="button" class="primary-action-btn danger" id="tts-stop-btn"><i class="fa-solid fa-stop"></i> Stop</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Timer Modal -->
+<div class="modal-overlay hidden" id="modal-timer">
+    <div class="modal-box modal-small">
+        <div class="modal-header"><span><i class="fa-solid fa-stopwatch"></i> Timer</span><button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-timer">✕</button></div>
+        <div class="timer-body">
+            <div class="timer-display" id="timer-display">05:00</div>
+            <div class="timer-presets">
+                <button type="button" class="preset-btn" data-sec="60">1 min</button>
+                <button type="button" class="preset-btn" data-sec="180">3 min</button>
+                <button type="button" class="preset-btn" data-sec="300">5 min</button>
+                <button type="button" class="preset-btn" data-sec="600">10 min</button>
+                <button type="button" class="preset-btn" data-sec="900">15 min</button>
+            </div>
+            <div class="timer-custom modal-row center">
+                <label for="timer-min" class="sr-only">Minutes</label>
+                <input type="number" id="timer-min" placeholder="Min" min="0" max="59" value="5" class="field-input w-80">
+                <span>:</span>
+                <label for="timer-sec-input" class="sr-only">Seconds</label>
+                <input type="number" id="timer-sec-input" placeholder="Sec" min="0" max="59" value="0" class="field-input w-80">
+                <button type="button" class="primary-action-btn" id="timer-set-btn">Set</button>
+            </div>
+            <div class="timer-controls">
+                <button type="button" class="timer-ctrl-btn" id="timer-start" aria-label="Start"><i class="fa-solid fa-play"></i></button>
+                <button type="button" class="timer-ctrl-btn" id="timer-pause" aria-label="Pause"><i class="fa-solid fa-pause"></i></button>
+                <button type="button" class="timer-ctrl-btn" id="timer-reset" aria-label="Reset"><i class="fa-solid fa-rotate-right"></i></button>
+            </div>
+            <div class="timer-progress-bar"><div id="timer-progress-fill"></div></div>
+        </div>
+    </div>
+</div>
+
+<!-- Name Picker Modal -->
+<div class="modal-overlay hidden" id="modal-namepick">
+    <div class="modal-box modal-small">
+        <div class="modal-header"><span><i class="fa-solid fa-person-circle-question"></i> Name Picker</span><button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-namepick">✕</button></div>
+        <div class="namepick-body">
+            <div class="namepick-display" id="namepick-display">?</div>
+            <button type="button" class="primary-action-btn big" id="namepick-btn"><i class="fa-solid fa-shuffle"></i> Pick a Student</button>
+            <div class="namepick-history" id="namepick-history"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Traffic Light Modal -->
+<div class="modal-overlay hidden" id="modal-traffic">
+    <div class="modal-box modal-small">
+        <div class="modal-header"><span><i class="fa-solid fa-traffic-light"></i> Traffic Light</span><button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-traffic">✕</button></div>
+        <div class="traffic-body">
+            <div class="traffic-light-widget">
+                <button type="button" class="tl-light red" id="tl-red" title="Stop" aria-label="Set traffic light to stop"></button>
+                <button type="button" class="tl-light yellow" id="tl-yellow" title="Slow" aria-label="Set traffic light to whisper"></button>
+                <button type="button" class="tl-light green" id="tl-green" title="Go" aria-label="Set traffic light to talk freely"></button>
+            </div>
+            <div class="tl-labels">
+                <button type="button" class="tl-label-btn" data-traffic="red">🔴 Stop / Quiet</button>
+                <button type="button" class="tl-label-btn" data-traffic="yellow">🟡 Whisper</button>
+                <button type="button" class="tl-label-btn" data-traffic="green">🟢 Talk Freely</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sound Meter Modal -->
+<div class="modal-overlay hidden" id="modal-sound">
+    <div class="modal-box modal-small">
+        <div class="modal-header"><span><i class="fa-solid fa-microphone-lines"></i> Sound Meter</span><button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-sound">✕</button></div>
+        <div class="sound-body">
+            <div class="sound-meter-visual">
+                <div class="sound-bars" id="sound-bars">
+                    <div class="sb"></div><div class="sb"></div><div class="sb"></div>
+                    <div class="sb"></div><div class="sb"></div><div class="sb"></div>
+                    <div class="sb"></div><div class="sb"></div><div class="sb"></div>
+                    <div class="sb"></div>
+                </div>
+            </div>
+            <div class="sound-level-label" id="sound-level-label">Listening...</div>
+            <button type="button" class="primary-action-btn" id="sound-start-btn"><i class="fa-solid fa-microphone"></i> Start Listening</button>
+            <button type="button" class="primary-action-btn danger hidden" id="sound-stop-btn"><i class="fa-solid fa-microphone-slash"></i> Stop</button>
+            <div class="modal-row center mt-12 gap-12">
+                <label for="sound-sensitivity" class="text-muted-small">Sensitivity:</label>
+                <input type="range" id="sound-sensitivity" min="1" max="20" value="8" class="brush-slider w-120 h-auto">
+            </div>
+            <div class="voice-levels">
+                <div class="vl-item level-0">🤫 Level 0: No Talking</div>
+                <div class="vl-item level-1">🗣 Level 1: Whisper</div>
+                <div class="vl-item level-2">💬 Level 2: Table Talk</div>
+                <div class="vl-item level-3">📢 Level 3: Presenter</div>
+                <div class="vl-item level-4">🔊 Level 4: Outside Voice</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- QR Code Modal -->
+<div class="modal-overlay hidden" id="modal-qr">
+    <div class="modal-box modal-small">
+        <div class="modal-header"><span><i class="fa-solid fa-qrcode"></i> QR Code Generator</span><button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-qr">✕</button></div>
+        <div class="qr-body">
+            <label for="qr-input" class="sr-only">QR Content</label>
+            <input type="text" id="qr-input" placeholder="Enter a URL or text..." class="qr-input">
+            <button type="button" class="primary-action-btn" id="qr-generate-btn">Generate QR Code</button>
+            <div id="qr-output" class="qr-output"></div>
+        </div>
+    </div>
+</div>
+
+<!-- TTS Modal (from bottom bar) -->
+<div class="modal-overlay hidden" id="modal-tts">
+    <div class="modal-box modal-small">
+        <div class="modal-header"><span><i class="fa-solid fa-volume-high"></i> Text to Speech</span><button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-tts">✕</button></div>
+        <div class="modal-form">
+            <textarea id="tts-input" placeholder="Type something to read aloud..." class="field-textarea"></textarea>
+            <div class="modal-row wrap">
+                <label for="tts-voice-select2">Voice:</label>
+                <select id="tts-voice-select2" class="field-select w-auto"></select>
+                <label for="tts-rate2">Speed:</label>
+                <input type="range" id="tts-rate2" min="0.5" max="2" step="0.1" value="1" class="brush-slider horizontal-range h-auto w-100">
+            </div>
+            <div class="modal-row">
+                <button type="button" class="primary-action-btn" id="tts-speak2"><i class="fa-solid fa-volume-high"></i> Speak</button>
+                <button type="button" class="primary-action-btn danger" id="tts-stop2"><i class="fa-solid fa-stop"></i> Stop</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Random Picker Modal -->
+<div class="modal-overlay hidden" id="modal-random">
+    <div class="modal-box modal-small">
+        <div class="modal-header"><span><i class="fa-solid fa-shuffle"></i> Randomizer</span><button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-random">✕</button></div>
+        <div class="random-body">
+            <div class="random-tabs">
+                <button type="button" class="rand-tab active" data-rtab="student">Student Picker</button>
+                <button type="button" class="rand-tab" data-rtab="group">Group Maker</button>
+                <button type="button" class="rand-tab" data-rtab="wheel">Spin the Wheel</button>
+            </div>
+            <div class="rand-content active" id="rtab-student">
+                <div class="namepick-display" id="rand-student-display">?</div>
+                <button type="button" class="primary-action-btn big" id="rand-pick-btn"><i class="fa-solid fa-shuffle"></i> Pick Random Student</button>
+            </div>
+            <div class="rand-content" id="rtab-group">
+                <div class="modal-row center">
+                    <label for="group-count">Number of Groups:</label>
+                    <input type="number" id="group-count" value="4" min="2" max="10" class="field-input w-70">
+                    <button type="button" class="primary-action-btn" id="make-groups-btn">Make Groups</button>
+                </div>
+                <div id="groups-output" class="groups-output"></div>
+            </div>
+            <div class="rand-content" id="rtab-wheel">
+                <canvas id="spin-wheel-canvas" width="280" height="280"></canvas>
+                <button type="button" class="primary-action-btn big" id="spin-btn"><i class="fa-solid fa-rotate"></i> Spin!</button>
+                <div id="spin-result" class="text-2xl text-bold mt-10"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Schedule Add Modal -->
+<div class="modal-overlay hidden" id="modal-schedule">
+    <div class="modal-box modal-small">
+        <div class="modal-header"><span>Add Schedule Item</span><button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-schedule">✕</button></div>
+        <div class="modal-form">
+            <label for="sw-item-title" class="sr-only">Activity Name</label>
+            <input type="text" id="sw-item-title" placeholder="Activity name (e.g. Breakfast)" class="field-input">
+            <div class="modal-row">
+                <label for="sw-item-start" class="sr-only">Start Time</label>
+                <input type="time" id="sw-item-start" class="field-input">
+                <label for="sw-item-end" class="sr-only">End Time</label>
+                <input type="time" id="sw-item-end" class="field-input">
+            </div>
+            <label for="sw-item-icon" class="sr-only">Icon</label>
+            <select id="sw-item-icon" class="field-select">
+                <option value="🍽️">🍽️ Meal / Breakfast</option>
+                <option value="⏰">⏰ Break</option>
+                <option value="❤️">❤️ SEL / Social-Emotional</option>
+                <option value="📚">📚 Lesson</option>
+                <option value="🎨">🎨 Art / Activity</option>
+                <option value="🏃">🏃 Movement / Brain Break</option>
+                <option value="🧮">🧮 Math</option>
+                <option value="📖">📖 Reading</option>
+            </select>
+            <button type="button" class="primary-action-btn big" id="sw-save-btn">Add to Schedule</button>
+        </div>
+    </div>
+</div>
+
+<!-- YouTube Video Player Widget (floats on canvas) -->
+<div class="yt-float-widget hidden" id="yt-float-widget">
+    <div class="yt-fw-header">
+        <span>▶ YouTube Player</span>
+        <button type="button" id="yt-fw-close" aria-label="Close video player">✕</button>
+    </div>
+    <div id="yt-player-container"></div>
+</div>
+
+<!-- Analog Clock Modal -->
+<div class="modal-overlay hidden" id="modal-clock">
+    <div class="modal-box modal-small">
+        <div class="modal-header"><span><i class="fa-solid fa-clock"></i> Analog Clock</span><button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-clock">✕</button></div>
+        <div class="clock-body">
+            <div class="clock-canvas-wrap">
+                <canvas id="analog-clock-canvas" width="240" height="240"></canvas>
+            </div>
+            <div class="clock-digital" id="clock-digital-display">00:00:00</div>
+        </div>
+    </div>
+</div>
+
+<!-- Stopwatch Modal -->
+<div class="modal-overlay hidden" id="modal-stopwatch">
+    <div class="modal-box modal-small">
+        <div class="modal-header"><span><i class="fa-solid fa-stopwatch"></i> Stopwatch</span><button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-stopwatch">✕</button></div>
+        <div class="stopwatch-body">
+            <div class="stopwatch-display" id="sw-display">00:00.00</div>
+            <div class="timer-controls">
+                <button type="button" class="timer-ctrl-btn" id="sw-start-btn" aria-label="Start"><i class="fa-solid fa-play"></i></button>
+                <button type="button" class="timer-ctrl-btn" id="sw-stop-btn" aria-label="Stop"><i class="fa-solid fa-pause"></i></button>
+                <button type="button" class="timer-ctrl-btn" id="sw-lap-btn" title="Lap" aria-label="Lap"><i class="fa-solid fa-flag"></i></button>
+                <button type="button" class="timer-ctrl-btn" id="sw-reset-btn" aria-label="Reset"><i class="fa-solid fa-rotate-right"></i></button>
+            </div>
+            <div class="stopwatch-laps" id="sw-laps"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Calculator Modal -->
+<div class="modal-overlay hidden" id="modal-calculator">
+    <div class="modal-box modal-small">
+        <div class="modal-header"><span><i class="fa-solid fa-calculator"></i> Calculator</span><button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-calculator">✕</button></div>
+        <div class="calc-body">
+            <div class="calc-display">
+                <div class="calc-expr" id="calc-expr"></div>
+                <div id="calc-result">0</div>
+            </div>
+            <div class="calc-grid">
+                <button type="button" class="calc-btn clear" data-calc="C">C</button>
+                <button type="button" class="calc-btn op" data-calc="(">(</button>
+                <button type="button" class="calc-btn op" data-calc=")">)</button>
+                <button type="button" class="calc-btn op" data-calc="÷">÷</button>
+                <button type="button" class="calc-btn num" data-calc="7">7</button>
+                <button type="button" class="calc-btn num" data-calc="8">8</button>
+                <button type="button" class="calc-btn num" data-calc="9">9</button>
+                <button type="button" class="calc-btn op" data-calc="×">×</button>
+                <button type="button" class="calc-btn num" data-calc="4">4</button>
+                <button type="button" class="calc-btn num" data-calc="5">5</button>
+                <button type="button" class="calc-btn num" data-calc="6">6</button>
+                <button type="button" class="calc-btn op" data-calc="-">−</button>
+                <button type="button" class="calc-btn num" data-calc="1">1</button>
+                <button type="button" class="calc-btn num" data-calc="2">2</button>
+                <button type="button" class="calc-btn num" data-calc="3">3</button>
+                <button type="button" class="calc-btn op" data-calc="+">+</button>
+                <button type="button" class="calc-btn num wide" data-calc="0">0</button>
+                <button type="button" class="calc-btn num" data-calc=".">.</button>
+                <button type="button" class="calc-btn equals" data-calc="=">=</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Flashcards Modal -->
+<div class="modal-overlay hidden" id="modal-flashcards">
+    <div class="modal-box modal-small">
+        <div class="modal-header"><span><i class="fa-solid fa-clone"></i> Flash Cards</span><button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-flashcards">✕</button></div>
+        <div class="fc-body">
+            <div class="fc-card-container" id="fc-card-container">
+                <div class="fc-card" id="fc-card">
+                    <div class="fc-front" id="fc-front">Click to flip!</div>
+                    <div class="fc-back" id="fc-back">Add cards below</div>
+                </div>
+            </div>
+            <div class="fc-controls">
+                <button type="button" class="timer-ctrl-btn" id="fc-prev" aria-label="Previous"><i class="fa-solid fa-arrow-left"></i></button>
+                <span class="fc-counter" id="fc-counter">0 / 0</span>
+                <button type="button" class="timer-ctrl-btn" id="fc-next" aria-label="Next"><i class="fa-solid fa-arrow-right"></i></button>
+                <button type="button" class="timer-ctrl-btn" id="fc-shuffle" title="Shuffle" aria-label="Shuffle"><i class="fa-solid fa-shuffle"></i></button>
+            </div>
+            <div class="fc-add-form">
+                <label for="fc-q-input" class="sr-only">Question</label>
+                <input type="text" id="fc-q-input" placeholder="Question / Front side">
+                <label for="fc-a-input" class="sr-only">Answer</label>
+                <input type="text" id="fc-a-input" placeholder="Answer / Back side">
+                <button type="button" class="primary-action-btn" id="fc-add-btn"><i class="fa-solid fa-plus"></i> Add Card</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Shapes Submenu (positioned next to draw toolbar) -->
+<div class="shapes-submenu hidden" id="shapes-submenu">
+    <button type="button" class="shape-option active" data-shape="rect" title="Rectangle" aria-label="Rectangle"><i class="fa-regular fa-square"></i></button>
+    <button type="button" class="shape-option" data-shape="circle" title="Circle" aria-label="Circle"><i class="fa-regular fa-circle"></i></button>
+    <button type="button" class="shape-option" data-shape="line" title="Line" aria-label="Line"><i class="fa-solid fa-minus"></i></button>
+    <button type="button" class="shape-option" data-shape="arrow" title="Arrow" aria-label="Arrow"><i class="fa-solid fa-arrow-right"></i></button>
+    <button type="button" class="shape-option" data-shape="triangle" title="Triangle" aria-label="Triangle"><i class="fa-solid fa-play"></i></button>
+</div>
+
+<!-- ===================== PART 3 MODALS ===================== -->
+
+<!-- Attendance Modal -->
+<div class="modal-overlay hidden" id="modal-attendance">
+    <div class="modal-box modal-medium">
+        <div class="modal-header"><span><i class="fa-solid fa-clipboard-user"></i> Attendance</span><button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-attendance">✕</button></div>
+        <div class="att-body">
+            <div class="att-summary">
+                <div class="att-stat p">
+                    <span class="count" id="att-present-count">0</span>
+                    <span class="label">Present</span>
+                </div>
+                <div class="att-stat a">
+                    <span class="count" id="att-absent-count">0</span>
+                    <span class="label">Absent</span>
+                </div>
+                <div class="att-stat l">
+                    <span class="count" id="att-late-count">0</span>
+                    <span class="label">Late</span>
+                </div>
+            </div>
+            <div class="att-grid" id="att-grid"></div>
+            <div class="modal-row center mt-16 gap-8">
+                <button type="button" class="primary-action-btn" id="att-pick-btn"><i class="fa-solid fa-shuffle"></i> Pick Random Present</button>
+                <button type="button" class="primary-action-btn danger" id="att-reset-btn">Reset All</button>
+                <button type="button" class="primary-action-btn" id="att-save-btn">Save Attendance</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Modal -->
+<div class="modal-overlay hidden" id="modal-charts">
+    <div class="modal-box modal-large">
+        <div class="modal-header"><span><i class="fa-solid fa-chart-bar"></i> Interactive Charts</span><button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-charts">✕</button></div>
+        <div class="charts-body">
+            <div class="chart-input-panel">
+                <div class="modal-row wrap">
+                    <button type="button" class="chart-type-btn active" data-type="bar">Bar Chart</button>
+                    <button type="button" class="chart-type-btn" data-type="line">Line Graph</button>
+                </div>
+                <label for="chart-title-input" class="sr-only">Chart Title</label>
+                <input type="text" id="chart-title-input" placeholder="Chart Title (e.g. Favorite Fruit)" class="field-input">
+                <div id="chart-data-rows" class="chart-data-rows">
+                    <div class="chart-row">
+                        <input type="text" placeholder="Label" class="row-label">
+                        <input type="number" placeholder="Value" class="row-value">
+                        <button type="button" class="row-remove">✕</button>
+                    </div>
+                </div>
+                <button type="button" class="sw-add-btn" id="chart-add-row"><i class="fa-solid fa-plus"></i> Add Row</button>
+                <button type="button" class="primary-action-btn big" id="chart-render-btn">Update Chart</button>
+            </div>
+            <div class="chart-display-area">
+                <canvas id="chart-canvas" width="500" height="400"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ten Frame Modal -->
+<div class="modal-overlay hidden" id="modal-tenframe">
+    <div class="modal-box modal-small">
+        <div class="modal-header"><span><i class="fa-solid fa-table-cells"></i> Ten Frame</span><button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-tenframe">✕</button></div>
+        <div class="tenframe-body">
+            <div class="ten-frame-grid" id="ten-frame">
+                <div class="tf-cell" data-idx="0"></div><div class="tf-cell" data-idx="1"></div>
+                <div class="tf-cell" data-idx="2"></div><div class="tf-cell" data-idx="3"></div>
+                <div class="tf-cell" data-idx="4"></div><div class="tf-cell" data-idx="5"></div>
+                <div class="tf-cell" data-idx="6"></div><div class="tf-cell" data-idx="7"></div>
+                <div class="tf-cell" data-idx="8"></div><div class="tf-cell" data-idx="9"></div>
+            </div>
+            <div class="tf-controls modal-row center">
+                <button type="button" class="tf-color-btn active" data-color="red" style="background: #ef4444;" aria-label="Red" aria-pressed="true"></button>
+                <button type="button" class="tf-color-btn" data-color="blue" style="background: #3b82f6;" aria-label="Blue" aria-pressed="false"></button>
+                <button type="button" class="tf-color-btn" data-color="yellow" style="background: #f59e0b;" aria-label="Yellow" aria-pressed="false"></button>
+                <button type="button" class="primary-action-btn" id="tf-clear">Clear</button>
+            </div>
+            <div class="tf-total">Total: <span id="tf-count" class="money-total">0</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- Thermometer Modal -->
+<div class="modal-overlay hidden" id="modal-thermometer">
+    <div class="modal-box modal-small">
+        <div class="modal-header"><span><i class="fa-solid fa-temperature-half"></i> Thermometer</span><button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-thermometer">✕</button></div>
+        <div class="therm-body">
+            <div class="therm-visual">
+                <div class="therm-scale">
+                    <div class="scale-mark" style="bottom:100%"><span>100</span></div>
+                    <div class="scale-mark" style="bottom:80%"><span>80</span></div>
+                    <div class="scale-mark" style="bottom:60%"><span>60</span></div>
+                    <div class="scale-mark" style="bottom:40%"><span>40</span></div>
+                    <div class="scale-mark" style="bottom:20%"><span>20</span></div>
+                    <div class="scale-mark" style="bottom:0%"><span>0</span></div>
+                </div>
+                <div class="therm-mercury" id="thermo-liquid"></div>
+                <div class="therm-bulb"></div>
+            </div>
+            <div class="therm-input-panel">
+                <div class="money-total text-3xl text-center"><span id="thermo-val">20</span><span id="thermo-unit">°C</span></div>
+                <label for="thermo-slider" class="sr-only">Temperature</label>
+                <input type="range" id="thermo-slider" min="0" max="100" value="20" class="brush-slider horizontal-range h-auto w-full">
+                <div class="modal-row gap-8">
+                    <button type="button" class="bg-tab unit-btn active" data-unit="C">Celsius</button>
+                    <button type="button" class="bg-tab unit-btn" data-unit="F">Fahrenheit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Money Tool Modal -->
+<div class="modal-overlay hidden" id="modal-money">
+    <div class="modal-box modal-medium">
+        <div class="modal-header"><span><i class="fa-solid fa-coins"></i> Money Tool</span><button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-money">✕</button></div>
+        <div class="money-body">
+            <div class="money-sidebar">
+                <button type="button" class="money-item" data-value="0.01" title="Penny" draggable="true">🪙<span>1¢</span></button>
+                <button type="button" class="money-item" data-value="0.05" title="Nickel" draggable="true">🪙<span>5¢</span></button>
+                <button type="button" class="money-item" data-value="0.10" title="Dime" draggable="true">🪙<span>10¢</span></button>
+                <button type="button" class="money-item" data-value="0.25" title="Quarter" draggable="true">🪙<span>25¢</span></button>
+                <button type="button" class="money-item bill" data-value="1" title="$1 Bill" draggable="true">💵<span>$1</span></button>
+                <button type="button" class="money-item bill" data-value="5" title="$5 Bill" draggable="true">💵<span>$5</span></button>
+                <button type="button" class="money-item bill" data-value="10" title="$10 Bill" draggable="true">💵<span>$10</span></button>
+                <button type="button" class="money-item bill" data-value="20" title="$20 Bill" draggable="true">💵<span>$20</span></button>
+            </div>
+            <div class="money-mat" id="money-mat">
+                <div class="mat-hint">Drag items here or click to add</div>
+                <div id="money-items-layer"></div>
+            </div>
+            <div class="money-footer">
+                <div class="money-total">Total: <span id="money-total-val">$0.00</span></div>
+                <button type="button" class="primary-action-btn" id="money-clear">Clear Mat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Shopping Game Modal -->
+<div class="modal-overlay hidden" id="modal-shopping">
+    <div class="modal-box modal-large">
+        <div class="modal-header">
+            <span><i class="fa-solid fa-cart-shopping"></i> Shopping Game</span>
+            <button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-shopping">✕</button>
+        </div>
+        <div class="modal-form">
+            <div class="shop-container">
+                <div class="shop-item-display">
+                    <div id="shop-item-icon">🍎</div>
+                    <div id="shop-item-name">Apple</div>
+                    <div class="shop-price-tag">Price: <span id="shop-item-price">$0.25</span></div>
+                </div>
+                
+                <div class="shop-work-area">
+                    <div class="shop-tray" id="shop-tray">
+                        <div class="mat-hint">Drag coins here to pay</div>
+                    </div>
+                    <div class="shop-total">You've paid: <span id="shop-paid-val">$0.00</span></div>
+                </div>
+
+                <div class="shop-wallet">
+                    <button type="button" class="shop-coin" data-value="0.01" draggable="true">🪙 1¢</button>
+                    <button type="button" class="shop-coin" data-value="0.05" draggable="true">🪙 5¢</button>
+                    <button type="button" class="shop-coin" data-value="0.10" draggable="true">🪙 10¢</button>
+                    <button type="button" class="shop-coin" data-value="0.25" draggable="true">🪙 25¢</button>
+                    <button type="button" class="shop-bill" data-value="1.00" draggable="true">💵 $1</button>
+                </div>
+            </div>
+            <div class="modal-row wrap mt-16 pt-16 border-t">
+                <div id="shop-feedback"></div>
+                <div class="modal-row gap-8">
+                    <button type="button" class="primary-action-btn" id="shop-clear">Clear</button>
+                    <button type="button" class="primary-action-btn" id="shop-check">Check Out</button>
+                    <button type="button" class="primary-action-btn" id="shop-next">Next Item</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ruler Tool (Visible on Canvas) -->
+<div class="ruler-tool hidden" id="ruler-tool">
+    <div class="ruler-handle"><i class="fa-solid fa-grip-vertical"></i></div>
+    <div class="ruler-body">
+        <!-- Scale generated by CSS/JS -->
+        <div class="ruler-marks"></div>
+    </div>
+    <button type="button" class="ruler-close" title="Close" aria-label="Close">✕</button>
+    <button type="button" class="ruler-rotate" title="Rotate" aria-label="Rotate"><i class="fa-solid fa-rotate"></i></button>
+</div>
+
+<script src="students.js"></script>
+<script src="whiteboard-storage.js"></script>
+<script src="whiteboard-core.js"></script>
+<script src="whiteboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacherstack - Command Center</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="profile-icon">R</div>
+                <div class="class-info">
+                    <span class="class-name">Regulation Sta...</span>
+                    <span class="grade">Grade K</span>
+                </div>
+                <i class="fa-solid fa-chevron-down toggle-icon" aria-hidden="true"></i>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item active">
+                    <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+                    <span>Attendance</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-display" aria-hidden="true"></i>
+                    <span>Display Tools</span>
+                </a>
+                <a href="students.html" class="nav-item">
+                    <i class="fa-solid fa-users" aria-hidden="true"></i>
+                    <span>Students</span>
+                </a>
+                
+                <div class="nav-section">PLANNING</div>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+                    <span>Planner</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+                    <span>Lessons</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-bookmark" aria-hidden="true"></i>
+                    <span>Library</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer user-profile">
+                <div class="user-avatar">T</div>
+                <div class="user-info">
+                    <span class="user-name">Kenzi Young</span>
+                    <span class="user-email">kenzi@gmail.com</span>
+                </div>
+                <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-nav">
+                <div class="nav-left">
+                    <i class="fa-solid fa-bars menu-toggle" aria-hidden="true"></i>
+                    <span class="brand-name">Teacherstack</span>
+                    <i class="fa-solid fa-chevron-left back-icon" aria-hidden="true"></i>
+                </div>
+                <div class="nav-right">
+                    <div class="landing-toggle">
+                        <label class="switch">
+                            <input type="checkbox">
+                            <span class="slider round"></span>
+                        </label>
+                        <span>Make this my landing page</span>
+                    </div>
+                    <button class="edit-btn"><i class="fa-solid fa-pencil" aria-hidden="true"></i> Edit Dashboard</button>
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+                <!-- Action Cards -->
+                <section class="action-row">
+                    <button class="action-card border-blue" onclick="window.location.href='whiteboard.html'">
+                        <i class="fa-solid fa-chalkboard" aria-hidden="true"></i>
+                        <span>Boards</span>
+                    </button>
+                    <button class="action-card border-red" onclick="window.location.href='whiteboard.html'">
+                        <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
+                        <span>Stations</span>
+                    </button>
+                    <button class="action-card border-orange" onclick="window.location.href='whiteboard.html#timer'">
+                        <i class="fa-solid fa-stopwatch" aria-hidden="true"></i>
+                        <span>Timer</span>
+                    </button>
+                    <button class="action-card border-green" onclick="window.location.href='whiteboard.html#random'">
+                        <i class="fa-solid fa-shuffle" aria-hidden="true"></i>
+                        <span>Random</span>
+                    </button>
+                    <button class="action-card border-grey" onclick="showCheckinToast()">
+                        <i class="fa-solid fa-face-smile" aria-hidden="true"></i>
+                        <span>Check-In</span>
+                    </button>
+                    <button class="action-card border-dark-grey" onclick="openTodos()">
+                        <i class="fa-solid fa-list-ul" aria-hidden="true"></i>
+                        <span>To-Dos</span>
+                    </button>
+                    
+                    <!-- Clock Card -->
+                    <div class="clock-card">
+                        <div class="time" id="clock-time">10:23 PM</div>
+                        <div class="date" id="clock-date">Saturday, April 18</div>
+                    </div>
+                </section>
+
+                <!-- Middle Content -->
+                <section class="content-row">
+                    <div class="large-card up-next">
+                        <div class="card-header">
+                            <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+                            <span>Up Next</span>
+                        </div>
+                        <div class="empty-state">
+                            <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
+                            <p>All done for today</p>
+                        </div>
+                    </div>
+                    
+                    <div class="large-card schedule">
+                        <div class="card-header">
+                            <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
+                            <span>Today's Schedule</span>
+                        </div>
+                        <div class="empty-state">
+                            <i class="fa-solid fa-calendar-xmark" aria-hidden="true"></i>
+                            <p>No scheduled items for today</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Footer Widgets -->
+                <section class="footer-row">
+                    <div class="countdown-card">
+                        <div class="countdown-label">
+                            <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
+                            <span>Last Day of School</span>
+                        </div>
+                        <div class="countdown-value" id="countdown-days">34</div>
+                        <div class="countdown-unit">days left</div>
+                        <div class="countdown-label" id="countdown-date-label">Last Day: Fri, May 22</div>
+                    </div>
+                    
+                    <div class="notes-card">
+                        <div class="card-header">
+                            <i class="fa-solid fa-note-sticky" aria-hidden="true"></i>
+                            <span>Notes</span>
+                        </div>
+                        <textarea id="dashboard-notes" placeholder="Click to add notes..."></textarea>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Floating Action Buttons -->
+            <div class="fab-container" id="fab-container">
+                <button class="fab-text"><i class="fa-solid fa-clipboard-user" aria-hidden="true"></i> Log Behavior</button>
+                <button class="fab-text"><i class="fa-solid fa-pen-nib" aria-hidden="true"></i> Student Note</button>
+                <button class="bottom-right-toggle" id="fab-toggle-close" aria-label="Close action menu">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+                <button class="fab-main" id="fab-toggle-open" aria-label="Open action menu">
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Clock functionality
+        function updateClock() {
+            const now = new Date();
+            const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+            const dateOptions = { weekday: 'long', month: 'long', day: 'numeric' };
+            
+            const timeEl = document.getElementById('clock-time');
+            const dateEl = document.getElementById('clock-date');
+            
+            if (timeEl) timeEl.textContent = now.toLocaleTimeString('en-US', timeOptions);
+            if (dateEl) dateEl.textContent = now.toLocaleDateString('en-US', dateOptions);
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // FAB Toggle functionality
+        const fabContainer = document.getElementById('fab-container');
+        const fabOpen = document.getElementById('fab-toggle-open');
+        const fabClose = document.getElementById('fab-toggle-close');
+
+        if (fabOpen && fabClose && fabContainer) {
+            fabOpen.addEventListener('click', () => {
+                fabContainer.classList.add('active');
+            });
+            fabClose.addEventListener('click', () => {
+                fabContainer.classList.remove('active');
+            });
+        }
+
+        // Notes auto-save
+        const notesEl = document.getElementById('dashboard-notes');
+        if (notesEl) {
+            notesEl.value = localStorage.getItem('dashboard-notes') || '';
+            notesEl.addEventListener('input', () => {
+                localStorage.setItem('dashboard-notes', notesEl.value);
+            });
+        }
+
+        // To-Dos
+        function openTodos() {
+            document.getElementById('todo-modal').classList.remove('hidden');
+            renderTodos();
+        }
+        function closeTodos() {
+            document.getElementById('todo-modal').classList.add('hidden');
+        }
+        let todos = JSON.parse(localStorage.getItem('dashboard-todos') || '[]');
+        function saveTodos() { localStorage.setItem('dashboard-todos', JSON.stringify(todos)); }
+        function renderTodos() {
+            const list = document.getElementById('todo-list');
+            list.innerHTML = '';
+            if (todos.length === 0) {
+                list.innerHTML = '<p style="color:#999;font-size:0.9rem;text-align:center;padding:12px 0;">No to-dos yet — add one below!</p>';
+                return;
+            }
+            todos.forEach((t, i) => {
+                const item = document.createElement('div');
+                item.className = 'todo-item' + (t.done ? ' done' : '');
+                item.innerHTML = `
+                    <button class="todo-check" onclick="toggleTodo(${i})" aria-label="${t.done ? 'Mark incomplete' : 'Mark complete'}">
+                        <i class="fa-solid ${t.done ? 'fa-circle-check' : 'fa-circle'}"></i>
+                    </button>
+                    <span class="todo-text">${t.text}</span>
+                    <button class="todo-delete" onclick="deleteTodo(${i})" aria-label="Delete"><i class="fa-solid fa-xmark"></i></button>
+                `;
+                list.appendChild(item);
+            });
+        }
+        function toggleTodo(i) { todos[i].done = !todos[i].done; saveTodos(); renderTodos(); }
+        function deleteTodo(i) { todos.splice(i, 1); saveTodos(); renderTodos(); }
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('todo-add-btn').addEventListener('click', () => {
+                const input = document.getElementById('todo-input');
+                const text = input.value.trim();
+                if (!text) return;
+                todos.push({ text, done: false });
+                saveTodos();
+                renderTodos();
+                input.value = '';
+                input.focus();
+            });
+            document.getElementById('todo-input').addEventListener('keypress', e => {
+                if (e.key === 'Enter') document.getElementById('todo-add-btn').click();
+            });
+            document.getElementById('todo-clear-done').addEventListener('click', () => {
+                todos = todos.filter(t => !t.done);
+                saveTodos();
+                renderTodos();
+            });
+        });
+
+        // Check-In toast
+        function showCheckinToast() {
+            const existing = document.getElementById('checkin-toast');
+            if (existing) existing.remove();
+            const emojis = ['😊','😎','🤩','😴','😤','😢','🤔','😁','🥱','😰'];
+            const labels = ['Happy','Cool','Excited','Tired','Frustrated','Sad','Thinking','Great','Bored','Anxious'];
+            const toast = document.createElement('div');
+            toast.id = 'checkin-toast';
+            toast.className = 'checkin-toast';
+            toast.innerHTML = `
+                <div class="checkin-header">How are you feeling today, Ms. Young? <button onclick="this.closest('.checkin-toast').remove()" aria-label="Close" style="float:right;background:none;border:none;cursor:pointer;font-size:1.1rem;">✕</button></div>
+                <div class="checkin-emojis">${emojis.map((e,i) => `<button class="checkin-emoji" title="${labels[i]}" onclick="checkinPick('${labels[i]}', this)">${e}</button>`).join('')}</div>
+                <div id="checkin-result" style="text-align:center;font-size:0.9rem;color:#6366f1;min-height:24px;"></div>
+            `;
+            document.body.appendChild(toast);
+        }
+        function checkinPick(label, btn) {
+            document.querySelectorAll('.checkin-emoji').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            document.getElementById('checkin-result').textContent = `You\'re feeling ${label} today — noted! 🌟`;
+            localStorage.setItem('dashboard-checkin', JSON.stringify({ label, date: new Date().toDateString() }));
+        }
+
+        // Open timer/random on whiteboard with auto-open
+        // Hash-based auto-open is handled by whiteboard.js on load
+
+        // Countdown calculation
+        function updateCountdown() {
+            const countdownEl = document.getElementById('countdown-days');
+            const dateLabelEl = document.getElementById('countdown-date-label');
+            if (!countdownEl) return;
+            
+            const targetDate = new Date('2026-05-22T00:00:00');
+            const now = new Date();
+            
+            const diff = targetDate - now;
+            const days = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+            
+            countdownEl.textContent = days;
+
+            if (dateLabelEl) {
+                const options = { weekday: 'short', month: 'short', day: 'numeric' };
+                dateLabelEl.textContent = `Last Day: ${targetDate.toLocaleDateString('en-US', options)}`;
+            }
+        }
+        updateCountdown();
+    </script>
+
+    <!-- To-Do Modal -->
+    <div id="todo-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2000;display:flex;align-items:center;justify-content:center;" onclick="if(event.target===this)closeTodos()">
+        <div style="background:#fff;border-radius:16px;padding:24px;width:380px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:1.1rem;font-weight:600;"><i class="fa-solid fa-list-ul" style="color:#6366f1;margin-right:8px;"></i>To-Dos</span>
+                <button onclick="closeTodos()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#999;">✕</button>
+            </div>
+            <div id="todo-list" style="flex:1;overflow-y:auto;max-height:340px;display:flex;flex-direction:column;gap:6px;"></div>
+            <div style="display:flex;gap:8px;">
+                <input id="todo-input" type="text" placeholder="Add a new to-do..." style="flex:1;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;" />
+                <button id="todo-add-btn" style="background:#6366f1;color:#fff;border:none;border-radius:10px;padding:10px 16px;cursor:pointer;font-size:0.95rem;"><i class="fa-solid fa-plus"></i></button>
+            </div>
+            <button id="todo-clear-done" style="background:none;border:1.5px solid #e0e0e0;border-radius:10px;padding:8px;font-size:0.82rem;color:#999;cursor:pointer;">Clear completed</button>
+        </div>
+    </div>
+
+    <style>
+        .todo-item { display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:#f8f9fa;transition:background 0.2s; }
+        .todo-item.done .todo-text { text-decoration:line-through;color:#aaa; }
+        .todo-check { background:none;border:none;cursor:pointer;color:#6366f1;font-size:1.1rem;flex-shrink:0; }
+        .todo-delete { background:none;border:none;cursor:pointer;color:#ccc;font-size:0.85rem;margin-left:auto;flex-shrink:0; }
+        .todo-delete:hover { color:#ef4444; }
+        .todo-text { flex:1;font-size:0.9rem; }
+        .checkin-toast { position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#fff;border-radius:16px;padding:20px 24px;box-shadow:0 12px 32px rgba(0,0,0,0.18);z-index:3000;min-width:320px;max-width:95vw; }
+        .checkin-header { font-weight:600;font-size:0.95rem;margin-bottom:14px; }
+        .checkin-emojis { display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:10px; }
+        .checkin-emoji { background:#f5f5f5;border:2px solid transparent;border-radius:10px;font-size:1.5rem;padding:6px 10px;cursor:pointer;transition:all 0.15s; }
+        .checkin-emoji:hover, .checkin-emoji.selected { border-color:#6366f1;background:#ede9fe; }
+    </style>
+</body>
+</html>

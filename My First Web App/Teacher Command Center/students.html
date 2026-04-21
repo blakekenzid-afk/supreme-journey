@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacherstack - Students</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="students.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="profile-icon">R</div>
+                <div class="class-info">
+                    <span class="class-name">Regulation Sta...</span>
+                    <span class="grade">Grade K</span>
+                </div>
+                <i class="fa-solid fa-chevron-down toggle-icon" aria-hidden="true"></i>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+                    <span>Attendance</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-display" aria-hidden="true"></i>
+                    <span>Display Tools</span>
+                </a>
+                <a href="students.html" class="nav-item active">
+                    <i class="fa-solid fa-users" aria-hidden="true"></i>
+                    <span>Students</span>
+                </a>
+                
+                <div class="nav-section">PLANNING</div>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+                    <span>Planner</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+                    <span>Lessons</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-bookmark" aria-hidden="true"></i>
+                    <span>Library</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer user-profile">
+                <div class="user-avatar">T</div>
+                <div class="user-info">
+                    <span class="user-name">Kenzi Young</span>
+                    <span class="user-email">kenzi@gmail.com</span>
+                </div>
+                <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content light-bg">
+            <header class="top-nav">
+                <div class="nav-left">
+                    <i class="fa-solid fa-bars menu-toggle" aria-hidden="true"></i>
+                    <span class="brand-name">Teacherstack</span>
+                </div>
+            </header>
+
+            <div class="students-container">
+                <h1 class="sr-only">Students</h1>
+                <div class="student-grid" id="student-grid">
+                    <!-- Students will be generated here -->
+                </div>
+            </div>
+
+            <!-- Floating Action Buttons -->
+            <div class="fab-container" id="fab-container">
+                <button class="fab-text"><i class="fa-solid fa-clipboard-user" aria-hidden="true"></i> Log Behavior</button>
+                <button class="fab-text"><i class="fa-solid fa-pen-nib" aria-hidden="true"></i> Student Note</button>
+                <button class="bottom-right-toggle" id="fab-toggle-close" aria-label="Close action menu">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+                <button class="fab-main" id="fab-toggle-open" aria-label="Open action menu">
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <script src="students.js"></script>
+    <script>
+        const grid = document.getElementById('student-grid');
+        students.forEach(s => {
+            const card = document.createElement('button');
+            card.className = 'student-card';
+            card.setAttribute('aria-label', `Student: ${s.name}`);
+            const textColor = getContrastColor(s.color);
+            card.innerHTML = `
+                <div class="student-avatar" style="background-color: ${s.color}; color: ${textColor}" aria-hidden="true">${s.initials}</div>
+                <div class="student-name">${s.name}</div>
+            `;
+            grid.appendChild(card);
+        });
+
+        // FAB toggle functionality
+        const fabContainer = document.getElementById('fab-container');
+        const fabOpen = document.getElementById('fab-toggle-open');
+        const fabClose = document.getElementById('fab-toggle-close');
+
+        if (fabOpen && fabClose && fabContainer) {
+            fabOpen.addEventListener('click', () => {
+                fabContainer.classList.add('active');
+            });
+            fabClose.addEventListener('click', () => {
+                fabContainer.classList.remove('active');
+            });
+        }
+    </script>
+</body>
+</html>
