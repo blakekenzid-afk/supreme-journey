@@ -462,7 +462,18 @@ body {
 .bb-btn:hover span{color:var(--accent);}
 .bb-btn:active{transform: translateY(0) scale(0.95);}
 
-/* MODALS */
+/* Page Navigation */
+.wb-page-nav{margin-left:auto;flex-shrink:0;display:flex;align-items:center;gap:4px;padding-left:16px;border-left:1px solid var(--wb-border-color);}
+.page-nav-btn{background:none;border:1.5px solid var(--wb-border-color);border-radius:8px;width:30px;height:30px;cursor:pointer;color:var(--wb-text-main);font-size:0.82rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:var(--transition-base);}
+.page-nav-btn:hover{background:var(--wb-accent-blue);color:var(--accent);border-color:var(--accent);}
+.page-nav-btn.disabled{opacity:0.3;cursor:not-allowed;pointer-events:none;}
+.page-add-btn{background:var(--accent,#6366f1);border-color:var(--accent,#6366f1);color:#fff;}
+.page-add-btn:hover{opacity:0.85;background:var(--accent,#6366f1);color:#fff;}
+.page-del-btn{color:var(--wb-text-muted);}
+.page-del-btn.hidden{display:none;}
+#page-counter{font-size:0.8rem;font-weight:700;color:var(--wb-text-main);white-space:nowrap;padding:0 6px;min-width:38px;text-align:center;letter-spacing:0.02em;}
+
+
 .modal-overlay{
   position:fixed;inset:0;
   background: var(--wb-overlay-medium, rgba(0, 0, 0, 0.4));

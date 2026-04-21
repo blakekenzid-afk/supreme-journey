@@ -125,10 +125,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (widgetsLayer) {
                 widgetsLayer.querySelectorAll('.text-overlay').forEach(el => el.remove());
             }
-            // Reset undo/redo stacks and clear persisted canvas
+            // Reset undo/redo stacks and save blank page state
             undoStack = [];
             redoStack = [];
-            localStorage.removeItem('wb-canvas-persist');
             saveCanvasState(); // Push the empty state as the new baseline
         }
     });
@@ -983,28 +982,115 @@ document.addEventListener('DOMContentLoaded', () => {
        - Limits undo stack to the last 30 states to optimize memory.
     */
     let undoStack = [], redoStack = [];
+
+    // ===================== MULTI-PAGE SYSTEM =====================
+    let wb_pages = JSON.parse(localStorage.getItem('wb-pages') || 'null');
+    let wb_currentPage = parseInt(localStorage.getItem('wb-current-page') || '0');
+    if (!wb_pages || wb_pages.length === 0) {
+        wb_pages = [{ canvas: null, bgStyle: '', bgClass: 'wb-canvas-area' }];
+        wb_currentPage = 0;
+    }
+    if (wb_currentPage >= wb_pages.length) wb_currentPage = 0;
+
+    function saveCurrentPageState(dataUrl) {
+        if (!dataUrl) dataUrl = canvas.toDataURL('image/png');
+        wb_pages[wb_currentPage] = {
+            canvas: dataUrl,
+            bgStyle: canvasArea.style.background || '',
+            bgClass: canvasArea.className || 'wb-canvas-area'
+        };
+        try { localStorage.setItem('wb-pages', JSON.stringify(wb_pages)); } catch(e) {}
+        localStorage.setItem('wb-current-page', String(wb_currentPage));
+    }
+
+    function updatePageCounter() {
+        const counter = document.getElementById('page-counter');
+        if (counter) counter.textContent = `${wb_currentPage + 1} / ${wb_pages.length}`;
+        document.getElementById('page-prev')?.classList.toggle('disabled', wb_currentPage === 0);
+        document.getElementById('page-next')?.classList.toggle('disabled', wb_currentPage === wb_pages.length - 1);
+        const delBtn = document.getElementById('page-delete');
+        if (delBtn) delBtn.classList.toggle('disabled', wb_pages.length <= 1);
+    }
+
+    function navigateToPage(index) {
+        if (index < 0 || index >= wb_pages.length) return;
+        saveCurrentPageState();
+        wb_currentPage = index;
+        localStorage.setItem('wb-current-page', String(wb_currentPage));
+        const page = wb_pages[wb_currentPage];
+        undoStack = []; redoStack = [];
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (page && page.canvas) {
+            const img = new Image();
+            img.onload = () => { ctx.drawImage(img, 0, 0); undoStack.push(page.canvas); };
+            img.src = page.canvas;
+        } else {
+            saveCanvasState();
+        }
+        canvasArea.className = (page && page.bgClass) ? page.bgClass : 'wb-canvas-area';
+        canvasArea.style.background = (page && page.bgStyle) ? page.bgStyle : '';
+        updateCanvasCursor();
+        updatePageCounter();
+    }
+
     function saveCanvasState() {
         const dataUrl = canvas.toDataURL();
         undoStack.push(dataUrl);
         if (undoStack.length > 30) undoStack.shift();
         redoStack = [];
-        // Persist to localStorage so canvas survives page reload
-        try { localStorage.setItem('wb-canvas-persist', dataUrl); } catch(e) {}
+        // Persist current page to localStorage
+        try { saveCurrentPageState(dataUrl); } catch(e) {}
     }
 
-    // Restore persisted canvas on load (before saving initial blank state)
-    const persistedCanvas = localStorage.getItem('wb-canvas-persist');
-    if (persistedCanvas) {
-        const img = new Image();
-        img.onload = () => {
-            ctx.drawImage(img, 0, 0);
-            undoStack.push(persistedCanvas);
-        };
-        img.src = persistedCanvas;
-    } else {
-        // Save initial blank state
-        saveCanvasState();
+    // Load current page on start
+    {
+        const page = wb_pages[wb_currentPage];
+        if (page && page.canvas) {
+            const img = new Image();
+            img.onload = () => { ctx.drawImage(img, 0, 0); undoStack.push(page.canvas); };
+            img.src = page.canvas;
+            if (page.bgClass) { canvasArea.className = page.bgClass; updateCanvasCursor(); }
+            if (page.bgStyle) canvasArea.style.background = page.bgStyle;
+        } else {
+            saveCanvasState();
+        }
+        updatePageCounter();
     }
+
+    // Page nav button wiring
+    document.getElementById('page-prev')?.addEventListener('click', () => {
+        if (wb_currentPage > 0) navigateToPage(wb_currentPage - 1);
+    });
+    document.getElementById('page-next')?.addEventListener('click', () => {
+        if (wb_currentPage < wb_pages.length - 1) navigateToPage(wb_currentPage + 1);
+    });
+    document.getElementById('page-add')?.addEventListener('click', () => {
+        saveCurrentPageState();
+        wb_pages.push({ canvas: null, bgStyle: '', bgClass: 'wb-canvas-area' });
+        navigateToPage(wb_pages.length - 1);
+    });
+    document.getElementById('page-delete')?.addEventListener('click', () => {
+        if (wb_pages.length <= 1) return;
+        wb_pages.splice(wb_currentPage, 1);
+        const newIndex = Math.min(wb_currentPage, wb_pages.length - 1);
+        wb_currentPage = newIndex;
+        localStorage.setItem('wb-current-page', String(wb_currentPage));
+        try { localStorage.setItem('wb-pages', JSON.stringify(wb_pages)); } catch(e) {}
+        const page = wb_pages[wb_currentPage];
+        undoStack = []; redoStack = [];
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (page && page.canvas) {
+            const img = new Image();
+            img.onload = () => { ctx.drawImage(img, 0, 0); undoStack.push(page.canvas); };
+            img.src = page.canvas;
+        } else {
+            saveCanvasState();
+        }
+        canvasArea.className = (page && page.bgClass) ? page.bgClass : 'wb-canvas-area';
+        canvasArea.style.background = (page && page.bgStyle) ? page.bgStyle : '';
+        updateCanvasCursor();
+        updatePageCounter();
+    });
 
     canvas.addEventListener('mouseup', () => { if (currentTool === 'pen' || currentTool === 'eraser') saveCanvasState(); });
     canvas.addEventListener('touchend', () => { if (currentTool === 'pen' || currentTool === 'eraser') saveCanvasState(); });
