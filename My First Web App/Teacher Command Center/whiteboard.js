@@ -636,6 +636,8 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (bg === 'dotted') canvasArea.classList.add('bg-dotted');
             else if (bg === 'isometric') canvasArea.classList.add('bg-isometric');
             else if (bg === 'music') canvasArea.classList.add('bg-music');
+        });
+    });
 
     // Color swatches
     const bgColors = [
