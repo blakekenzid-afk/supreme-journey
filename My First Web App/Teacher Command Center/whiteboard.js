@@ -125,10 +125,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (widgetsLayer) {
                 widgetsLayer.querySelectorAll('.text-overlay').forEach(el => el.remove());
             }
-            // Reset undo/redo stacks as requested to prevent inconsistent state
+            // Reset undo/redo stacks and clear persisted canvas
             undoStack = [];
             redoStack = [];
-            saveCanvasState(); // This will push the empty state as the new baseline
+            localStorage.removeItem('wb-canvas-persist');
+            saveCanvasState(); // Push the empty state as the new baseline
         }
     });
 
@@ -983,12 +984,27 @@ document.addEventListener('DOMContentLoaded', () => {
     */
     let undoStack = [], redoStack = [];
     function saveCanvasState() {
-        undoStack.push(canvas.toDataURL());
+        const dataUrl = canvas.toDataURL();
+        undoStack.push(dataUrl);
         if (undoStack.length > 30) undoStack.shift();
         redoStack = [];
+        // Persist to localStorage so canvas survives page reload
+        try { localStorage.setItem('wb-canvas-persist', dataUrl); } catch(e) {}
     }
-    // Save initial blank state
-    saveCanvasState();
+
+    // Restore persisted canvas on load (before saving initial blank state)
+    const persistedCanvas = localStorage.getItem('wb-canvas-persist');
+    if (persistedCanvas) {
+        const img = new Image();
+        img.onload = () => {
+            ctx.drawImage(img, 0, 0);
+            undoStack.push(persistedCanvas);
+        };
+        img.src = persistedCanvas;
+    } else {
+        // Save initial blank state
+        saveCanvasState();
+    }
 
     canvas.addEventListener('mouseup', () => { if (currentTool === 'pen' || currentTool === 'eraser') saveCanvasState(); });
     canvas.addEventListener('touchend', () => { if (currentTool === 'pen' || currentTool === 'eraser') saveCanvasState(); });

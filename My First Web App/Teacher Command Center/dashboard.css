@@ -222,7 +222,7 @@ body {
     display: flex;
     flex-direction: column;
     position: relative;
-    overflow-y: auto;
+    overflow: hidden;
     min-height: 0;
 }
 

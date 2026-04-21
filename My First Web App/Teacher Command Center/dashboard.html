@@ -86,86 +86,20 @@
                 </div>
             </header>
 
-            <div class="dashboard-grid">
-                <!-- Action Cards -->
-                <section class="action-row">
-                    <button class="action-card border-blue" onclick="window.location.href='whiteboard.html'">
-                        <i class="fa-solid fa-chalkboard" aria-hidden="true"></i>
-                        <span>Boards</span>
-                    </button>
-                    <button class="action-card border-red" onclick="openStationsModal()">
-                        <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
-                        <span>Stations</span>
-                    </button>
-                    <button class="action-card border-orange" onclick="window.location.href='whiteboard.html#timer'">
-                        <i class="fa-solid fa-stopwatch" aria-hidden="true"></i>
-                        <span>Timer</span>
-                    </button>
-                    <button class="action-card border-green" onclick="window.location.href='whiteboard.html#random'">
-                        <i class="fa-solid fa-shuffle" aria-hidden="true"></i>
-                        <span>Random</span>
-                    </button>
-                    <button class="action-card border-grey" onclick="showCheckinToast()">
-                        <i class="fa-solid fa-face-smile" aria-hidden="true"></i>
-                        <span>Check-In</span>
-                    </button>
-                    <button class="action-card border-dark-grey" onclick="openTodos()">
-                        <i class="fa-solid fa-list-ul" aria-hidden="true"></i>
-                        <span>To-Dos</span>
-                    </button>
-                    
-                    <!-- Clock Card -->
-                    <div class="clock-card">
-                        <div class="time" id="clock-time">10:23 PM</div>
-                        <div class="date" id="clock-date">Saturday, April 18</div>
-                    </div>
-                </section>
-
-                <!-- Middle Content -->
-                <section class="content-row">
-                    <div class="large-card up-next">
-                        <div class="card-header">
-                            <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
-                            <span>Up Next</span>
-                        </div>
-                        <div id="up-next-content" class="up-next-content"></div>
-                    </div>
-                    
-                    <div class="large-card schedule">
-                        <div class="card-header" style="justify-content:space-between;">
-                            <span style="display:flex;align-items:center;gap:10px;">
-                                <i class="fa-solid fa-calendar-day" aria-hidden="true"></i>
-                                <span>Today's Schedule</span>
-                            </span>
-                            <button class="sched-add-btn" id="sched-add-btn" title="Add item" aria-label="Add schedule item">
-                                <i class="fa-solid fa-plus"></i> Add
-                            </button>
-                        </div>
-                        <div id="schedule-list" class="schedule-list"></div>
-                    </div>
-                </section>
-
-                <!-- Footer Widgets -->
-                <section class="footer-row">
-                    <div class="countdown-card">
-                        <div class="countdown-label">
-                            <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
-                            <span>Last Day of School</span>
-                        </div>
-                        <div class="countdown-value" id="countdown-days">34</div>
-                        <div class="countdown-unit">days left</div>
-                        <div class="countdown-label" id="countdown-date-label">Last Day: Fri, May 22</div>
-                    </div>
-                    
-                    <div class="notes-card">
-                        <div class="card-header">
-                            <i class="fa-solid fa-note-sticky" aria-hidden="true"></i>
-                            <span>Notes</span>
-                        </div>
-                        <textarea id="dashboard-notes" placeholder="Click to add notes..."></textarea>
-                    </div>
-                </section>
+            <!-- Widget Picker Bar -->
+            <div class="widget-picker" id="widget-picker">
+                <span class="picker-label"><i class="fa-solid fa-plus-circle"></i> Add Widget</span>
+                <button class="pick-btn" data-wid="clock"><i class="fa-solid fa-clock"></i> Clock</button>
+                <button class="pick-btn" data-wid="countdown"><i class="fa-solid fa-calendar-check"></i> Countdown</button>
+                <button class="pick-btn" data-wid="schedule"><i class="fa-solid fa-calendar-day"></i> Schedule</button>
+                <button class="pick-btn" data-wid="upnext"><i class="fa-solid fa-play"></i> Up Next</button>
+                <button class="pick-btn" data-wid="notes"><i class="fa-solid fa-note-sticky"></i> Notes</button>
+                <button class="pick-btn" data-wid="todos"><i class="fa-solid fa-list-ul"></i> To-Dos</button>
+                <button class="pick-btn" data-wid="actions"><i class="fa-solid fa-bolt"></i> Quick Actions</button>
+                <button class="pick-btn" data-wid="checkin"><i class="fa-solid fa-face-smile"></i> Check-In</button>
             </div>
+            <!-- Widget Canvas -->
+            <div class="widget-canvas" id="widget-canvas"></div>
 
             <!-- Floating Action Buttons -->
             <div class="fab-container" id="fab-container">
@@ -182,26 +116,10 @@
     </div>
 
     <script>
-        // Clock functionality
-        function updateClock() {
-            const now = new Date();
-            const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
-            const dateOptions = { weekday: 'long', month: 'long', day: 'numeric' };
-            
-            const timeEl = document.getElementById('clock-time');
-            const dateEl = document.getElementById('clock-date');
-            
-            if (timeEl) timeEl.textContent = now.toLocaleTimeString('en-US', timeOptions);
-            if (dateEl) dateEl.textContent = now.toLocaleDateString('en-US', dateOptions);
-        }
-        setInterval(updateClock, 1000);
-        updateClock();
-
-        // FAB Toggle functionality
+        // ===== FAB TOGGLE =====
         const fabContainer = document.getElementById('fab-container');
         const fabOpen = document.getElementById('fab-toggle-open');
         const fabClose = document.getElementById('fab-toggle-close');
-
         if (fabOpen && fabClose && fabContainer) {
             fabOpen.addEventListener('click', () => fabContainer.classList.add('active'));
             fabClose.addEventListener('click', () => fabContainer.classList.remove('active'));
@@ -269,190 +187,261 @@
             const next = sorted.find(i => toMins(i.start) > nowMins);
             const item = current || next;
             if (!item) {
-                el.innerHTML = '<div class="up-next-empty"><i class="fa-solid fa-calendar-check"></i><p>' + (schedItems.length > 0 ? 'All done for today! 🎉' : 'Add items to your schedule') + '</p></div>';
-                return;
-            }
-            const startM = toMins(item.start), endM = toMins(item.end);
-            const pct = current ? Math.round(((nowMins-startM)/(endM-startM))*100) : 0;
-            const label = current ? 'Happening now' : 'Coming up at ' + fmt12(item.start);
-            el.innerHTML = `
-                <div class="up-next-item">
-                    <div class="up-next-icon">${item.icon}</div>
-                    <div class="up-next-name">${item.title}</div>
-                    <div class="up-next-time">${label}</div>
-                    ${current ? `<div class="up-next-bar"><div class="up-next-bar-fill" style="width:${pct}%"></div></div>` : ''}
-                </div>
-            `;
-        }
-
-        function openSchedModal(editIndex = -1) {
-            schedEditIndex = editIndex;
-            const isEdit = editIndex >= 0;
-            document.getElementById('sched-modal-title').textContent = isEdit ? 'Edit Item' : 'Add Schedule Item';
-            document.getElementById('sched-delete-btn').style.display = isEdit ? 'inline-block' : 'none';
-            const item = isEdit ? schedItems[editIndex] : null;
-            document.getElementById('sched-title').value = item ? item.title : '';
-            document.getElementById('sched-start').value = item ? item.start : '';
-            document.getElementById('sched-end').value = item ? item.end : '';
-            selectedIcon = item ? item.icon : '📚';
-            const iconsEl = document.getElementById('sched-icons');
-            iconsEl.innerHTML = '';
-            SCHED_ICONS.forEach(ic => {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.textContent = ic;
-                btn.style.cssText = 'font-size:1.3rem;background:' + (ic===selectedIcon?'#ede9fe':'#f5f5f5') + ';border:2px solid ' + (ic===selectedIcon?'#6366f1':'transparent') + ';border-radius:8px;padding:4px 7px;cursor:pointer;';
-                btn.addEventListener('click', () => {
-                    selectedIcon = ic;
-                    iconsEl.querySelectorAll('button').forEach(b => { b.style.background='#f5f5f5'; b.style.borderColor='transparent'; });
-                    btn.style.background = '#ede9fe'; btn.style.borderColor = '#6366f1';
+        // ===== SCHEDULE HELPERS =====
+        const SCHED_ICONS = ['📚','🎨','🧮','📖','🏃','🍽️','⏰','🎵','🧪','💬','🌟','✏️','🖥️','🤸','🧘','📝','🔬','🌍','🎭','❤️'];
+        let schedItems = JSON.parse(localStorage.getItem('dashboard-schedule') || '[]');
+        let schedEditIndex = -1, selectedIcon = '📚';
+        function saveSchedule() { localStorage.setItem('dashboard-schedule', JSON.stringify(schedItems)); }
+        function toMins(t) { const [h,m] = t.split(':').map(Number); return h*60+m; }
+        function fmt12(t) { const [h,m] = t.split(':').map(Number); const ap = h>=12?'PM':'AM'; return ((h%12)||12)+':'+String(m).padStart(2,'0')+' '+ap; }
+        function renderSchedule() {
+            const list = document.getElementById('schedule-list');
+            if (!list) return;
+            if (schedItems.length === 0) { list.innerHTML = '<div class="sched-empty"><i class="fa-solid fa-calendar-xmark"></i><p>No items yet</p></div>'; }
+            else {
+                const nowMins = new Date().getHours()*60+new Date().getMinutes();
+                schedItems.sort((a,b)=>toMins(a.start)-toMins(b.start));
+                list.innerHTML = '';
+                schedItems.forEach((item,i) => {
+                    const sM=toMins(item.start),eM=toMins(item.end),done=nowMins>eM,active=nowMins>=sM&&nowMins<=eM;
+                    const pct=done?100:active?Math.round(((nowMins-sM)/(eM-sM))*100):0;
+                    const div=document.createElement('div');
+                    div.className='sched-item'+(active?' active':'')+(done?' done':'');
+                    div.innerHTML=`<span class="sched-icon">${item.icon}</span><div class="sched-info"><div class="sched-name">${item.title}</div><div class="sched-time">${fmt12(item.start)} – ${fmt12(item.end)}</div><div class="sched-progress"><div class="sched-progress-fill" style="width:${pct}%"></div></div></div>`;
+                    div.addEventListener('click',()=>openSchedModal(i));
+                    list.appendChild(div);
                 });
+            }
+            renderUpNext();
+        }
+        function renderUpNext() {
+            const el = document.getElementById('up-next-content');
+            if (!el) return;
+            const nowMins = new Date().getHours()*60+new Date().getMinutes();
+            const sorted = [...schedItems].sort((a,b)=>toMins(a.start)-toMins(b.start));
+            const current = sorted.find(i=>nowMins>=toMins(i.start)&&nowMins<=toMins(i.end));
+            const next = sorted.find(i=>toMins(i.start)>nowMins);
+            const item = current||next;
+            if (!item) { el.innerHTML='<div class="up-next-empty"><i class="fa-solid fa-calendar-check"></i><p>'+(schedItems.length>0?'All done! 🎉':'Add schedule items')+'</p></div>'; return; }
+            const sM=toMins(item.start),eM=toMins(item.end),pct=current?Math.round(((nowMins-sM)/(eM-sM))*100):0;
+            el.innerHTML=`<div class="up-next-item"><div class="up-next-icon">${item.icon}</div><div class="up-next-name">${item.title}</div><div class="up-next-time">${current?'Happening now':'At '+fmt12(item.start)}</div>${current?`<div class="up-next-bar"><div class="up-next-bar-fill" style="width:${pct}%"></div></div>`:''}</div>`;
+        }
+        function openSchedModal(editIndex=-1) {
+            schedEditIndex=editIndex; const isEdit=editIndex>=0;
+            document.getElementById('sched-modal-title').textContent=isEdit?'Edit Item':'Add Schedule Item';
+            document.getElementById('sched-delete-btn').style.display=isEdit?'inline-block':'none';
+            const item=isEdit?schedItems[editIndex]:null;
+            document.getElementById('sched-title').value=item?item.title:'';
+            document.getElementById('sched-start').value=item?item.start:'';
+            document.getElementById('sched-end').value=item?item.end:'';
+            selectedIcon=item?item.icon:'📚';
+            const iconsEl=document.getElementById('sched-icons'); iconsEl.innerHTML='';
+            SCHED_ICONS.forEach(ic=>{
+                const btn=document.createElement('button'); btn.type='button'; btn.textContent=ic;
+                btn.style.cssText='font-size:1.3rem;background:'+(ic===selectedIcon?'#ede9fe':'#f5f5f5')+';border:2px solid '+(ic===selectedIcon?'#6366f1':'transparent')+';border-radius:8px;padding:4px 7px;cursor:pointer;';
+                btn.addEventListener('click',()=>{ selectedIcon=ic; iconsEl.querySelectorAll('button').forEach(b=>{b.style.background='#f5f5f5';b.style.borderColor='transparent';}); btn.style.background='#ede9fe'; btn.style.borderColor='#6366f1'; });
                 iconsEl.appendChild(btn);
             });
-            const m = document.getElementById('sched-modal');
-            m.style.display = 'flex';
-            setTimeout(() => document.getElementById('sched-title').focus(), 50);
+            document.getElementById('sched-modal').style.display='flex';
+            setTimeout(()=>document.getElementById('sched-title').focus(),50);
         }
-
-        function closeSchedModal() { document.getElementById('sched-modal').style.display = 'none'; }
-
+        function closeSchedModal() { document.getElementById('sched-modal').style.display='none'; }
         function saveSchedItem() {
-            const title = document.getElementById('sched-title').value.trim();
-            const start = document.getElementById('sched-start').value;
-            const end = document.getElementById('sched-end').value;
+            const title=document.getElementById('sched-title').value.trim(), start=document.getElementById('sched-start').value, end=document.getElementById('sched-end').value;
             if (!title) { document.getElementById('sched-title').focus(); return; }
-            if (!start || !end) { alert('Please set a start and end time.'); return; }
-            if (toMins(end) <= toMins(start)) { alert('End time must be after start time.'); return; }
-            const item = { title, start, end, icon: selectedIcon };
-            if (schedEditIndex >= 0) schedItems[schedEditIndex] = item;
-            else schedItems.push(item);
-            saveSchedule();
-            renderSchedule();
-            closeSchedModal();
+            if (!start||!end) { alert('Please set a start and end time.'); return; }
+            if (toMins(end)<=toMins(start)) { alert('End time must be after start time.'); return; }
+            const item={title,start,end,icon:selectedIcon};
+            if (schedEditIndex>=0) schedItems[schedEditIndex]=item; else schedItems.push(item);
+            saveSchedule(); renderSchedule(); closeSchedModal();
         }
+        function deleteSchedItem() { if (schedEditIndex<0) return; schedItems.splice(schedEditIndex,1); saveSchedule(); renderSchedule(); closeSchedModal(); }
 
-        function deleteSchedItem() {
-            if (schedEditIndex < 0) return;
-            schedItems.splice(schedEditIndex, 1);
-            saveSchedule();
-            renderSchedule();
-            closeSchedModal();
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('sched-add-btn').addEventListener('click', () => openSchedModal());
-            renderSchedule();
-            setInterval(renderSchedule, 60000);
-        });
-
-        // Notes auto-save
-        const notesEl = document.getElementById('dashboard-notes');
-        if (notesEl) {
-            notesEl.value = localStorage.getItem('dashboard-notes') || '';
-            notesEl.addEventListener('input', () => {
-                localStorage.setItem('dashboard-notes', notesEl.value);
-            });
-        }
-
-        // To-Dos
-        function openTodos() {
-            document.getElementById('todo-modal').style.display = 'flex';
-            renderTodos();
-        }
-        function closeTodos() {
-            document.getElementById('todo-modal').style.display = 'none';
-        }
+        // ===== TO-DO HELPERS =====
         let todos = JSON.parse(localStorage.getItem('dashboard-todos') || '[]');
         function saveTodos() { localStorage.setItem('dashboard-todos', JSON.stringify(todos)); }
         function renderTodos() {
             const list = document.getElementById('todo-list');
+            if (!list) return;
             list.innerHTML = '';
-            if (todos.length === 0) {
-                list.innerHTML = '<p style="color:#999;font-size:0.9rem;text-align:center;padding:12px 0;">No to-dos yet — add one below!</p>';
-                return;
-            }
-            todos.forEach((t, i) => {
-                const item = document.createElement('div');
-                item.className = 'todo-item' + (t.done ? ' done' : '');
-                item.innerHTML = `
-                    <button class="todo-check" onclick="toggleTodo(${i})" aria-label="${t.done ? 'Mark incomplete' : 'Mark complete'}">
-                        <i class="fa-solid ${t.done ? 'fa-circle-check' : 'fa-circle'}"></i>
-                    </button>
-                    <span class="todo-text">${t.text}</span>
-                    <button class="todo-delete" onclick="deleteTodo(${i})" aria-label="Delete"><i class="fa-solid fa-xmark"></i></button>
-                `;
+            if (todos.length === 0) { list.innerHTML='<p style="color:#999;font-size:0.85rem;text-align:center;padding:10px 0;">No to-dos yet!</p>'; return; }
+            todos.forEach((t,i) => {
+                const item=document.createElement('div'); item.className='todo-item'+(t.done?' done':'');
+                item.innerHTML=`<button class="todo-check" onclick="toggleTodo(${i})"><i class="fa-solid ${t.done?'fa-circle-check':'fa-circle'}"></i></button><span class="todo-text">${t.text}</span><button class="todo-delete" onclick="deleteTodo(${i})"><i class="fa-solid fa-xmark"></i></button>`;
                 list.appendChild(item);
             });
         }
-        function toggleTodo(i) { todos[i].done = !todos[i].done; saveTodos(); renderTodos(); }
-        function deleteTodo(i) { todos.splice(i, 1); saveTodos(); renderTodos(); }
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('todo-add-btn').addEventListener('click', () => {
-                const input = document.getElementById('todo-input');
-                const text = input.value.trim();
-                if (!text) return;
-                todos.push({ text, done: false });
-                saveTodos();
-                renderTodos();
-                input.value = '';
-                input.focus();
-            });
-            document.getElementById('todo-input').addEventListener('keypress', e => {
-                if (e.key === 'Enter') document.getElementById('todo-add-btn').click();
-            });
-            document.getElementById('todo-clear-done').addEventListener('click', () => {
-                todos = todos.filter(t => !t.done);
-                saveTodos();
-                renderTodos();
-            });
+        function toggleTodo(i) { todos[i].done=!todos[i].done; saveTodos(); renderTodos(); }
+        function deleteTodo(i) { todos.splice(i,1); saveTodos(); renderTodos(); }
+
+        // ===== CHECK-IN =====
+        function checkinPick(label, btn) {
+            document.querySelectorAll('.checkin-emoji').forEach(b=>b.classList.remove('selected'));
+            btn.classList.add('selected');
+            const r=document.getElementById('checkin-result');
+            if (r) r.textContent=`Feeling ${label} today 🌟`;
+            localStorage.setItem('dashboard-checkin', JSON.stringify({label, date:new Date().toDateString()}));
+        }
+
+        // ===== WIDGET SYSTEM =====
+        const WIDGET_DEFS = {
+            clock: {
+                title:'Clock', icon:'fa-clock', headerBg:'#1a2332', headerColor:'#fff', width:230,
+                render(body) {
+                    body.style.cssText='padding:16px;text-align:center;';
+                    body.innerHTML=`<div id="wid-clock-time" style="font-size:2.2rem;font-weight:800;color:#1a2332;letter-spacing:-1px;line-height:1;"></div><div id="wid-clock-date" style="font-size:0.78rem;color:#888;margin-top:6px;"></div>`;
+                    const tick=()=>{ const n=new Date(),te=document.getElementById('wid-clock-time'),de=document.getElementById('wid-clock-date'); if(te)te.textContent=n.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true}); if(de)de.textContent=n.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}); };
+                    tick(); const iv=setInterval(tick,1000); body.closest('.dash-widget')._clockIv=iv;
+                }, onClose(el){clearInterval(el._clockIv);}
+            },
+            countdown: {
+                title:'Countdown', icon:'fa-calendar-check', headerBg:'#2e7d6b', headerColor:'#fff', width:210,
+                render(body) {
+                    body.style.cssText='text-align:center;padding:16px 12px;';
+                    const target=new Date('2026-05-22T00:00:00'), days=Math.max(0,Math.ceil((target-new Date())/86400000));
+                    body.innerHTML=`<div style="font-size:0.78rem;color:#888;margin-bottom:4px;">Last Day of School</div><div style="font-size:3rem;font-weight:900;color:#2e7d6b;line-height:1;">${days}</div><div style="font-size:0.75rem;color:#aaa;margin-top:4px;">days left · Fri, May 22</div>`;
+                }
+            },
+            schedule: {
+                title:"Today's Schedule", icon:'fa-calendar-day', headerBg:'#6366f1', headerColor:'#fff', width:300,
+                render(body) {
+                    body.style.cssText='padding:10px;display:flex;flex-direction:column;gap:8px;';
+                    body.innerHTML=`<div style="display:flex;justify-content:flex-end;"><button id="sched-add-btn" class="sched-add-btn"><i class="fa-solid fa-plus"></i> Add</button></div><div id="schedule-list" class="schedule-list" style="max-height:300px;overflow-y:auto;"></div>`;
+                    document.getElementById('sched-add-btn').addEventListener('click',()=>openSchedModal());
+                    renderSchedule();
+                    body.closest('.dash-widget')._schedIv=setInterval(renderSchedule,60000);
+                }, onClose(el){clearInterval(el._schedIv);}
+            },
+            upnext: {
+                title:'Up Next', icon:'fa-play', headerBg:'#4f46e5', headerColor:'#fff', width:260,
+                render(body) {
+                    body.style.cssText='padding:12px;min-height:80px;';
+                    body.innerHTML=`<div id="up-next-content" class="up-next-content"></div>`;
+                    renderUpNext();
+                    body.closest('.dash-widget')._upIv=setInterval(renderUpNext,60000);
+                }, onClose(el){clearInterval(el._upIv);}
+            },
+            notes: {
+                title:'Notes', icon:'fa-note-sticky', headerBg:'#b3b1bd', headerColor:'#333', width:300,
+                render(body) {
+                    body.style.cssText='padding:8px;';
+                    body.innerHTML=`<textarea id="dashboard-notes" placeholder="Click to add notes..." style="width:100%;height:160px;border:none;outline:none;resize:vertical;font-family:inherit;font-size:0.88rem;line-height:1.5;background:transparent;box-sizing:border-box;"></textarea>`;
+                    const ta=document.getElementById('dashboard-notes');
+                    ta.value=localStorage.getItem('dashboard-notes')||'';
+                    ta.addEventListener('input',()=>localStorage.setItem('dashboard-notes',ta.value));
+                }
+            },
+            todos: {
+                title:'To-Dos', icon:'fa-list-ul', width:280,
+                render(body) {
+                    body.style.cssText='padding:10px;display:flex;flex-direction:column;gap:8px;';
+                    body.innerHTML=`<div id="todo-list" style="display:flex;flex-direction:column;gap:5px;max-height:240px;overflow-y:auto;"></div><div style="display:flex;gap:6px;"><input id="todo-input" type="text" placeholder="Add to-do..." style="flex:1;padding:7px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.85rem;outline:none;"><button id="todo-add-btn" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:7px 12px;cursor:pointer;"><i class="fa-solid fa-plus"></i></button></div><button id="todo-clear-done" style="background:none;border:1.5px solid #e0e0e0;border-radius:8px;padding:6px;font-size:0.78rem;color:#aaa;cursor:pointer;">Clear completed</button>`;
+                    renderTodos();
+                    document.getElementById('todo-add-btn').addEventListener('click',()=>{ const inp=document.getElementById('todo-input'),text=inp.value.trim(); if(!text)return; todos.push({text,done:false}); saveTodos(); renderTodos(); inp.value=''; inp.focus(); });
+                    document.getElementById('todo-input').addEventListener('keypress',e=>{ if(e.key==='Enter')document.getElementById('todo-add-btn').click(); });
+                    document.getElementById('todo-clear-done').addEventListener('click',()=>{ todos=todos.filter(t=>!t.done); saveTodos(); renderTodos(); });
+                }
+            },
+            actions: {
+                title:'Quick Actions', icon:'fa-bolt', width:280,
+                render(body) {
+                    body.style.cssText='padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;';
+                    const btns=[
+                        {label:'Boards',icon:'fa-chalkboard',color:'#4a90e2',action:`window.location.href='whiteboard.html'`},
+                        {label:'Stations',icon:'fa-arrows-rotate',color:'#a83836',action:`openStationsModal()`},
+                        {label:'Timer',icon:'fa-stopwatch',color:'#d48e37',action:`window.location.href='whiteboard.html#timer'`},
+                        {label:'Random',icon:'fa-shuffle',color:'#388e3c',action:`window.location.href='whiteboard.html#random'`},
+                        {label:'Log Behavior',icon:'fa-clipboard-user',color:'#6366f1',action:`openLogBehavior(null)`},
+                        {label:'Student Note',icon:'fa-pen-nib',color:'#d97706',action:`openStudentNote(null)`},
+                    ];
+                    body.innerHTML=btns.map(b=>`<button onclick="${b.action}" style="background:${b.color}18;border:1.5px solid ${b.color}40;border-radius:10px;padding:10px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;font-family:inherit;"><i class="fa-solid ${b.icon}" style="color:${b.color};font-size:1.2rem;"></i><span style="font-size:0.72rem;font-weight:600;color:#444;">${b.label}</span></button>`).join('');
+                }
+            },
+            checkin: {
+                title:'Check-In', icon:'fa-face-smile', headerBg:'#fce4ec', headerColor:'#d81b60', width:300,
+                render(body) {
+                    const emojis=['😊','😎','🤩','😴','😤','😢','🤔','😁','🥱','😰'], labels=['Happy','Cool','Excited','Tired','Frustrated','Sad','Thinking','Great','Bored','Anxious'];
+                    body.style.cssText='padding:12px;';
+                    body.innerHTML=`<div style="font-size:0.82rem;color:#888;margin-bottom:10px;text-align:center;">How are you feeling today, Ms. Young?</div><div class="checkin-emojis">${emojis.map((e,i)=>`<button class="checkin-emoji" title="${labels[i]}" onclick="checkinPick('${labels[i]}',this)">${e}</button>`).join('')}</div><div id="checkin-result" style="text-align:center;font-size:0.85rem;color:#6366f1;min-height:20px;margin-top:8px;"></div>`;
+                    const saved=JSON.parse(localStorage.getItem('dashboard-checkin')||'null');
+                    if (saved&&saved.date===new Date().toDateString()) { const r=document.getElementById('checkin-result'); if(r)r.textContent=`Feeling ${saved.label} today 🌟`; }
+                }
+            }
+        };
+
+        let widgetEls = {};
+        let widgetPositions = JSON.parse(localStorage.getItem('dash-widget-pos') || '{}');
+
+        function savePositions() {
+            const pos = {};
+            Object.entries(widgetEls).forEach(([wid,el]) => { pos[wid]={x:parseInt(el.style.left)||0, y:parseInt(el.style.top)||0, open:true}; });
+            Object.entries(widgetPositions).forEach(([wid,v]) => { if (!pos[wid]) pos[wid]={...v, open:false}; });
+            widgetPositions=pos; localStorage.setItem('dash-widget-pos', JSON.stringify(pos));
+        }
+
+        function spawnWidget(wid) {
+            if (widgetEls[wid]) { document.querySelectorAll('.dash-widget').forEach(w=>w.style.zIndex=10); widgetEls[wid].style.zIndex=20; return; }
+            const def=WIDGET_DEFS[wid]; if (!def) return;
+            const canvas=document.getElementById('widget-canvas');
+            const cw=canvas.clientWidth, ch=canvas.clientHeight;
+            const saved=widgetPositions[wid], count=Object.keys(widgetEls).length;
+            let x=saved?saved.x:20+(count%5)*30, y=saved?saved.y:20+Math.floor(count/5)*28;
+            x=Math.max(0,Math.min(x,Math.max(0,cw-(def.width||260)))); y=Math.max(0,Math.min(y,Math.max(0,ch-120)));
+            const el=document.createElement('div'); el.className='dash-widget'; el.dataset.wid=wid;
+            el.style.left=x+'px'; el.style.top=y+'px'; if(def.width)el.style.width=def.width+'px';
+            const hS=def.headerBg?`background:${def.headerBg};`:'', hT=def.headerColor?`color:${def.headerColor};`:'';
+            el.innerHTML=`<div class="wid-header" style="${hS}cursor:grab;"><div class="wid-title" style="${hT}"><i class="fa-solid ${def.icon}"></i> ${def.title}</div><button class="wid-close" onclick="closeWidget('${wid}')" style="${def.headerColor?`color:${def.headerColor};opacity:0.8;`:''}">✕</button></div><div class="wid-body"></div>`;
+            canvas.appendChild(el);
+            def.render(el.querySelector('.wid-body'));
+            widgetEls[wid]=el;
+            makeDraggable(el, el.querySelector('.wid-header'));
+            updatePickerBtn(wid, true);
+            savePositions();
+        }
+
+        function closeWidget(wid) {
+            const el=widgetEls[wid]; if (!el) return;
+            const def=WIDGET_DEFS[wid]; if (def&&def.onClose) def.onClose(el);
+            widgetPositions[wid]={x:parseInt(el.style.left)||0, y:parseInt(el.style.top)||0, open:false};
+            localStorage.setItem('dash-widget-pos', JSON.stringify(widgetPositions));
+            el.remove(); delete widgetEls[wid]; updatePickerBtn(wid, false);
+        }
+
+        function updatePickerBtn(wid, active) {
+            const btn=document.querySelector(`.pick-btn[data-wid="${wid}"]`); if(btn)btn.classList.toggle('active',active);
+        }
+
+        function makeDraggable(el, handle) {
+            const onDown=(cx,cy) => {
+                let ox=cx-el.offsetLeft, oy=cy-el.offsetTop;
+                document.querySelectorAll('.dash-widget').forEach(w=>w.style.zIndex=10); el.style.zIndex=20;
+                const onMove=(mx,my)=>{ const canvas=document.getElementById('widget-canvas'), maxX=canvas.clientWidth-el.offsetWidth, maxY=canvas.clientHeight-el.offsetHeight; el.style.left=Math.max(0,Math.min(maxX,mx-ox))+'px'; el.style.top=Math.max(0,Math.min(maxY,my-oy))+'px'; };
+                const mm=e=>onMove(e.clientX,e.clientY);
+                const tm=e=>{ e.preventDefault(); onMove(e.touches[0].clientX,e.touches[0].clientY); };
+                const up=()=>{ document.removeEventListener('mousemove',mm); document.removeEventListener('touchmove',tm); document.removeEventListener('mouseup',up); document.removeEventListener('touchend',up); savePositions(); };
+                document.addEventListener('mousemove',mm); document.addEventListener('touchmove',tm,{passive:false}); document.addEventListener('mouseup',up); document.addEventListener('touchend',up);
+            };
+            handle.addEventListener('mousedown',e=>{ e.preventDefault(); onDown(e.clientX,e.clientY); });
+            handle.addEventListener('touchstart',e=>onDown(e.touches[0].clientX,e.touches[0].clientY));
+            el.addEventListener('mousedown',()=>{ document.querySelectorAll('.dash-widget').forEach(w=>w.style.zIndex=10); el.style.zIndex=20; });
+        }
+
+        document.querySelectorAll('.pick-btn').forEach(btn => {
+            btn.addEventListener('click', () => { const wid=btn.dataset.wid; if(widgetEls[wid])closeWidget(wid); else spawnWidget(wid); });
         });
 
-        // Check-In toast
-        function showCheckinToast() {
-            const existing = document.getElementById('checkin-toast');
-            if (existing) existing.remove();
-            const emojis = ['😊','😎','🤩','😴','😤','😢','🤔','😁','🥱','😰'];
-            const labels = ['Happy','Cool','Excited','Tired','Frustrated','Sad','Thinking','Great','Bored','Anxious'];
-            const toast = document.createElement('div');
-            toast.id = 'checkin-toast';
-            toast.className = 'checkin-toast';
-            toast.innerHTML = `
-                <div class="checkin-header">How are you feeling today, Ms. Young? <button onclick="this.closest('.checkin-toast').remove()" aria-label="Close" style="float:right;background:none;border:none;cursor:pointer;font-size:1.1rem;">✕</button></div>
-                <div class="checkin-emojis">${emojis.map((e,i) => `<button class="checkin-emoji" title="${labels[i]}" onclick="checkinPick('${labels[i]}', this)">${e}</button>`).join('')}</div>
-                <div id="checkin-result" style="text-align:center;font-size:0.9rem;color:#6366f1;min-height:24px;"></div>
-            `;
-            document.body.appendChild(toast);
-        }
-        function checkinPick(label, btn) {
-            document.querySelectorAll('.checkin-emoji').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            document.getElementById('checkin-result').textContent = `You\'re feeling ${label} today — noted! 🌟`;
-            localStorage.setItem('dashboard-checkin', JSON.stringify({ label, date: new Date().toDateString() }));
-        }
-
-        // Open timer/random on whiteboard with auto-open
-        // Hash-based auto-open is handled by whiteboard.js on load
-
-        // Countdown calculation
-        function updateCountdown() {
-            const countdownEl = document.getElementById('countdown-days');
-            const dateLabelEl = document.getElementById('countdown-date-label');
-            if (!countdownEl) return;
-            
-            const targetDate = new Date('2026-05-22T00:00:00');
-            const now = new Date();
-            
-            const diff = targetDate - now;
-            const days = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-            
-            countdownEl.textContent = days;
-
-            if (dateLabelEl) {
-                const options = { weekday: 'short', month: 'short', day: 'numeric' };
-                dateLabelEl.textContent = `Last Day: ${targetDate.toLocaleDateString('en-US', options)}`;
-            }
-        }
-        updateCountdown();
+        document.addEventListener('DOMContentLoaded', () => {
+            const saved = JSON.parse(localStorage.getItem('dash-widget-pos') || '{}');
+            const open = Object.keys(saved).filter(w => saved[w].open !== false && WIDGET_DEFS[w]);
+            setTimeout(() => {
+                if (open.length === 0) {
+                    spawnWidget('clock'); spawnWidget('schedule'); spawnWidget('notes'); spawnWidget('actions');
+                } else {
+                    open.forEach(wid => spawnWidget(wid));
+                }
+            }, 50);
+            setInterval(() => { renderSchedule(); renderUpNext(); }, 60000);
+        });
     </script>
 
     <!-- Schedule Add/Edit Modal -->
@@ -465,40 +454,15 @@
             <div style="display:flex;flex-direction:column;gap:10px;">
                 <input id="sched-title" type="text" placeholder="Activity name (e.g. Morning Meeting)" style="padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;width:100%;box-sizing:border-box;">
                 <div style="display:flex;gap:10px;">
-                    <div style="flex:1;">
-                        <label style="font-size:0.78rem;color:#999;display:block;margin-bottom:4px;">Start time</label>
-                        <input id="sched-start" type="time" style="padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;width:100%;box-sizing:border-box;">
-                    </div>
-                    <div style="flex:1;">
-                        <label style="font-size:0.78rem;color:#999;display:block;margin-bottom:4px;">End time</label>
-                        <input id="sched-end" type="time" style="padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;width:100%;box-sizing:border-box;">
-                    </div>
+                    <div style="flex:1;"><label style="font-size:0.78rem;color:#999;display:block;margin-bottom:4px;">Start time</label><input id="sched-start" type="time" style="padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;width:100%;box-sizing:border-box;"></div>
+                    <div style="flex:1;"><label style="font-size:0.78rem;color:#999;display:block;margin-bottom:4px;">End time</label><input id="sched-end" type="time" style="padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;width:100%;box-sizing:border-box;"></div>
                 </div>
-                <div>
-                    <label style="font-size:0.78rem;color:#999;display:block;margin-bottom:6px;">Icon</label>
-                    <div id="sched-icons" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
-                </div>
+                <div><label style="font-size:0.78rem;color:#999;display:block;margin-bottom:6px;">Icon</label><div id="sched-icons" style="display:flex;flex-wrap:wrap;gap:6px;"></div></div>
             </div>
             <div style="display:flex;gap:8px;justify-content:flex-end;">
                 <button id="sched-delete-btn" onclick="deleteSchedItem()" style="display:none;background:#fee2e2;color:#ef4444;border:none;border-radius:10px;padding:10px 16px;cursor:pointer;font-size:0.9rem;">Delete</button>
                 <button onclick="saveSchedItem()" style="background:#6366f1;color:#fff;border:none;border-radius:10px;padding:10px 20px;cursor:pointer;font-size:0.9rem;font-weight:600;">Save</button>
             </div>
-        </div>
-    </div>
-
-    <!-- To-Do Modal -->
-    <div id="todo-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)closeTodos()">
-        <div style="background:#fff;border-radius:16px;padding:24px;width:380px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 40px rgba(0,0,0,0.2);">
-            <div style="display:flex;align-items:center;justify-content:space-between;">
-                <span style="font-size:1.1rem;font-weight:600;"><i class="fa-solid fa-list-ul" style="color:#6366f1;margin-right:8px;"></i>To-Dos</span>
-                <button onclick="closeTodos()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#999;">✕</button>
-            </div>
-            <div id="todo-list" style="flex:1;overflow-y:auto;max-height:340px;display:flex;flex-direction:column;gap:6px;"></div>
-            <div style="display:flex;gap:8px;">
-                <input id="todo-input" type="text" placeholder="Add a new to-do..." style="flex:1;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;" />
-                <button id="todo-add-btn" style="background:#6366f1;color:#fff;border:none;border-radius:10px;padding:10px 16px;cursor:pointer;font-size:0.95rem;"><i class="fa-solid fa-plus"></i></button>
-            </div>
-            <button id="todo-clear-done" style="background:none;border:1.5px solid #e0e0e0;border-radius:10px;padding:8px;font-size:0.82rem;color:#999;cursor:pointer;">Clear completed</button>
         </div>
     </div>
 
@@ -509,7 +473,6 @@
         .todo-delete { background:none;border:none;cursor:pointer;color:#ccc;font-size:0.85rem;margin-left:auto;flex-shrink:0; }
         .todo-delete:hover { color:#ef4444; }
         .todo-text { flex:1;font-size:0.9rem; }
-        .checkin-toast { position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#fff;border-radius:16px;padding:20px 24px;box-shadow:0 12px 32px rgba(0,0,0,0.18);z-index:3000;min-width:320px;max-width:95vw; }
         .checkin-header { font-weight:600;font-size:0.95rem;margin-bottom:14px; }
         .checkin-emojis { display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:10px; }
         .checkin-emoji { background:#f5f5f5;border:2px solid transparent;border-radius:10px;font-size:1.5rem;padding:6px 10px;cursor:pointer;transition:all 0.15s; }
@@ -541,6 +504,27 @@
         .up-next-empty { flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#bbb;gap:10px; }
         .up-next-empty i { font-size:2.5rem;opacity:0.4; }
         .up-next-empty p { font-size:0.85rem; }
+        /* ===== Widget Picker Bar ===== */
+        .widget-picker { display:flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(255,255,255,0.88);border-bottom:1px solid #e0e0e0;overflow-x:auto;flex-shrink:0;backdrop-filter:blur(4px); }
+        .widget-picker::-webkit-scrollbar { height:3px; }
+        .widget-picker::-webkit-scrollbar-thumb { background:#d0d0d0;border-radius:2px; }
+        .picker-label { font-size:0.75rem;font-weight:700;color:#999;white-space:nowrap;flex-shrink:0;display:flex;align-items:center;gap:5px;padding-right:4px;border-right:1px solid #e0e0e0;margin-right:2px; }
+        .pick-btn { display:flex;align-items:center;gap:5px;padding:5px 13px;border-radius:8px;border:1.5px solid #e0e0e0;background:#fff;font-family:inherit;font-size:0.78rem;font-weight:600;color:#555;cursor:pointer;white-space:nowrap;transition:all 0.15s;flex-shrink:0; }
+        .pick-btn:hover { background:#f4f4f8;border-color:#c0c0c8; }
+        .pick-btn.active { background:#ede9fe;border-color:#6366f1;color:#6366f1; }
+        /* ===== Widget Canvas ===== */
+        .widget-canvas { position:relative;flex:1;overflow:hidden;background:var(--main-bg,#f0f0f5); }
+        /* ===== Individual Widgets ===== */
+        .dash-widget { position:absolute;background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.14);z-index:10;display:flex;flex-direction:column;overflow:hidden;transition:box-shadow 0.15s; }
+        .dash-widget:hover { box-shadow:0 8px 32px rgba(0,0,0,0.18); }
+        .wid-header { display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px;cursor:grab;user-select:none;border-bottom:1px solid rgba(0,0,0,0.07);gap:8px;flex-shrink:0; }
+        .wid-header:active { cursor:grabbing; }
+        .wid-title { font-size:0.82rem;font-weight:700;color:#333;display:flex;align-items:center;gap:7px;flex:1;min-width:0; }
+        .wid-close { background:none;border:none;cursor:pointer;color:#bbb;font-size:1rem;line-height:1;padding:2px 4px;flex-shrink:0;border-radius:4px;transition:color 0.1s; }
+        .wid-close:hover { color:#ef4444; }
+        .wid-body { overflow-y:auto;flex:1; }
+        .wid-body::-webkit-scrollbar { width:4px; }
+        .wid-body::-webkit-scrollbar-thumb { background:#d0d0d0;border-radius:2px; }
     </style>
 
 <!-- ===== Edit Dashboard Settings Modal ===== -->
