@@ -121,10 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-clear-canvas').addEventListener('click', () => {
         if (confirm('Clear everything on the board?')) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            // Clear text overlays
-            if (widgetsLayer) {
-                widgetsLayer.querySelectorAll('.text-overlay').forEach(el => el.remove());
-            }
+            clearWidgetsLayer();
             // Reset undo/redo stacks and save blank page state
             undoStack = [];
             redoStack = [];
@@ -260,14 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     img.alt = hit.tags;
                     img.title = hit.tags;
                     img.addEventListener('click', () => {
-                        const overlay = document.createElement('div');
-                        overlay.className = 'image-overlay';
-                        overlay.style.left = '100px';
-                        overlay.style.top = '100px';
-                        overlay.innerHTML = `<img src="${hit.webformatURL}" alt="${hit.tags}"><button class="text-delete">✕</button>`;
-                        widgetsLayer.appendChild(overlay);
-                        App.makeDraggable(overlay);
-                        overlay.querySelector('.text-delete').addEventListener('click', () => overlay.remove());
+                        createImageOverlay(hit.webformatURL, hit.tags, 100, 100);
                         App.closeModal('modal-media');
                     });
                     imgResults.appendChild(img);
@@ -636,6 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (bg === 'dotted') canvasArea.classList.add('bg-dotted');
             else if (bg === 'isometric') canvasArea.classList.add('bg-isometric');
             else if (bg === 'music') canvasArea.classList.add('bg-music');
+            saveCurrentPageState();
         });
     });
 
@@ -657,6 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sw.addEventListener('click', () => {
                 canvasArea.className = 'wb-canvas-area';
                 canvasArea.style.background = c;
+                saveCurrentPageState();
                 App.closeModal('modal-background');
             });
             colorGrid.appendChild(sw);
@@ -667,6 +659,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (bgApply) bgApply.addEventListener('click', () => {
         canvasArea.className = 'wb-canvas-area';
         canvasArea.style.background = document.getElementById('bg-custom-color').value;
+        saveCurrentPageState();
         App.closeModal('modal-background');
     });
 
@@ -731,6 +724,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.addEventListener('click', () => {
                     canvasArea.className = 'wb-canvas-area';
                     canvasArea.style.background = theme.bg;
+                    saveCurrentPageState();
                     App.closeModal('modal-background');
                 });
                 bgImageGrid.appendChild(btn);
@@ -782,6 +776,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ctx.arc(canvas.width/2 + 80, canvas.height/2, 140, 0, Math.PI*2);
                 ctx.stroke();
             }
+            saveCanvasState();
             App.closeModal('modal-background');
         });
     });
@@ -1145,7 +1140,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'Traffic Light','Timer','Stopwatch','Clock','Name Picker','Sound Meter','QR Code','Attendance','Text Box'
     ]);
 
-    function spawnCanvasWidget(name, x, y) {
+    function spawnCanvasWidget(name, x, y, restoreState) {
         const def = CANVAS_WIDGET_DEFS[name];
         if (!def) return;
         const widgetsLayer = document.getElementById('widgets-layer');
@@ -1153,6 +1148,7 @@ document.addEventListener('DOMContentLoaded', () => {
         canvasWidgetZ++;
         const el = document.createElement('div');
         el.className = 'wb-canvas-widget';
+        el.dataset.widgetName = name;
         el.style.left = (x || 60) + 'px';
         el.style.top = (y || 60) + 'px';
         el.style.zIndex = canvasWidgetZ;
@@ -1165,12 +1161,20 @@ document.addEventListener('DOMContentLoaded', () => {
         </div><div class="cwid-body"></div>`;
         widgetsLayer.appendChild(el);
         def.render(el.querySelector('.cwid-body'), el);
+        if (restoreState && restoreState.width) el.style.width = restoreState.width;
+        if (restoreState && restoreState.height) el.style.height = restoreState.height;
+        if (restoreState && restoreState.state) restoreCanvasWidgetState(el, restoreState.state);
         el.querySelector('.cwid-close').addEventListener('click', () => {
             if (el._cwCleanup) el._cwCleanup();
             el.remove();
+            schedulePagePersist();
         });
-        App.makeDraggable(el, el.querySelector('.cwid-header'));
+        App.makeDraggable(el, el.querySelector('.cwid-header'), () => schedulePagePersist());
+        el.addEventListener('input', schedulePagePersist);
+        el.addEventListener('change', schedulePagePersist);
+        el.addEventListener('click', schedulePagePersist);
         el.addEventListener('mousedown', () => { canvasWidgetZ++; el.style.zIndex = canvasWidgetZ; });
+        schedulePagePersist();
         return el;
     }
 
@@ -1236,12 +1240,138 @@ document.addEventListener('DOMContentLoaded', () => {
        - Limits undo stack to the last 30 states to optimize memory.
     */
     let undoStack = [], redoStack = [];
+    let persistWidgetsTimer = null;
+
+    function schedulePagePersist() {
+        clearTimeout(persistWidgetsTimer);
+        persistWidgetsTimer = setTimeout(() => {
+            try { saveCurrentPageState(); } catch (e) {}
+        }, 120);
+    }
+
+    function createImageOverlay(src, alt, x, y) {
+        const overlay = document.createElement('div');
+        overlay.className = 'image-overlay';
+        overlay.style.left = x + 'px';
+        overlay.style.top = y + 'px';
+        overlay.innerHTML = `<img src="${src}" alt="${alt || ''}"><button class="text-delete">✕</button>`;
+        widgetsLayer.appendChild(overlay);
+        App.makeDraggable(overlay, null, () => schedulePagePersist());
+        overlay.querySelector('.text-delete').addEventListener('click', () => { overlay.remove(); schedulePagePersist(); });
+        schedulePagePersist();
+        return overlay;
+    }
+
+    function clearWidgetsLayer() {
+        if (!widgetsLayer) return;
+        widgetsLayer.querySelectorAll('.wb-canvas-widget').forEach(el => {
+            if (el._cwCleanup) el._cwCleanup();
+        });
+        widgetsLayer.replaceChildren();
+    }
+
+    function serializeCanvasWidgetState(el) {
+        const name = el.dataset.widgetName;
+        if (!name) return null;
+        const payload = {
+            kind: 'canvas-widget',
+            name,
+            x: parseInt(el.style.left, 10) || 0,
+            y: parseInt(el.style.top, 10) || 0,
+            width: el.style.width || '',
+            height: el.style.height || '',
+            state: null,
+        };
+        if (name === 'Traffic Light') {
+            payload.state = {
+                active: el.querySelector('.cwid-tl.active')?.dataset.tl || 'red'
+            };
+        } else if (name === 'Text Box') {
+            payload.state = {
+                text: el.querySelector('textarea')?.value || ''
+            };
+        } else if (name === 'QR Code') {
+            payload.state = {
+                text: el.querySelector('#cwqr-input')?.value || ''
+            };
+        }
+        return payload;
+    }
+
+    function restoreCanvasWidgetState(el, state) {
+        const name = el.dataset.widgetName;
+        if (!state || !name) return;
+        if (name === 'Traffic Light' && state.active) {
+            const light = el.querySelector(`.cwid-tl[data-tl="${state.active}"]`);
+            if (light) light.click();
+        } else if (name === 'Text Box' && typeof state.text === 'string') {
+            const textarea = el.querySelector('textarea');
+            if (textarea) textarea.value = state.text;
+        } else if (name === 'QR Code' && typeof state.text === 'string') {
+            const input = el.querySelector('#cwqr-input');
+            if (input) input.value = state.text;
+            if (input && state.text) el.querySelector('#cwqr-btn')?.click();
+        }
+    }
+
+    function serializeWidgetsLayer() {
+        if (!widgetsLayer) return [];
+        return Array.from(widgetsLayer.children).map(el => {
+            if (el.classList.contains('text-overlay')) {
+                const textarea = el.querySelector('textarea');
+                return {
+                    kind: 'text-overlay',
+                    x: parseInt(el.style.left, 10) || 0,
+                    y: parseInt(el.style.top, 10) || 0,
+                    text: textarea?.value || '',
+                    width: textarea?.style.width || '',
+                    height: textarea?.style.height || '',
+                };
+            }
+            if (el.classList.contains('image-overlay')) {
+                const img = el.querySelector('img');
+                return {
+                    kind: 'image-overlay',
+                    x: parseInt(el.style.left, 10) || 0,
+                    y: parseInt(el.style.top, 10) || 0,
+                    src: img?.getAttribute('src') || '',
+                    alt: img?.getAttribute('alt') || '',
+                };
+            }
+            if (el.classList.contains('wb-canvas-widget')) {
+                return serializeCanvasWidgetState(el);
+            }
+            return null;
+        }).filter(Boolean);
+    }
+
+    function restoreWidgetsLayer(savedWidgets) {
+        clearWidgetsLayer();
+        (savedWidgets || []).forEach(item => {
+            if (item.kind === 'text-overlay') {
+                const overlay = createTextOverlay(item.x, item.y, {
+                    text: item.text,
+                    width: item.width,
+                    height: item.height,
+                    focus: false,
+                });
+                return overlay;
+            }
+            if (item.kind === 'image-overlay' && item.src) {
+                createImageOverlay(item.src, item.alt, item.x, item.y);
+                return;
+            }
+            if (item.kind === 'canvas-widget' && item.name) {
+                spawnCanvasWidget(item.name, item.x, item.y, item);
+            }
+        });
+    }
 
     // ===================== MULTI-PAGE SYSTEM =====================
     let wb_pages = JSON.parse(localStorage.getItem('wb-pages') || 'null');
     let wb_currentPage = parseInt(localStorage.getItem('wb-current-page') || '0');
     if (!wb_pages || wb_pages.length === 0) {
-        wb_pages = [{ canvas: null, bgStyle: '', bgClass: 'wb-canvas-area' }];
+        wb_pages = [{ canvas: null, bgStyle: '', bgClass: 'wb-canvas-area', widgets: [] }];
         wb_currentPage = 0;
     }
     if (wb_currentPage >= wb_pages.length) wb_currentPage = 0;
@@ -1251,7 +1381,8 @@ document.addEventListener('DOMContentLoaded', () => {
         wb_pages[wb_currentPage] = {
             canvas: dataUrl,
             bgStyle: canvasArea.style.background || '',
-            bgClass: canvasArea.className || 'wb-canvas-area'
+            bgClass: canvasArea.className || 'wb-canvas-area',
+            widgets: serializeWidgetsLayer()
         };
         try { localStorage.setItem('wb-pages', JSON.stringify(wb_pages)); } catch(e) {}
         localStorage.setItem('wb-current-page', String(wb_currentPage));
@@ -1283,6 +1414,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         canvasArea.className = (page && page.bgClass) ? page.bgClass : 'wb-canvas-area';
         canvasArea.style.background = (page && page.bgStyle) ? page.bgStyle : '';
+        restoreWidgetsLayer(page && page.widgets ? page.widgets : []);
         updateCanvasCursor();
         updatePageCounter();
     }
@@ -1308,6 +1440,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             saveCanvasState();
         }
+        restoreWidgetsLayer(page && page.widgets ? page.widgets : []);
         updatePageCounter();
     }
 
@@ -1320,7 +1453,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('page-add')?.addEventListener('click', () => {
         saveCurrentPageState();
-        wb_pages.push({ canvas: null, bgStyle: '', bgClass: 'wb-canvas-area' });
+        wb_pages.push({ canvas: null, bgStyle: '', bgClass: 'wb-canvas-area', widgets: [] });
         navigateToPage(wb_pages.length - 1);
     });
     document.getElementById('page-delete')?.addEventListener('click', () => {
@@ -1342,6 +1475,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         canvasArea.className = (page && page.bgClass) ? page.bgClass : 'wb-canvas-area';
         canvasArea.style.background = (page && page.bgStyle) ? page.bgStyle : '';
+        restoreWidgetsLayer(page && page.widgets ? page.widgets : []);
         updateCanvasCursor();
         updatePageCounter();
     });
@@ -1505,7 +1639,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===================== PART 2: TEXT TOOL =====================
     const widgetsLayer = document.getElementById('widgets-layer');
 
-    function createTextOverlay(x, y) {
+    function createTextOverlay(x, y, options = {}) {
         const div = document.createElement('div');
         div.className = 'text-overlay';
         div.style.left = x + 'px';
@@ -1526,11 +1660,21 @@ document.addEventListener('DOMContentLoaded', () => {
             div.style.left = (e.clientX - dragOffX) + 'px';
             div.style.top = (e.clientY - dragOffY) + 'px';
         });
-        document.addEventListener('mouseup', () => isDrag = false);
+        document.addEventListener('mouseup', () => {
+            if (isDrag) schedulePagePersist();
+            isDrag = false;
+        });
 
-        div.querySelector('.text-delete').addEventListener('click', () => div.remove());
+        div.querySelector('.text-delete').addEventListener('click', () => { div.remove(); schedulePagePersist(); });
         widgetsLayer.appendChild(div);
-        div.querySelector('textarea').focus();
+        const textarea = div.querySelector('textarea');
+        if (typeof options.text === 'string') textarea.value = options.text;
+        if (options.width) textarea.style.width = options.width;
+        if (options.height) textarea.style.height = options.height;
+        textarea.addEventListener('input', schedulePagePersist);
+        if (options.focus !== false) textarea.focus();
+        schedulePagePersist();
+        return div;
     }
 
     // Text tool from bottom bar
