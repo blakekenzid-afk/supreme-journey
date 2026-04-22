@@ -1195,7 +1195,12 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  resize: both;
+  pointer-events: all;
   min-width: 160px;
+  min-height: 90px;
+  max-width: calc(100% - 16px);
+  max-height: calc(100% - 16px);
   border: 1.5px solid rgba(0,0,0,0.07);
 }
 .wb-canvas-widget .cwid-header {
@@ -1235,6 +1240,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: 1;
+  overflow: auto;
 }
 /* drag-over highlight on canvas area */
 .wb-canvas-area.drag-over { outline: 3px dashed var(--accent, #6366f1); outline-offset: -6px; }
