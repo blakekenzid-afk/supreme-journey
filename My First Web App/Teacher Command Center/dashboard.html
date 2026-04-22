@@ -561,6 +561,10 @@
 
 <script src="students.js"></script>
 <script>
+    function getDashboardStudents() {
+        return (typeof students !== 'undefined' && Array.isArray(students)) ? students : [];
+    }
+
     const BEHAVIORS_POS = [
         {label:'Great listener',icon:'👂'},{label:'Good helper',icon:'🤝'},
         {label:'Kind friend',icon:'❤️'},{label:'Hard worker',icon:'💪'},
@@ -576,7 +580,8 @@
     function saveStudentLog(name, log) { localStorage.setItem('slog-' + name, JSON.stringify(log)); }
     function populateStudentSelect(id, preselect) {
         const sel = document.getElementById(id);
-        sel.innerHTML = students.map(s => `<option value="${s.name}" ${s.name===preselect?'selected':''}>${s.name}</option>`).join('');
+        const studentList = getDashboardStudents();
+        sel.innerHTML = studentList.map(s => `<option value="${s.name}" ${s.name===preselect?'selected':''}>${s.name}</option>`).join('');
     }
     function openLogBehavior(name) {
         selectedBehavior = null;
@@ -671,8 +676,8 @@
     const STATION_GROUPS = ['Group 1','Group 2','Group 3','Group 4','Group 5','Group 6'];
     let stationGroups = JSON.parse(localStorage.getItem('station-groups') || 'null');
     if (!stationGroups) {
-        // Default: split students evenly
-        const names = typeof students !== 'undefined' ? students.map(s => s.name) : [];
+        if (cn) localStorage.setItem('dash-class-name', cn);
+        const names = getDashboardStudents().map(s => s.name);
         stationGroups = STATION_GROUPS.map((label, i) => ({
             label,
             members: names.filter((_, ni) => ni % STATION_GROUPS.length === i)
