@@ -8,8 +8,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===================== STUDENTS =====================
     // Consolidate student list from students.js if available
-    const getStudentNames = () => (typeof students !== 'undefined') ? students.map(s => s.name) : ["Vaani", "Jagger", "Krue", "Malina", "Julian", "Reece", "Johnathan", "Alaric", "Everett", "P.J.", "Apollo", "Messiah", "Lily", "Aidan", "Paxton", "Dean", "Raelynn", "Adalynn", "Phoebe", "Everleigh", "Gavin", "Kota"];
-    const getStudentData = () => (typeof students !== 'undefined') ? students : getStudentNames().map(s => ({ name: s, initials: s.substring(0,2).toUpperCase(), color: '#6366f1' }));
+    const defaultStudentNames = ["Vaani", "Jagger", "Krue", "Malina", "Julian", "Reece", "Johnathan", "Alaric", "Everett", "P.J.", "Apollo", "Messiah", "Lily", "Aidan", "Paxton", "Dean", "Raelynn", "Adalynn", "Phoebe", "Everleigh", "Gavin", "Kota"];
+    const readStudents = () => (typeof students !== 'undefined' && Array.isArray(students)) ? students : [];
+    const getStudentNames = () => {
+        const names = readStudents()
+            .map(student => typeof student?.name === 'string' ? student.name.trim() : '')
+            .filter(Boolean);
+        return names.length ? names : defaultStudentNames;
+    };
+    const getStudentData = () => {
+        const roster = readStudents()
+            .map(student => {
+                if (!student || typeof student.name !== 'string') return null;
+                const name = student.name.trim();
+                if (!name) return null;
+                return {
+                    ...student,
+                    name,
+                    initials: student.initials || name.substring(0, 2).toUpperCase(),
+                    color: student.color || '#6366f1'
+                };
+            })
+            .filter(Boolean);
+        return roster.length ? roster : getStudentNames().map(name => ({ name, initials: name.substring(0, 2).toUpperCase(), color: '#6366f1' }));
+    };
 
     // window.WhiteboardApp and window.WhiteboardStorage are loaded from external scripts
     const App = window.WhiteboardApp;
@@ -21,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvasArea = document.getElementById('wb-canvas-area');
     const widgetsLayer = document.getElementById('widgets-layer');
     let isDrawing = false;
+    let strokeDirty = false;
     let currentTool = 'cursor';
     let lastX = 0, lastY = 0;
     
@@ -75,6 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function startDrawing(e) {
         if (currentTool === 'cursor') return;
         isDrawing = true;
+        strokeDirty = false;
         [lastX, lastY] = [e.offsetX, e.offsetY];
     }
     function draw(e) {
@@ -92,9 +116,15 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.globalCompositeOperation = 'destination-out';
         }
         ctx.stroke();
+        if (currentTool === 'pen' || currentTool === 'eraser') strokeDirty = true;
         [lastX, lastY] = [e.offsetX, e.offsetY];
     }
-    function stopDrawing() { isDrawing = false; }
+    function stopDrawing() {
+        const shouldSaveStroke = isDrawing && strokeDirty && (currentTool === 'pen' || currentTool === 'eraser');
+        isDrawing = false;
+        strokeDirty = false;
+        if (shouldSaveStroke) saveCanvasState();
+    }
 
     canvas.addEventListener('mousedown', startDrawing);
     canvas.addEventListener('mousemove', draw);
@@ -105,6 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
     canvas.addEventListener('touchstart', e => { e.preventDefault(); const t = e.touches[0]; const r = canvas.getBoundingClientRect(); startDrawing({offsetX: t.clientX-r.left, offsetY: t.clientY-r.top}); });
     canvas.addEventListener('touchmove', e => { e.preventDefault(); const t = e.touches[0]; const r = canvas.getBoundingClientRect(); draw({offsetX: t.clientX-r.left, offsetY: t.clientY-r.top}); });
     canvas.addEventListener('touchend', stopDrawing);
+    canvas.addEventListener('touchcancel', stopDrawing);
 
     // ===================== TOOLBAR =====================
     document.querySelectorAll('.draw-tool').forEach(tool => {
@@ -122,6 +153,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-clear-canvas').addEventListener('click', () => {
         if (confirm('Clear everything on the board?')) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            canvasArea.className = 'wb-canvas-area';
+            canvasArea.style.background = '';
+            updateCanvasCursor();
             clearWidgetsLayer();
             // Reset undo/redo stacks and save blank page state
             undoStack = [];
@@ -1363,18 +1397,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Map toolsData names that should spawn widgets vs open modals
     const WIDGET_TOOL_NAMES = new Set([
-        'Traffic Light','Timer','Stopwatch','Clock','Name Picker','Sound Meter','QR Code','Attendance','Text Box'
+        'Traffic Light','Timer','Stopwatch','Clock','Name Picker','Student Picker','Sound Meter','QR Code','Attendance','Text Box'
     ]);
 
+    function normalizeCanvasWidgetName(name) {
+        if (name === 'Student Picker') return 'Name Picker';
+        return name;
+    }
+
     function spawnCanvasWidget(name, x, y, restoreState) {
-        const def = CANVAS_WIDGET_DEFS[name];
+        const widgetName = normalizeCanvasWidgetName(name);
+        const def = CANVAS_WIDGET_DEFS[widgetName];
         if (!def) return;
         const widgetsLayer = document.getElementById('widgets-layer');
         if (!widgetsLayer) return;
         canvasWidgetZ++;
         const el = document.createElement('div');
         el.className = 'wb-canvas-widget';
-        el.dataset.widgetName = name;
+        el.dataset.widgetName = widgetName;
         el.style.left = (x || 60) + 'px';
         el.style.top = (y || 60) + 'px';
         el.style.zIndex = canvasWidgetZ;
@@ -1382,7 +1422,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const hBg = def.headerBg ? `background:${def.headerBg};` : 'background:var(--accent,#6366f1);';
         const hCol = def.headerColor ? `color:${def.headerColor};` : 'color:#fff;';
         el.innerHTML = `<div class="cwid-header" style="${hBg}${hCol}">
-            <div class="cwid-title">${def.icon} ${name}</div>
+            <div class="cwid-title">${def.icon} ${widgetName}</div>
             <button class="cwid-close" style="${hCol}">✕</button>
         </div><div class="cwid-body"></div>`;
         widgetsLayer.appendChild(el);
@@ -1718,9 +1758,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateCanvasCursor();
         updatePageCounter();
     });
-
-    canvas.addEventListener('mouseup', () => { if (currentTool === 'pen' || currentTool === 'eraser') saveCanvasState(); });
-    canvas.addEventListener('touchend', () => { if (currentTool === 'pen' || currentTool === 'eraser') saveCanvasState(); });
 
     document.getElementById('btn-undo').addEventListener('click', () => {
         if (undoStack.length <= 1) return;
