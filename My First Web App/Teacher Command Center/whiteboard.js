@@ -190,7 +190,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const bbMap = {
         'bb-background': 'modal-background',
         'bb-random': 'modal-random',
-        'bb-media': 'modal-media',
         'bb-tts': 'modal-tts'
     };
     Object.entries(bbMap).forEach(([btnId, modalId]) => {
@@ -219,6 +218,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (bbVideo) bbVideo.addEventListener('click', () => {
         App.openModal('modal-media');
         const tab = document.querySelector('[data-tab="media-videos"]');
+        if (tab) tab.click();
+    });
+
+    const bbMedia = document.getElementById('bb-media');
+    if (bbMedia) bbMedia.addEventListener('click', () => {
+        App.openModal('modal-media');
+        const tab = document.querySelector('[data-tab="media-images"]');
         if (tab) tab.click();
     });
 
