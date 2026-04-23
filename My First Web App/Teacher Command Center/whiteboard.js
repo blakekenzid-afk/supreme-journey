@@ -189,7 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Bottom bar → modals
     const bbMap = {
         'bb-background': 'modal-background',
-        'bb-timer': 'modal-timer',
         'bb-random': 'modal-random',
         'bb-media': 'modal-media',
         'bb-tts': 'modal-tts'
@@ -200,6 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const bbWidgetMap = {
+        'bb-timer': 'Timer',
         'bb-namepick': 'Name Picker',
         'bb-traffic': 'Traffic Light',
         'bb-sound': 'Sound Meter',
@@ -1188,8 +1188,17 @@ document.addEventListener('DOMContentLoaded', () => {
         'Timer': {
             icon: '⏱️', headerBg: '#1a2332', headerColor: '#fff', width: 200,
             render(body, el) {
-                let secs = 300, remaining = 300, iv = null, running = false;
-                body.innerHTML = `<div class="cwid-timer-display" id="cwtd">05:00</div>
+                let timerTotal = 300;
+                let timerSeconds = 300;
+                let timerEndsAt = null;
+                let timerRunning = false;
+                let timerInterval = null;
+                body.innerHTML = `<div class="cwid-timer-ring" data-role="ring">
+                        <div class="cwid-timer-ring-inner">
+                            <div class="cwid-timer-display" data-role="display">05:00</div>
+                            <div class="cwid-timer-status" data-role="status">Ready</div>
+                        </div>
+                    </div>
                     <div class="cwid-timer-btns">
                         <button class="cwid-preset" data-s="60">1m</button>
                         <button class="cwid-preset" data-s="180">3m</button>
@@ -1201,27 +1210,114 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button class="cwid-ctrl" id="cwt-pause">⏸</button>
                         <button class="cwid-ctrl" id="cwt-reset">↺</button>
                     </div>`;
-                const disp = body.querySelector('#cwtd');
+                const disp = body.querySelector('[data-role="display"]');
+                const status = body.querySelector('[data-role="status"]');
+                const ring = body.querySelector('[data-role="ring"]');
                 const fmt = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
-                const tick = () => {
-                    if (remaining <= 0) { clearInterval(iv); running = false; disp.className='cwid-timer-display done'; disp.textContent='00:00'; return; }
-                    remaining--; disp.textContent = fmt(remaining);
+                const persistWidgetState = () => {
+                    el._cwState = {
+                        timerTotal,
+                        timerSeconds,
+                        timerRunning,
+                        timerEndsAt,
+                    };
+                };
+                const clearTick = () => {
+                    if (!timerInterval) return;
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                };
+                const syncFromClock = () => {
+                    if (!timerRunning || !timerEndsAt) return;
+                    timerSeconds = Math.max(0, Math.ceil((timerEndsAt - Date.now()) / 1000));
+                    if (timerSeconds <= 0) {
+                        timerSeconds = 0;
+                        timerRunning = false;
+                        timerEndsAt = null;
+                        clearTick();
+                    }
+                };
+                const renderTimer = () => {
+                    syncFromClock();
+                    disp.textContent = fmt(timerSeconds);
+                    disp.classList.remove('running', 'done');
+                    const pct = timerTotal > 0 ? (timerSeconds / timerTotal) * 100 : 0;
+                    ring?.style.setProperty('--timer-progress', `${Math.max(0, Math.min(100, pct))}%`);
+                    if (timerSeconds <= 0) {
+                        disp.classList.add('done');
+                        if (status) status.textContent = `Time's up`;
+                    } else if (timerRunning) {
+                        disp.classList.add('running');
+                        if (status) status.textContent = `${Math.max(0, Math.round(pct))}% left`;
+                    } else if (timerSeconds === timerTotal) {
+                        if (status) status.textContent = 'Ready';
+                    } else {
+                        if (status) status.textContent = 'Paused';
+                    }
+                    persistWidgetState();
+                };
+                const startTick = () => {
+                    if (timerInterval) return;
+                    timerInterval = setInterval(() => {
+                        const before = timerSeconds;
+                        renderTimer();
+                        if (!timerRunning || !timerEndsAt || timerSeconds <= 0) clearTick();
+                        if (before !== timerSeconds) persistWidgetState();
+                    }, 250);
+                };
+                const setDuration = seconds => {
+                    clearTick();
+                    timerRunning = false;
+                    timerEndsAt = null;
+                    timerTotal = timerSeconds = seconds;
+                    renderTimer();
+                    schedulePagePersist();
                 };
                 body.querySelectorAll('.cwid-preset').forEach(btn => {
                     btn.addEventListener('click', () => {
-                        clearInterval(iv); running = false;
-                        secs = remaining = parseInt(btn.dataset.s);
-                        disp.className = 'cwid-timer-display'; disp.textContent = fmt(remaining);
+                        setDuration(parseInt(btn.dataset.s, 10));
                     });
                 });
                 body.querySelector('#cwt-play').addEventListener('click', () => {
-                    if (running) return; running = true;
-                    disp.className = 'cwid-timer-display running';
-                    iv = setInterval(tick, 1000);
+                    if (timerRunning || timerSeconds <= 0) return;
+                    timerRunning = true;
+                    timerEndsAt = Date.now() + timerSeconds * 1000;
+                    startTick();
+                    renderTimer();
+                    schedulePagePersist();
                 });
-                body.querySelector('#cwt-pause').addEventListener('click', () => { clearInterval(iv); running = false; disp.className = 'cwid-timer-display'; });
-                body.querySelector('#cwt-reset').addEventListener('click', () => { clearInterval(iv); running = false; remaining = secs; disp.className = 'cwid-timer-display'; disp.textContent = fmt(remaining); });
-                el._cwCleanup = () => clearInterval(iv);
+                body.querySelector('#cwt-pause').addEventListener('click', () => {
+                    if (timerRunning && timerEndsAt) {
+                        timerSeconds = Math.max(0, Math.ceil((timerEndsAt - Date.now()) / 1000));
+                    }
+                    clearTick();
+                    timerRunning = false;
+                    timerEndsAt = null;
+                    renderTimer();
+                    schedulePagePersist();
+                });
+                body.querySelector('#cwt-reset').addEventListener('click', () => {
+                    clearTick();
+                    timerRunning = false;
+                    timerEndsAt = null;
+                    timerSeconds = timerTotal;
+                    renderTimer();
+                    schedulePagePersist();
+                });
+                el._cwApplyState = state => {
+                    if (!state || typeof state !== 'object') return;
+                    timerTotal = typeof state.timerTotal === 'number' ? state.timerTotal : timerTotal;
+                    timerSeconds = typeof state.timerSeconds === 'number' ? state.timerSeconds : timerSeconds;
+                    timerRunning = !!state.timerRunning;
+                    timerEndsAt = typeof state.timerEndsAt === 'number' ? state.timerEndsAt : null;
+                    if (timerRunning && timerEndsAt) {
+                        syncFromClock();
+                        if (timerRunning && timerSeconds > 0) startTick();
+                    }
+                    renderTimer();
+                };
+                el._cwCleanup = () => clearTick();
+                renderTimer();
             }
         },
         'Stopwatch': {
@@ -1565,6 +1661,8 @@ document.addEventListener('DOMContentLoaded', () => {
             payload.state = {
                 active: el.querySelector('.cwid-tl.active')?.dataset.tl || 'red'
             };
+        } else if (name === 'Timer') {
+            payload.state = el._cwState ? { ...el._cwState } : null;
         } else if (name === 'Text Box') {
             payload.state = {
                 text: el.querySelector('textarea')?.value || ''
@@ -1583,6 +1681,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (name === 'Traffic Light' && state.active) {
             const light = el.querySelector(`.cwid-tl[data-tl="${state.active}"]`);
             if (light) light.click();
+        } else if (name === 'Timer' && typeof el._cwApplyState === 'function') {
+            el._cwApplyState(state);
         } else if (name === 'Text Box' && typeof state.text === 'string') {
             const textarea = el.querySelector('textarea');
             if (textarea) textarea.value = state.text;

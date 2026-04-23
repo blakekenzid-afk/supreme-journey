@@ -1260,9 +1260,12 @@ body {
 .cwid-tl.green { background: #22c55e; }
 .cwid-tl.green.active { box-shadow: 0 0 16px #22c55e; }
 /* Timer widget */
+.cwid-timer-ring { --timer-progress: 100%; width: 132px; height: 132px; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: conic-gradient(var(--accent) 0 var(--timer-progress), var(--wb-border-color) var(--timer-progress) 100%); padding: 8px; box-shadow: 0 8px 20px rgba(15,23,42,0.08); }
+.cwid-timer-ring-inner { width: 100%; height: 100%; border-radius: 50%; background: var(--wb-sidebar-bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; box-shadow: inset 0 0 0 1px var(--wb-border-color); }
 .cwid-timer-display { font-size: 2.2rem; font-weight: 900; text-align: center; letter-spacing: -1px; color: var(--wb-text-main,#1a2332); line-height: 1; }
 .cwid-timer-display.running { color: #22c55e; }
 .cwid-timer-display.done { color: #ef4444; }
+.cwid-timer-status { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--wb-text-muted,#6b7280); }
 .cwid-timer-btns { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
 .cwid-preset { font-size: 0.72rem; padding: 3px 8px; border: 1.5px solid #e0e0e0; background: #f5f5f5; border-radius: 6px; cursor: pointer; font-family: inherit; }
 .cwid-preset:hover { background: #ede9fe; border-color: #6366f1; }
