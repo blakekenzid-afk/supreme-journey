@@ -156,10 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const bbMap = {
         'bb-background': 'modal-background',
         'bb-timer': 'modal-timer',
-        'bb-namepick': 'modal-namepick',
-        'bb-traffic': 'modal-traffic',
-        'bb-sound': 'modal-sound',
-        'bb-qr': 'modal-qr',
         'bb-random': 'modal-random',
         'bb-media': 'modal-media',
         'bb-tts': 'modal-tts'
@@ -167,6 +163,21 @@ document.addEventListener('DOMContentLoaded', () => {
     Object.entries(bbMap).forEach(([btnId, modalId]) => {
         const btn = document.getElementById(btnId);
         if (btn) btn.addEventListener('click', () => App.openModal(modalId));
+    });
+
+    const bbWidgetMap = {
+        'bb-namepick': 'Name Picker',
+        'bb-traffic': 'Traffic Light',
+        'bb-sound': 'Sound Meter',
+        'bb-qr': 'QR Code'
+    };
+    Object.entries(bbWidgetMap).forEach(([btnId, widgetName]) => {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        btn.addEventListener('click', () => {
+            const existing = document.querySelectorAll('.wb-canvas-widget').length;
+            spawnCanvasWidget(widgetName, 40 + existing * 24, 40 + existing * 20);
+        });
     });
 
     const bbVideo = document.getElementById('bb-video');
@@ -418,7 +429,67 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ===================== TIMER =====================
-    let timerSeconds = 300, timerTotal = 300, timerInterval = null, timerRunning = false;
+    const TIMER_STORAGE_KEY = 'wb-standalone-timer';
+    let timerSeconds = 300, timerTotal = 300, timerInterval = null, timerRunning = false, timerEndsAt = null;
+
+    function persistTimerState() {
+        try {
+            localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify({
+                timerSeconds,
+                timerTotal,
+                timerRunning,
+                timerEndsAt,
+            }));
+        } catch (e) {}
+    }
+
+    function clearTimerTick() {
+        if (!timerInterval) return;
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+
+    function loadTimerState() {
+        try {
+            const saved = JSON.parse(localStorage.getItem(TIMER_STORAGE_KEY) || 'null');
+            if (!saved) return;
+            timerTotal = typeof saved.timerTotal === 'number' ? saved.timerTotal : timerTotal;
+            timerRunning = !!saved.timerRunning;
+            timerEndsAt = typeof saved.timerEndsAt === 'number' ? saved.timerEndsAt : null;
+            if (timerRunning && timerEndsAt) {
+                timerSeconds = Math.max(0, Math.ceil((timerEndsAt - Date.now()) / 1000));
+                if (timerSeconds === 0) {
+                    timerRunning = false;
+                    timerEndsAt = null;
+                }
+            } else {
+                timerSeconds = typeof saved.timerSeconds === 'number' ? saved.timerSeconds : timerSeconds;
+            }
+        } catch (e) {}
+    }
+
+    function startTimerTick() {
+        if (timerInterval) return;
+        timerInterval = setInterval(() => {
+            if (!timerRunning || !timerEndsAt) {
+                clearTimerTick();
+                return;
+            }
+            const nextSeconds = Math.max(0, Math.ceil((timerEndsAt - Date.now()) / 1000));
+            if (nextSeconds !== timerSeconds) {
+                timerSeconds = nextSeconds;
+                updateTimerDisplay();
+                persistTimerState();
+            }
+            if (nextSeconds <= 0) {
+                clearTimerTick();
+                timerRunning = false;
+                timerEndsAt = null;
+                persistTimerState();
+                timerFinished();
+            }
+        }, 250);
+    }
 
     function updateTimerDisplay() {
         const m = Math.floor(timerSeconds / 60);
@@ -426,29 +497,34 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('timer-display').textContent =
             String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
         const pct = timerTotal > 0 ? (timerSeconds / timerTotal) * 100 : 0;
+        document.getElementById('timer-ring')?.style.setProperty('--timer-progress', `${Math.max(0, Math.min(100, pct))}%`);
+        const status = document.getElementById('timer-status');
+        if (status) {
+            if (timerRunning) status.textContent = `${Math.max(0, Math.round(pct))}% left`;
+            else if (timerSeconds === 0) status.textContent = `Time's up`;
+            else if (timerSeconds === timerTotal) status.textContent = 'Ready';
+            else status.textContent = 'Paused';
+        }
         document.getElementById('timer-progress-fill').style.width = pct + '%';
     }
 
     function startTimer() {
         if (timerRunning || timerSeconds <= 0) return;
         timerRunning = true;
-        timerInterval = setInterval(() => {
-            timerSeconds--;
-            updateTimerDisplay();
-            if (timerSeconds <= 0) {
-                clearInterval(timerInterval);
-                timerRunning = false;
-                timerFinished();
-            }
-        }, 1000);
+        timerEndsAt = Date.now() + timerSeconds * 1000;
+        startTimerTick();
+        persistTimerState();
+        updateTimerDisplay();
     }
 
     function timerFinished() {
         document.getElementById('timer-display').style.color = 'var(--color-red)';
+        updateTimerDisplay();
         // Play a sound using Web Audio
         try {
             const ac = new AudioContext();
-            [0, 300, 600].forEach(delay => {
+            const delays = [0, 300, 600];
+            delays.forEach(delay => {
                 const osc = ac.createOscillator();
                 const gain = ac.createGain();
                 osc.connect(gain); gain.connect(ac.destination);
@@ -458,38 +534,67 @@ document.addEventListener('DOMContentLoaded', () => {
                 osc.start(ac.currentTime + delay/1000);
                 osc.stop(ac.currentTime + delay/1000 + 0.2);
             });
+            if (typeof ac.close === 'function') {
+                setTimeout(() => ac.close(), Math.max(...delays) + 300);
+            }
         } catch(e) {}
     }
 
     document.getElementById('timer-start').addEventListener('click', startTimer);
     document.getElementById('timer-pause').addEventListener('click', () => {
-        clearInterval(timerInterval); timerRunning = false;
+        if (timerRunning && timerEndsAt) {
+            timerSeconds = Math.max(0, Math.ceil((timerEndsAt - Date.now()) / 1000));
+        }
+        clearTimerTick();
+        timerRunning = false;
+        timerEndsAt = null;
+        persistTimerState();
+        updateTimerDisplay();
     });
     document.getElementById('timer-reset').addEventListener('click', () => {
-        clearInterval(timerInterval); timerRunning = false;
+        clearTimerTick();
+        timerRunning = false;
+        timerEndsAt = null;
         timerSeconds = timerTotal;
         document.getElementById('timer-display').style.color = 'var(--text-main)';
+        persistTimerState();
         updateTimerDisplay();
     });
 
     document.querySelectorAll('.preset-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            clearInterval(timerInterval); timerRunning = false;
+            clearTimerTick();
+            timerRunning = false;
+            timerEndsAt = null;
             timerSeconds = timerTotal = parseInt(btn.getAttribute('data-sec'));
             document.getElementById('timer-display').style.color = 'var(--text-main)';
+            persistTimerState();
             updateTimerDisplay();
         });
     });
 
     document.getElementById('timer-set-btn').addEventListener('click', () => {
-        clearInterval(timerInterval); timerRunning = false;
+        clearTimerTick();
+        timerRunning = false;
+        timerEndsAt = null;
         const m = parseInt(document.getElementById('timer-min').value) || 0;
         const s = parseInt(document.getElementById('timer-sec-input').value) || 0;
         timerSeconds = timerTotal = m * 60 + s;
         document.getElementById('timer-display').style.color = 'var(--text-main)';
+        persistTimerState();
         updateTimerDisplay();
     });
 
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && timerRunning) {
+            timerSeconds = Math.max(0, Math.ceil((timerEndsAt - Date.now()) / 1000));
+            updateTimerDisplay();
+            if (!timerInterval) startTimerTick();
+        }
+    });
+
+    loadTimerState();
+    if (timerRunning && timerEndsAt) startTimerTick();
     updateTimerDisplay();
 
     // ===================== TRAFFIC LIGHT =====================
@@ -573,17 +678,34 @@ document.addEventListener('DOMContentLoaded', () => {
        - AudioContext: Interface for managing and playing all sounds.
        - AnalyserNode: Provides real-time frequency and time-domain analysis.
     */
-    let audioCtx, analyser, micStream, soundAnimFrame;
+    let audioCtx, analyser, micStream, soundAnimFrame, soundStarting = false;
     const soundBars = document.querySelectorAll('#sound-bars .sb');
 
+    function stopStandaloneSoundMeter() {
+        soundStarting = false;
+        cancelAnimationFrame(soundAnimFrame);
+        soundAnimFrame = null;
+        if (micStream) micStream.getTracks().forEach(t => t.stop());
+        micStream = null;
+        analyser = null;
+        if (audioCtx && typeof audioCtx.close === 'function') audioCtx.close();
+        audioCtx = null;
+        soundBars.forEach(b => { b.style.height = '8px'; b.style.background = 'var(--border-color)'; });
+    }
+
     document.getElementById('sound-start-btn').addEventListener('click', async () => {
+        if (soundStarting || micStream) return;
+        soundStarting = true;
         try {
-            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stopStandaloneSoundMeter();
+            micStream = stream;
             audioCtx = new AudioContext();
             analyser = audioCtx.createAnalyser();
             analyser.fftSize = 256;
             const src = audioCtx.createMediaStreamSource(micStream);
             src.connect(analyser);
+            soundStarting = false;
 
             document.getElementById('sound-start-btn').classList.add('hidden');
             document.getElementById('sound-stop-btn').classList.remove('hidden');
@@ -614,15 +736,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             animateBars();
         } catch(e) {
+            soundStarting = false;
             alert('Microphone access denied. Please allow mic access.');
         }
     });
 
     document.getElementById('sound-stop-btn').addEventListener('click', () => {
-        cancelAnimationFrame(soundAnimFrame);
-        if (micStream) micStream.getTracks().forEach(t => t.stop());
-        if (audioCtx) audioCtx.close();
-        soundBars.forEach(b => { b.style.height = '8px'; b.style.background = 'var(--border-color)'; });
+        stopStandaloneSoundMeter();
         document.getElementById('sound-level-label').textContent = 'Listening...';
         document.getElementById('sound-start-btn').classList.remove('hidden');
         document.getElementById('sound-stop-btn').classList.add('hidden');

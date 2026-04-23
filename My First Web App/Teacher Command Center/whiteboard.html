@@ -241,7 +241,12 @@
     <div class="modal-box modal-small">
         <div class="modal-header"><span><i class="fa-solid fa-stopwatch"></i> Timer</span><button type="button" class="modal-close" title="Close" aria-label="Close" data-modal="modal-timer">✕</button></div>
         <div class="timer-body">
-            <div class="timer-display" id="timer-display">05:00</div>
+            <div class="timer-ring" id="timer-ring">
+                <div class="timer-ring-inner">
+                    <div class="timer-display" id="timer-display">05:00</div>
+                    <div class="timer-status" id="timer-status">Ready</div>
+                </div>
+            </div>
             <div class="timer-presets">
                 <button type="button" class="preset-btn" data-sec="60">1 min</button>
                 <button type="button" class="preset-btn" data-sec="180">3 min</button>
