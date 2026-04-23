@@ -270,6 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ytFloatWidget = document.getElementById('yt-float-widget');
     const ytPlayerContainer = document.getElementById('yt-player-container');
     let ytPlayer = null;
+    let ytFloatDragBound = false;
 
     // Load YouTube API
     if (!window.YT) {
@@ -445,7 +446,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         App.closeModal('modal-media');
-        App.makeDraggable(ytFloatWidget, ytFloatWidget.querySelector('.yt-fw-header'));
+        if (!ytFloatDragBound) {
+            App.makeDraggable(ytFloatWidget, ytFloatWidget.querySelector('.yt-fw-header'));
+            ytFloatDragBound = true;
+        }
     }
 
     imgSearchBtn?.addEventListener('click', () => searchImages(imgSearchInput.value));
@@ -672,6 +676,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===================== NAME PICKER =====================
     let pickedNames = [];
+    let namepickShuffleInterval = null;
     document.getElementById('namepick-btn').addEventListener('click', () => {
         const studentNames = getStudentNames();
         const available = studentNames.filter(n => !pickedNames.includes(n));
@@ -683,13 +688,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const display = document.getElementById('namepick-display');
         display.textContent = '';
         display.style.animation = 'none';
+        if (namepickShuffleInterval) {
+            clearInterval(namepickShuffleInterval);
+            namepickShuffleInterval = null;
+        }
         // Shuffle animation
         let count = 0;
-        const shuffleInt = setInterval(() => {
+        namepickShuffleInterval = setInterval(() => {
             display.textContent = studentNames[Math.floor(Math.random() * studentNames.length)];
             count++;
             if (count > 15) {
-                clearInterval(shuffleInt);
+                clearInterval(namepickShuffleInterval);
+                namepickShuffleInterval = null;
                 display.textContent = pick;
                 display.style.animation = 'popIn 0.4s ease';
             }
@@ -1876,15 +1886,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ===================== PART 2: RANDOM STUDENT (in Randomizer modal) =====================
+    let randStudentShuffleInterval = null;
     document.getElementById('rand-pick-btn').addEventListener('click', () => {
         const display = document.getElementById('rand-student-display');
         display.textContent = '';
+        display.style.animation = 'none';
+        if (randStudentShuffleInterval) {
+            clearInterval(randStudentShuffleInterval);
+            randStudentShuffleInterval = null;
+        }
         let count = 0;
-        const shuffleInt = setInterval(() => {
+        randStudentShuffleInterval = setInterval(() => {
             display.textContent = getStudentNames()[Math.floor(Math.random() * getStudentNames().length)];
             count++;
             if (count > 15) {
-                clearInterval(shuffleInt);
+                clearInterval(randStudentShuffleInterval);
+                randStudentShuffleInterval = null;
                 const pick = getStudentNames()[Math.floor(Math.random() * getStudentNames().length)];
                 display.textContent = pick;
                 display.style.animation = 'popIn 0.4s ease';
