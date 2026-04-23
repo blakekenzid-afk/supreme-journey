@@ -203,7 +203,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'bb-namepick': 'Name Picker',
         'bb-traffic': 'Traffic Light',
         'bb-sound': 'Sound Meter',
-        'bb-qr': 'QR Code'
+        'bb-qr': 'QR Code',
+        'bb-text': 'Text Box'
     };
     Object.entries(bbWidgetMap).forEach(([btnId, widgetName]) => {
         const btn = document.getElementById(btnId);
@@ -452,6 +453,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function closeFloatingYouTubePlayer() {
+        ytFloatWidget.classList.add('hidden');
+        if (ytPlayer && ytPlayer.stopVideo) ytPlayer.stopVideo();
+    }
+
     imgSearchBtn?.addEventListener('click', () => searchImages(imgSearchInput.value));
     imgSearchInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchImages(imgSearchInput.value); });
     
@@ -461,10 +467,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     ytSearchInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchYouTube(e.currentTarget.value.trim()); });
 
-    document.getElementById('yt-fw-close')?.addEventListener('click', () => {
-        ytFloatWidget.classList.add('hidden');
-        if (ytPlayer && ytPlayer.stopVideo) ytPlayer.stopVideo();
-    });
+    document.getElementById('yt-fw-close')?.addEventListener('click', closeFloatingYouTubePlayer);
 
     // ===================== TIMER =====================
     const TIMER_STORAGE_KEY = 'wb-standalone-timer';
@@ -724,6 +727,7 @@ document.addEventListener('DOMContentLoaded', () => {
     */
     let audioCtx, analyser, micStream, soundAnimFrame, soundStarting = false;
     const soundBars = document.querySelectorAll('#sound-bars .sb');
+    const soundSensitivity = document.getElementById('sound-sensitivity');
 
     function stopStandaloneSoundMeter() {
         soundStarting = false;
@@ -735,6 +739,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (audioCtx && typeof audioCtx.close === 'function') audioCtx.close();
         audioCtx = null;
         soundBars.forEach(b => { b.style.height = '8px'; b.style.background = 'var(--border-color)'; });
+    }
+
+    function resetStandaloneSoundMeterUi() {
+        stopStandaloneSoundMeter();
+        document.getElementById('sound-level-label').textContent = 'Listening...';
+        document.getElementById('sound-start-btn').classList.remove('hidden');
+        document.getElementById('sound-stop-btn').classList.add('hidden');
     }
 
     document.getElementById('sound-start-btn').addEventListener('click', async () => {
@@ -758,7 +769,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = new Uint8Array(analyser.frequencyBinCount);
                 analyser.getByteFrequencyData(data);
                 const avg = data.reduce((a,b) => a+b, 0) / data.length;
-                const norm = Math.min(avg / 128, 1);
+                const sensitivityFactor = soundSensitivity ? (parseInt(soundSensitivity.value, 10) || 8) / 8 : 1;
+                const norm = Math.min((avg / 128) * sensitivityFactor, 1);
 
                 soundBars.forEach((bar, i) => {
                     const h = 8 + norm * (70 - i * 4) * (0.6 + Math.random() * 0.4);
@@ -785,12 +797,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.getElementById('sound-stop-btn').addEventListener('click', () => {
-        stopStandaloneSoundMeter();
-        document.getElementById('sound-level-label').textContent = 'Listening...';
-        document.getElementById('sound-start-btn').classList.remove('hidden');
-        document.getElementById('sound-stop-btn').classList.add('hidden');
-    });
+    document.getElementById('sound-stop-btn').addEventListener('click', resetStandaloneSoundMeterUi);
+
+    const soundModal = document.getElementById('modal-sound');
+    if (soundModal) {
+        new MutationObserver(() => {
+            if (soundModal.classList.contains('hidden')) resetStandaloneSoundMeterUi();
+        }).observe(soundModal, { attributes: true, attributeFilter: ['class'] });
+    }
 
     // ===================== BACKGROUND PICKER =====================
     // Lines/Grid/Dotted backgrounds
@@ -1165,7 +1179,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clocks: [
             { icon: '🕐', name: 'Analog Clock', action: () => App.openModal('modal-clock') },
             { icon: '⏱️', name: 'Stopwatch', action: () => App.openModal('modal-stopwatch') },
-            { icon: '⏳', name: 'Hourglass', action: () => App.openModal('modal-timer') },
+            { icon: '⏳', name: 'Countdown Timer', action: () => App.openModal('modal-timer') },
         ],
         money: [
             { icon: '🪙', name: 'Coin Mat', action: () => App.openModal('modal-money') },
@@ -1451,10 +1465,15 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         'Attendance': {
             icon: '📋', headerBg: '#b45309', headerColor: '#fff', width: 260,
-            render(body) {
+            render(body, el) {
                 const names = getStudentNames();
                 const state = {};
                 names.forEach(n => state[n] = 'present');
+                const syncState = () => {
+                    el._cwState = {
+                        attendance: { ...state }
+                    };
+                };
                 const render = () => {
                     body.innerHTML = '';
                     const list = document.createElement('div');
@@ -1481,6 +1500,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         btn.addEventListener('click', () => {
                             const cycle = {present:'absent',absent:'late',late:'present'};
                             state[name] = cycle[state[name]];
+                            syncState();
                             render();
                         });
                         list.appendChild(btn);
@@ -1490,6 +1510,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     hint.textContent = 'Click to cycle: present → absent → late';
                     body.append(list, hint);
                 };
+                el._cwApplyState = savedState => {
+                    const attendance = savedState && typeof savedState.attendance === 'object' ? savedState.attendance : null;
+                    if (!attendance) return;
+                    names.forEach(name => {
+                        const saved = attendance[name];
+                        state[name] = (saved === 'absent' || saved === 'late' || saved === 'present') ? saved : 'present';
+                    });
+                    syncState();
+                    render();
+                };
+                syncState();
                 render();
             }
         },
@@ -1646,6 +1677,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function clearWidgetsLayer() {
+        closeFloatingYouTubePlayer();
         if (!widgetsLayer) return;
         Array.from(widgetsLayer.children).forEach(el => {
             if (typeof el._dragCleanup === 'function') el._dragCleanup();
@@ -1671,6 +1703,8 @@ document.addEventListener('DOMContentLoaded', () => {
             payload.state = {
                 active: el.querySelector('.cwid-tl.active')?.dataset.tl || 'red'
             };
+        } else if (name === 'Attendance') {
+            payload.state = el._cwState ? { ...el._cwState } : null;
         } else if (name === 'Timer') {
             payload.state = el._cwState ? { ...el._cwState } : null;
         } else if (name === 'Text Box') {
@@ -1691,6 +1725,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (name === 'Traffic Light' && state.active) {
             const light = el.querySelector(`.cwid-tl[data-tl="${state.active}"]`);
             if (light) light.click();
+        } else if (name === 'Attendance' && typeof el._cwApplyState === 'function') {
+            el._cwApplyState(state);
         } else if (name === 'Timer' && typeof el._cwApplyState === 'function') {
             el._cwApplyState(state);
         } else if (name === 'Text Box' && typeof state.text === 'string') {
@@ -2096,15 +2132,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return div;
     }
 
-    // Text tool from bottom bar
-    const bbText = document.getElementById('bb-text');
-    if (bbText) bbText.addEventListener('click', () => {
-        currentTool = 'text';
-        document.querySelectorAll('.draw-tool').forEach(b => b.classList.remove('active'));
-        document.getElementById('tool-text').classList.add('active');
-        updateCanvasCursor();
-    });
-
     canvas.addEventListener('click', (e) => {
         if (currentTool === 'text') {
             createTextOverlay(e.offsetX, e.offsetY);
@@ -2333,6 +2360,17 @@ document.addEventListener('DOMContentLoaded', () => {
         lapDiv.innerHTML = `<span>Lap ${swLaps.length}</span><span>${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}.${String(cs).padStart(2,'0')}</span>`;
         lapsEl.prepend(lapDiv);
     });
+
+    const stopwatchModal = document.getElementById('modal-stopwatch');
+    if (stopwatchModal) {
+        new MutationObserver(() => {
+            if (stopwatchModal.classList.contains('hidden')) {
+                swRunning = false;
+                clearInterval(swInterval);
+                swInterval = null;
+            }
+        }).observe(stopwatchModal, { attributes: true, attributeFilter: ['class'] });
+    }
 
     // ===================== PART 2: CALCULATOR =====================
     let calcExpr = '';
