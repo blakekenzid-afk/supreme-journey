@@ -170,14 +170,29 @@
     const STATUS_CYCLE = ['', 'present', 'absent', 'late'];
     const STATUS_LABELS = { present: 'P', absent: 'A', late: 'L' };
 
+    function formatLocalDateKey(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function getStudentList() {
+        return (typeof students !== 'undefined' && Array.isArray(students)) ? students : [];
+    }
+
+    function getSafeContrastColor(color) {
+        return typeof getContrastColor === 'function' ? getContrastColor(color) : '#ffffff';
+    }
+
     // Today's date key e.g. "2026-04-21"
     function todayKey() {
-        const d = new Date();
-        return d.toISOString().slice(0, 10);
+        return formatLocalDateKey(new Date());
     }
 
     // Load saved state for today
     let attState = JSON.parse(localStorage.getItem('att-' + todayKey()) || '{}');
+    const studentList = getStudentList();
 
     function saveState() {
         localStorage.setItem('att-' + todayKey(), JSON.stringify(attState));
@@ -188,11 +203,14 @@
 
     // Render grid
     const grid = document.getElementById('att-student-grid');
-    students.forEach(s => {
+    if (studentList.length === 0) {
+        grid.innerHTML = '<div style="grid-column:1 / -1;color:#999;text-align:center;padding:24px 0;">Student roster unavailable.</div>';
+    }
+    studentList.forEach(s => {
         const card = document.createElement('div');
         card.className = 'att-card';
         card.id = 'attcard-' + s.name;
-        const textColor = getContrastColor(s.color);
+        const textColor = getSafeContrastColor(s.color);
         card.innerHTML = `
             <div class="att-avatar" style="background:${s.color};color:${textColor};">${s.initials}</div>
             <div class="att-name">${s.name}</div>
@@ -236,11 +254,11 @@
         document.getElementById('count-present').textContent = counts.present;
         document.getElementById('count-absent').textContent = counts.absent;
         document.getElementById('count-late').textContent = counts.late;
-        document.getElementById('count-unmarked').textContent = students.length - counts.present - counts.absent - counts.late;
+        document.getElementById('count-unmarked').textContent = studentList.length - counts.present - counts.absent - counts.late;
     }
 
     function markAll(status) {
-        students.forEach(s => { attState[s.name] = status; applyStatus(s.name); });
+        studentList.forEach(s => { attState[s.name] = status; applyStatus(s.name); });
         saveState();
         updateCounts();
     }
@@ -248,7 +266,7 @@
     function resetAll() {
         attState = {};
         saveState();
-        students.forEach(s => applyStatus(s.name));
+        studentList.forEach(s => applyStatus(s.name));
         updateCounts();
     }
 

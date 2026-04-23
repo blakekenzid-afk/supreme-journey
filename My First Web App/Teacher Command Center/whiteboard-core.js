@@ -47,6 +47,28 @@ window.WhiteboardApp = {
         const app = this;
         let isDragging = false;
         let offsetX, offsetY;
+        let docListenersBound = false;
+        const dragHandle = handle || el;
+
+        if (typeof el._dragCleanup === 'function') el._dragCleanup();
+
+        const addDocumentListeners = () => {
+            if (docListenersBound) return;
+            document.addEventListener('mousemove', move);
+            document.addEventListener('touchmove', move, {passive: false});
+            document.addEventListener('mouseup', stop);
+            document.addEventListener('touchend', stop);
+            docListenersBound = true;
+        };
+
+        const removeDocumentListeners = () => {
+            if (!docListenersBound) return;
+            document.removeEventListener('mousemove', move);
+            document.removeEventListener('touchmove', move);
+            document.removeEventListener('mouseup', stop);
+            document.removeEventListener('touchend', stop);
+            docListenersBound = false;
+        };
 
         const start = (e) => {
             const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : null);
@@ -68,7 +90,8 @@ window.WhiteboardApp = {
                 el.style.zIndex = app.widgetZ;
             }
 
-            if (e.type === 'mousedown') e.preventDefault();
+            addDocumentListeners();
+            if (e.cancelable) e.preventDefault();
         };
 
         const move = (e) => {
@@ -88,14 +111,16 @@ window.WhiteboardApp = {
 
         const stop = () => {
             isDragging = false;
+            removeDocumentListeners();
         };
 
-        (handle || el).addEventListener('mousedown', start);
-        (handle || el).addEventListener('touchstart', start, {passive: false});
-        document.addEventListener('mousemove', move);
-        document.addEventListener('touchmove', move, {passive: false});
-        document.addEventListener('mouseup', stop);
-        document.addEventListener('touchend', stop);
+        dragHandle.addEventListener('mousedown', start);
+        dragHandle.addEventListener('touchstart', start, {passive: false});
+        el._dragCleanup = () => {
+            removeDocumentListeners();
+            dragHandle.removeEventListener('mousedown', start);
+            dragHandle.removeEventListener('touchstart', start);
+        };
     },
 
     /**

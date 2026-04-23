@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('wb-canvas');
     const ctx = canvas.getContext('2d');
     const canvasArea = document.getElementById('wb-canvas-area');
+    const widgetsLayer = document.getElementById('widgets-layer');
     let isDrawing = false;
     let currentTool = 'cursor';
     let lastX = 0, lastY = 0;
@@ -336,7 +337,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     const thumb = item.snippet.thumbnails.default.url;
                     const div = document.createElement('div');
                     div.className = 'yt-result-item';
-                    div.innerHTML = `<img src="${thumb}" alt="${title}"><span>${title}</span>`;
+                        const img = document.createElement('img');
+                        img.src = thumb;
+                        img.alt = title;
+                        const label = document.createElement('span');
+                        label.textContent = title;
+                        div.append(img, label);
                     div.addEventListener('click', () => playVideo(vid));
                     ytResults.appendChild(div);
                 });
@@ -362,7 +368,12 @@ document.addEventListener('DOMContentLoaded', () => {
         suggestions.forEach(v => {
             const div = document.createElement('div');
             div.className = 'yt-result-item';
-            div.innerHTML = `<img src="https://img.youtube.com/vi/${v.id}/mqdefault.jpg" alt="${v.title}"><span>${v.title}</span>`;
+            const img = document.createElement('img');
+            img.src = `https://img.youtube.com/vi/${v.id}/mqdefault.jpg`;
+            img.alt = v.title;
+            const label = document.createElement('span');
+            label.textContent = v.title;
+            div.append(img, label);
             div.addEventListener('click', () => playVideo(v.id));
             ytResults.appendChild(div);
         });
@@ -547,9 +558,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Update history
         const hist = document.getElementById('namepick-history');
-        hist.innerHTML = pickedNames.map(n =>
-            `<span class="namepick-chip">${n}</span>`
-        ).join('');
+        hist.innerHTML = '';
+        pickedNames.forEach(name => {
+            const chip = document.createElement('span');
+            chip.className = 'namepick-chip';
+            chip.textContent = name;
+            hist.appendChild(chip);
+        });
     });
 
     // ===================== SOUND METER =====================
@@ -802,16 +817,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const div = document.createElement('div');
             div.className = 'schedule-item';
-            div.innerHTML = `
-                <div class="si-icon">${item.icon}</div>
-                <div class="si-info">
-                    <div class="si-title">${item.title}</div>
-                    <div class="si-time">${item.startTime} – ${item.endTime}</div>
-                    <div class="si-progress"><div class="si-progress-fill" style="width:${pct}%"></div></div>
-                </div>
-                ${done ? '<div class="si-check">✓</div>' : ''}
-                <button onclick="removeScheduleItem(${i})" style="background:none;border:none;color:var(--border-color);cursor:pointer;font-size:0.8rem;" title="Remove">✕</button>
-            `;
+            const icon = document.createElement('div');
+            icon.className = 'si-icon';
+            icon.textContent = item.icon;
+            const info = document.createElement('div');
+            info.className = 'si-info';
+            const title = document.createElement('div');
+            title.className = 'si-title';
+            title.textContent = item.title;
+            const time = document.createElement('div');
+            time.className = 'si-time';
+            time.textContent = `${item.startTime} – ${item.endTime}`;
+            const progress = document.createElement('div');
+            progress.className = 'si-progress';
+            const fill = document.createElement('div');
+            fill.className = 'si-progress-fill';
+            fill.style.width = `${pct}%`;
+            progress.appendChild(fill);
+            info.append(title, time, progress);
+            div.append(icon, info);
+            if (done) {
+                const check = document.createElement('div');
+                check.className = 'si-check';
+                check.textContent = '✓';
+                div.appendChild(check);
+            }
+            const removeBtn = document.createElement('button');
+            removeBtn.style.cssText = 'background:none;border:none;color:var(--border-color);cursor:pointer;font-size:0.8rem;';
+            removeBtn.title = 'Remove';
+            removeBtn.textContent = '✕';
+            removeBtn.addEventListener('click', () => removeScheduleItem(i));
+            div.appendChild(removeBtn);
             container.appendChild(div);
         });
     }
@@ -852,29 +888,58 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===================== TEXT-TO-SPEECH =====================
     function setupTTS(inputId, voiceId, rateId, speakBtnId, stopBtnId) {
         const synth = window.speechSynthesis;
+        const supportsTTS = !!(synth && typeof synth.cancel === 'function' && typeof synth.speak === 'function' && typeof window.SpeechSynthesisUtterance === 'function');
         let voices = [];
+        const speakBtn = document.getElementById(speakBtnId);
+        const stopBtn = document.getElementById(stopBtnId);
+        const sel = document.getElementById(voiceId);
+
+        if (!supportsTTS) {
+            if (sel) {
+                sel.innerHTML = '';
+                const opt = document.createElement('option');
+                opt.textContent = 'Text-to-speech unavailable in this browser';
+                sel.appendChild(opt);
+                sel.disabled = true;
+            }
+            if (speakBtn) speakBtn.disabled = true;
+            if (stopBtn) stopBtn.disabled = true;
+            return;
+        }
+
         function loadVoices() {
-            voices = synth.getVoices();
-            const sel = document.getElementById(voiceId);
+            voices = typeof synth.getVoices === 'function' ? synth.getVoices() : [];
             if (!sel) return;
             sel.innerHTML = '';
+            if (voices.length === 0) {
+                const opt = document.createElement('option');
+                opt.textContent = 'Default browser voice';
+                opt.value = '';
+                sel.appendChild(opt);
+                return;
+            }
             voices.forEach((v, i) => {
                 const opt = document.createElement('option');
                 opt.value = i; opt.textContent = v.name + ' (' + v.lang + ')';
                 sel.appendChild(opt);
             });
         }
-        synth.onvoiceschanged = loadVoices;
+        if (typeof synth.addEventListener === 'function') {
+            synth.addEventListener('voiceschanged', loadVoices);
+        } else if ('onvoiceschanged' in synth) {
+            const prev = synth.onvoiceschanged;
+            synth.onvoiceschanged = function(event) {
+                if (typeof prev === 'function') prev.call(this, event);
+                loadVoices();
+            };
+        }
         loadVoices();
 
-        const speakBtn = document.getElementById(speakBtnId);
-        const stopBtn = document.getElementById(stopBtnId);
         if (speakBtn) speakBtn.addEventListener('click', () => {
             synth.cancel();
             const text = document.getElementById(inputId).value;
             if (!text) return;
             const utter = new SpeechSynthesisUtterance(text);
-            const sel = document.getElementById(voiceId);
             if (sel && voices[sel.value]) utter.voice = voices[sel.value];
             const rate = document.getElementById(rateId);
             if (rate) utter.rate = parseFloat(rate.value);
@@ -1061,9 +1126,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 body.innerHTML = `<div class="cwid-sound-bars" id="cwsb">${Array(8).fill('<div class="sb" style="height:4px"></div>').join('')}</div>
                     <div class="cwid-sound-label" id="cwsl">Tap Start</div>
                     <div class="cwid-timer-btns"><button class="cwid-ctrl" id="cwsound-start">🎙</button><button class="cwid-ctrl" id="cwsound-stop">⏹</button></div>`;
-                let stream = null, analyser = null, raf = null;
+                let stream = null, analyser = null, raf = null, audioCtx = null, starting = false;
                 const bars = body.querySelectorAll('.sb');
                 const labels = ['🤫 Silence','🤫 Very Quiet','🗣 Quiet','💬 Low','💬 Medium','📢 Loud','📢 Very Loud','🔊 Too Loud!'];
+                const stopMeter = () => {
+                    starting = false;
+                    cancelAnimationFrame(raf);
+                    raf = null;
+                    if (stream) stream.getTracks().forEach(t => t.stop());
+                    stream = null;
+                    analyser = null;
+                    if (audioCtx && typeof audioCtx.close === 'function') audioCtx.close();
+                    audioCtx = null;
+                    bars.forEach(b => { b.style.height = '4px'; b.style.background = ''; });
+                };
                 const draw = () => {
                     if (!analyser) return;
                     const data = new Uint8Array(analyser.frequencyBinCount);
@@ -1075,19 +1151,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     raf = requestAnimationFrame(draw);
                 };
                 body.querySelector('#cwsound-start').addEventListener('click', () => {
+                    if (starting || stream) return;
+                    starting = true;
                     navigator.mediaDevices.getUserMedia({audio:true}).then(s => {
+                        stopMeter();
                         stream = s;
-                        const ctx = new AudioContext();
-                        analyser = ctx.createAnalyser();
-                        ctx.createMediaStreamSource(s).connect(analyser);
+                        audioCtx = new AudioContext();
+                        analyser = audioCtx.createAnalyser();
+                        audioCtx.createMediaStreamSource(s).connect(analyser);
+                        starting = false;
                         draw();
-                    }).catch(() => body.querySelector('#cwsl').textContent = 'Mic denied');
+                    }).catch(() => {
+                        starting = false;
+                        body.querySelector('#cwsl').textContent = 'Mic denied';
+                    });
                 });
                 body.querySelector('#cwsound-stop').addEventListener('click', () => {
-                    cancelAnimationFrame(raf); if(stream) stream.getTracks().forEach(t=>t.stop()); stream=null; analyser=null;
-                    bars.forEach(b=>{b.style.height='4px';}); body.querySelector('#cwsl').textContent='Stopped';
+                    stopMeter();
+                    body.querySelector('#cwsl').textContent='Stopped';
                 });
-                el._cwCleanup = () => { cancelAnimationFrame(raf); if(stream) stream.getTracks().forEach(t=>t.stop()); };
+                el._cwCleanup = () => stopMeter();
             }
         },
         'QR Code': {
@@ -1113,16 +1196,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 const state = {};
                 names.forEach(n => state[n] = 'present');
                 const render = () => {
-                    body.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:4px;max-height:200px;overflow-y:auto;">' +
-                        names.map(n => `<button data-n="${n}" style="font-size:0.72rem;padding:3px 8px;border-radius:6px;border:1.5px solid;cursor:pointer;font-family:inherit;background:${state[n]==='present'?'#dcfce7':state[n]==='absent'?'#fee2e2':'#fef9c3'};border-color:${state[n]==='present'?'#22c55e':state[n]==='absent'?'#ef4444':'#f59e0b'};color:${state[n]==='present'?'#15803d':state[n]==='absent'?'#b91c1c':'#92400e'};">${n}</button>`).join('') +
-                        '</div><div style="font-size:0.72rem;color:#888;margin-top:6px;text-align:center;">Click to cycle: present → absent → late</div>';
-                    body.querySelectorAll('[data-n]').forEach(btn => {
+                    body.innerHTML = '';
+                    const list = document.createElement('div');
+                    list.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;max-height:200px;overflow-y:auto;';
+                    names.forEach(name => {
+                        const status = state[name];
+                        const btn = document.createElement('button');
+                        btn.dataset.n = name;
+                        btn.style.cssText = 'font-size:0.72rem;padding:3px 8px;border-radius:6px;border:1.5px solid;cursor:pointer;font-family:inherit;';
+                        if (status === 'present') {
+                            btn.style.background = '#dcfce7';
+                            btn.style.borderColor = '#22c55e';
+                            btn.style.color = '#15803d';
+                        } else if (status === 'absent') {
+                            btn.style.background = '#fee2e2';
+                            btn.style.borderColor = '#ef4444';
+                            btn.style.color = '#b91c1c';
+                        } else {
+                            btn.style.background = '#fef9c3';
+                            btn.style.borderColor = '#f59e0b';
+                            btn.style.color = '#92400e';
+                        }
+                        btn.textContent = name;
                         btn.addEventListener('click', () => {
                             const cycle = {present:'absent',absent:'late',late:'present'};
-                            state[btn.dataset.n] = cycle[state[btn.dataset.n]];
+                            state[name] = cycle[state[name]];
                             render();
                         });
+                        list.appendChild(btn);
                     });
+                    const hint = document.createElement('div');
+                    hint.style.cssText = 'font-size:0.72rem;color:#888;margin-top:6px;text-align:center;';
+                    hint.textContent = 'Click to cycle: present → absent → late';
+                    body.append(list, hint);
                 };
                 render();
             }
@@ -1165,6 +1271,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (restoreState && restoreState.height) el.style.height = restoreState.height;
         if (restoreState && restoreState.state) restoreCanvasWidgetState(el, restoreState.state);
         el.querySelector('.cwid-close').addEventListener('click', () => {
+            if (el._dragCleanup) el._dragCleanup();
             if (el._cwCleanup) el._cwCleanup();
             el.remove();
             schedulePagePersist();
@@ -1254,18 +1361,30 @@ document.addEventListener('DOMContentLoaded', () => {
         overlay.className = 'image-overlay';
         overlay.style.left = x + 'px';
         overlay.style.top = y + 'px';
-        overlay.innerHTML = `<img src="${src}" alt="${alt || ''}"><button class="text-delete">✕</button>`;
+        const image = document.createElement('img');
+        image.src = src;
+        image.alt = alt || '';
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'text-delete';
+        removeBtn.textContent = '✕';
+        overlay.append(image, removeBtn);
         widgetsLayer.appendChild(overlay);
         App.makeDraggable(overlay, null, () => schedulePagePersist());
-        overlay.querySelector('.text-delete').addEventListener('click', () => { overlay.remove(); schedulePagePersist(); });
+        removeBtn.addEventListener('click', () => {
+            if (overlay._dragCleanup) overlay._dragCleanup();
+            overlay.remove();
+            schedulePagePersist();
+        });
         schedulePagePersist();
         return overlay;
     }
 
     function clearWidgetsLayer() {
         if (!widgetsLayer) return;
-        widgetsLayer.querySelectorAll('.wb-canvas-widget').forEach(el => {
-            if (el._cwCleanup) el._cwCleanup();
+        Array.from(widgetsLayer.children).forEach(el => {
+            if (typeof el._dragCleanup === 'function') el._dragCleanup();
+            if (typeof el._cleanup === 'function') el._cleanup();
+            if (typeof el._cwCleanup === 'function') el._cwCleanup();
         });
         widgetsLayer.replaceChildren();
     }
@@ -1536,12 +1655,25 @@ document.addEventListener('DOMContentLoaded', () => {
             App.getVar('--wheel-7', '#ef4444'), App.getVar('--wheel-8', '#8b5cf6'), App.getVar('--wheel-9', '#14b8a6'),
             App.getVar('--wheel-10', '#f97316')
         ];
-        output.innerHTML = groups.map((g, i) => `
-            <div class="group-box" style="border-left:4px solid ${colors[i % colors.length]}">
-                <div class="group-title" style="color:${colors[i % colors.length]}">Group ${i + 1}</div>
-                ${g.map(m => `<div class="group-member">${m}</div>`).join('')}
-            </div>
-        `).join('');
+        output.innerHTML = '';
+        groups.forEach((group, i) => {
+            const color = colors[i % colors.length];
+            const box = document.createElement('div');
+            box.className = 'group-box';
+            box.style.borderLeft = `4px solid ${color}`;
+            const title = document.createElement('div');
+            title.className = 'group-title';
+            title.style.color = color;
+            title.textContent = `Group ${i + 1}`;
+            box.appendChild(title);
+            group.forEach(member => {
+                const memberEl = document.createElement('div');
+                memberEl.className = 'group-member';
+                memberEl.textContent = member;
+                box.appendChild(memberEl);
+            });
+            output.appendChild(box);
+        });
     });
 
     // ===================== PART 2: SPIN THE WHEEL =====================
@@ -1637,7 +1769,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ===================== PART 2: TEXT TOOL =====================
-    const widgetsLayer = document.getElementById('widgets-layer');
 
     function createTextOverlay(x, y, options = {}) {
         const div = document.createElement('div');
@@ -1649,29 +1780,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Drag support
         let isDrag = false, dragOffX = 0, dragOffY = 0;
-        div.addEventListener('mousedown', e => {
+        const onMouseDown = (e) => {
             if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
             isDrag = true;
             dragOffX = e.clientX - div.offsetLeft;
             dragOffY = e.clientY - div.offsetTop;
-        });
-        document.addEventListener('mousemove', e => {
+        };
+        const onMouseMove = (e) => {
             if (!isDrag) return;
             div.style.left = (e.clientX - dragOffX) + 'px';
             div.style.top = (e.clientY - dragOffY) + 'px';
-        });
-        document.addEventListener('mouseup', () => {
+        };
+        const onMouseUp = () => {
             if (isDrag) schedulePagePersist();
             isDrag = false;
-        });
+        };
 
-        div.querySelector('.text-delete').addEventListener('click', () => { div.remove(); schedulePagePersist(); });
+        div.addEventListener('mousedown', onMouseDown);
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+
+        const cleanup = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        };
+
+        div.querySelector('.text-delete').addEventListener('click', () => {
+            cleanup();
+            div.remove();
+            schedulePagePersist();
+        });
         widgetsLayer.appendChild(div);
         const textarea = div.querySelector('textarea');
         if (typeof options.text === 'string') textarea.value = options.text;
         if (options.width) textarea.style.width = options.width;
         if (options.height) textarea.style.height = options.height;
         textarea.addEventListener('input', schedulePagePersist);
+        div._cleanup = cleanup;
         if (options.focus !== false) textarea.focus();
         schedulePagePersist();
         return div;
@@ -1864,14 +2009,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Start clock when modal opens
     const clockModal = document.getElementById('modal-clock');
-    new MutationObserver(() => {
-        if (!clockModal.classList.contains('hidden')) {
-            drawAnalogClock();
-            clockInterval = setInterval(drawAnalogClock, 1000);
-        } else {
-            clearInterval(clockInterval);
-        }
-    }).observe(clockModal, { attributes: true, attributeFilter: ['class'] });
+    if (clockModal) {
+        new MutationObserver(() => {
+            if (!clockModal.classList.contains('hidden')) {
+                drawAnalogClock();
+                if (!clockInterval) clockInterval = setInterval(drawAnalogClock, 1000);
+            } else if (clockInterval) {
+                clearInterval(clockInterval);
+                clockInterval = null;
+            }
+        }).observe(clockModal, { attributes: true, attributeFilter: ['class'] });
+    }
 
     // ===================== PART 2: STOPWATCH =====================
     let swTime = 0, swRunning = false, swInterval = null, swLaps = [];
@@ -2021,15 +2169,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.className = 'att-card';
             card.dataset.status = 'none';
-            card.innerHTML = `
-                <div class="att-avatar" style="background: ${s.color || '#6366f1'}; color: ${typeof getContrastColor === 'function' ? getContrastColor(s.color || '#6366f1') : '#fff'}">${s.initials || s.name.substring(0,2)}</div>
-                <div class="att-name">${s.name}</div>
-                <div class="att-btns">
-                    <button class="att-btn p" title="Present">P</button>
-                    <button class="att-btn a" title="Absent">A</button>
-                    <button class="att-btn l" title="Late">L</button>
-                </div>
-            `;
+            const avatar = document.createElement('div');
+            avatar.className = 'att-avatar';
+            avatar.style.background = s.color || '#6366f1';
+            avatar.style.color = typeof getContrastColor === 'function' ? getContrastColor(s.color || '#6366f1') : '#fff';
+            avatar.textContent = s.initials || s.name.substring(0,2);
+            const name = document.createElement('div');
+            name.className = 'att-name';
+            name.textContent = s.name;
+            const buttons = document.createElement('div');
+            buttons.className = 'att-btns';
+            ['p', 'a', 'l'].forEach((suffix, index) => {
+                const btn = document.createElement('button');
+                btn.className = `att-btn ${suffix}`;
+                btn.title = index === 0 ? 'Present' : index === 1 ? 'Absent' : 'Late';
+                btn.textContent = index === 0 ? 'P' : index === 1 ? 'A' : 'L';
+                buttons.appendChild(btn);
+            });
+            card.append(avatar, name, buttons);
             
             const btns = card.querySelectorAll('.att-btn');
             btns.forEach(btn => {
@@ -2102,7 +2259,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const randomCard = presentCards[Math.floor(Math.random() * presentCards.length)];
         const studentName = randomCard.querySelector('.att-name').textContent;
-        if (resultEl) resultEl.innerHTML = `<i class="fa-solid fa-star" style="color:#f59e0b;margin-right:6px;"></i>${studentName}`;
+        if (resultEl) {
+            resultEl.innerHTML = '';
+            const icon = document.createElement('i');
+            icon.className = 'fa-solid fa-star';
+            icon.style.color = '#f59e0b';
+            icon.style.marginRight = '6px';
+            resultEl.append(icon, document.createTextNode(studentName));
+        }
         presentCards.forEach(c => c.classList.remove('picked'));
         randomCard.classList.add('picked');
     });
@@ -2354,12 +2518,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===================== PART 3: RULER TOOL =====================
     const ruler = document.getElementById('ruler-tool');
     let rulerRotation = 0;
+    let cleanupRulerRotate = null;
 
 
     // Ruler is now exclusively opened via toolsData action
 
 
-    ruler?.querySelector('.ruler-close').addEventListener('click', () => ruler.classList.add('hidden'));
+    ruler?.querySelector('.ruler-close').addEventListener('click', () => {
+        if (cleanupRulerRotate) cleanupRulerRotate();
+        if (ruler._dragCleanup) ruler._dragCleanup();
+        ruler.classList.add('hidden');
+    });
     
     const rulerRotate = ruler?.querySelector('.ruler-rotate');
     if (rulerRotate) {
@@ -2398,7 +2567,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.removeEventListener('mouseup', stopRotate);
                 document.removeEventListener('touchmove', moveRotate);
                 document.removeEventListener('touchend', stopRotate);
+                cleanupRulerRotate = null;
             };
+
+            cleanupRulerRotate = stopRotate;
             
             document.addEventListener('mousemove', moveRotate);
             document.addEventListener('mouseup', stopRotate);

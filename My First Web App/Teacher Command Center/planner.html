@@ -199,8 +199,15 @@
         return monday;
     }
 
+    function formatLocalDateKey(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
     function weekKey(monday) {
-        return monday.toISOString().slice(0, 10);
+        return formatLocalDateKey(monday);
     }
 
     function loadWeek(monday) {
@@ -218,7 +225,7 @@
         mondayDate = getWeekMonday(weekOffset);
         plannerData = loadWeek(mondayDate);
 
-        const todayStr = new Date().toISOString().slice(0,10);
+        const todayStr = formatLocalDateKey(new Date());
         const grid = document.getElementById('planner-grid');
         grid.innerHTML = '';
 
@@ -238,7 +245,7 @@
         DAYS.forEach((day, di) => {
             const date = new Date(mondayDate);
             date.setDate(mondayDate.getDate() + di);
-            const dateStr = date.toISOString().slice(0,10);
+            const dateStr = formatLocalDateKey(date);
             const isToday = dateStr === todayStr;
             const hdr = document.createElement('div');
             hdr.className = 'p-col-header' + (isToday ? ' today-col' : '');
@@ -256,7 +263,7 @@
             DAYS.forEach((day, di) => {
                 const date = new Date(mondayDate);
                 date.setDate(mondayDate.getDate() + di);
-                const dateStr = date.toISOString().slice(0,10);
+                const dateStr = formatLocalDateKey(date);
                 const isToday = dateStr === todayStr;
 
                 const cell = document.createElement('div');

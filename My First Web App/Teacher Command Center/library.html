@@ -188,6 +188,11 @@
 
     function catInfo(key) { return CATEGORIES.find(c => c.key === key) || {label:'Other',icon:'📁'}; }
 
+    function openResourceUrl(url) {
+        if (!url) return;
+        window.open(url, '_blank', 'noopener,noreferrer');
+    }
+
     function renderLibrary() {
         const body = document.getElementById('lib-body');
         const q = document.getElementById('lib-search').value.toLowerCase().trim();
@@ -222,19 +227,63 @@
             grouped[cat.key].forEach(r => {
                 const card = document.createElement('div');
                 card.className = 'lib-card';
-                card.innerHTML = `
-                    <div class="lib-fav-icon">${cat.icon}</div>
-                    <div class="lib-info">
-                        <div class="lib-name" title="${r.name}">${r.name}</div>
-                        ${r.url ? `<div class="lib-url" title="${r.url}">${r.url.replace(/^https?:\/\//,'')}</div>` : ''}
-                        ${r.desc ? `<div class="lib-desc">${r.desc}</div>` : ''}
-                    </div>
-                    <div class="lib-card-actions">
-                        ${r.url ? `<button class="icon-btn" title="Open" onclick="window.open('${r.url}','_blank')"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>` : ''}
-                        <button class="icon-btn" title="Edit" onclick="openAddModal('${r.id}')"><i class="fa-solid fa-pencil"></i></button>
-                        <button class="icon-btn red" title="Delete" onclick="deleteResource('${r.id}')"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                `;
+                const icon = document.createElement('div');
+                icon.className = 'lib-fav-icon';
+                icon.textContent = cat.icon;
+
+                const info = document.createElement('div');
+                info.className = 'lib-info';
+
+                const name = document.createElement('div');
+                name.className = 'lib-name';
+                name.title = r.name;
+                name.textContent = r.name;
+                info.appendChild(name);
+
+                if (r.url) {
+                    const url = document.createElement('div');
+                    url.className = 'lib-url';
+                    url.title = r.url;
+                    url.textContent = r.url.replace(/^https?:\/\//, '');
+                    info.appendChild(url);
+                }
+
+                if (r.desc) {
+                    const desc = document.createElement('div');
+                    desc.className = 'lib-desc';
+                    desc.textContent = r.desc;
+                    info.appendChild(desc);
+                }
+
+                const actions = document.createElement('div');
+                actions.className = 'lib-card-actions';
+
+                if (r.url) {
+                    const openBtn = document.createElement('button');
+                    openBtn.className = 'icon-btn';
+                    openBtn.title = 'Open';
+                    openBtn.innerHTML = '<i class="fa-solid fa-arrow-up-right-from-square"></i>';
+                    openBtn.addEventListener('click', () => openResourceUrl(r.url));
+                    actions.appendChild(openBtn);
+                }
+
+                const editBtn = document.createElement('button');
+                editBtn.className = 'icon-btn';
+                editBtn.title = 'Edit';
+                editBtn.innerHTML = '<i class="fa-solid fa-pencil"></i>';
+                editBtn.addEventListener('click', () => openAddModal(r.id));
+                actions.appendChild(editBtn);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'icon-btn red';
+                deleteBtn.title = 'Delete';
+                deleteBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+                deleteBtn.addEventListener('click', () => deleteResource(r.id));
+                actions.appendChild(deleteBtn);
+
+                card.appendChild(icon);
+                card.appendChild(info);
+                card.appendChild(actions);
                 grid.appendChild(card);
             });
         });

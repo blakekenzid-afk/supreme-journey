@@ -164,13 +164,25 @@
 
     <script src="students.js"></script>
     <script>
+        function getStudentList() {
+            return (typeof students !== 'undefined' && Array.isArray(students)) ? students : [];
+        }
+
+        function getSafeContrastColor(color) {
+            return typeof getContrastColor === 'function' ? getContrastColor(color) : '#ffffff';
+        }
+
         // ===== Render student grid =====
         const grid = document.getElementById('student-grid');
-        students.forEach(s => {
+        const studentList = getStudentList();
+        if (studentList.length === 0) {
+            grid.innerHTML = '<p style="grid-column:1 / -1;color:#999;text-align:center;padding:24px 0;">Student roster unavailable.</p>';
+        }
+        studentList.forEach(s => {
             const card = document.createElement('button');
             card.className = 'student-card';
             card.setAttribute('aria-label', `Student: ${s.name}`);
-            const textColor = getContrastColor(s.color);
+            const textColor = getSafeContrastColor(s.color);
             card.innerHTML = `
                 <div class="student-avatar" style="background-color: ${s.color}; color: ${textColor}" aria-hidden="true">${s.initials}</div>
                 <div class="student-name">${s.name}</div>
@@ -215,7 +227,7 @@
         // ===== Student detail modal =====
         function openStudentModal(s) {
             currentStudent = s;
-            const textColor = getContrastColor(s.color);
+            const textColor = getSafeContrastColor(s.color);
             document.getElementById('sm-avatar').style.cssText = `width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:700;flex-shrink:0;background:${s.color};color:${textColor}`;
             document.getElementById('sm-avatar').textContent = s.initials;
             document.getElementById('sm-name').textContent = s.name;
@@ -234,25 +246,48 @@
                 el.innerHTML = '<p style="color:#bbb;font-size:0.85rem;text-align:center;padding:16px 0;">No entries yet</p>';
                 return;
             }
-            el.innerHTML = log.slice(0, 20).map(e => {
-                const colors = {pos:'#dcfce7',neg:'#fee2e2',note:'#fef3c7'};
-                const tcolors = {pos:'#16a34a',neg:'#dc2626',note:'#d97706'};
-                const icons = {pos:'fa-circle-check',neg:'fa-circle-exclamation',note:'fa-note-sticky'};
-                return `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:10px;background:${colors[e.type]};">
-                    <i class="fa-solid ${icons[e.type]}" style="color:${tcolors[e.type]};margin-top:2px;flex-shrink:0;"></i>
-                    <div style="flex:1;min-width:0;">
-                        <div style="font-size:0.85rem;font-weight:600;color:#333;">${e.icon||''} ${e.label||e.text}</div>
-                        ${e.note ? `<div style="font-size:0.78rem;color:#666;margin-top:2px;">${e.note}</div>`:''}
-                        <div style="font-size:0.72rem;color:#aaa;margin-top:2px;">${new Date(e.date).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
-                    </div>
-                </div>`;
-            }).join('');
+            const colors = {pos:'#dcfce7',neg:'#fee2e2',note:'#fef3c7'};
+            const tcolors = {pos:'#16a34a',neg:'#dc2626',note:'#d97706'};
+            const icons = {pos:'fa-circle-check',neg:'fa-circle-exclamation',note:'fa-note-sticky'};
+            el.innerHTML = '';
+            log.slice(0, 20).forEach(entry => {
+                const row = document.createElement('div');
+                row.style.cssText = `display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:10px;background:${colors[entry.type] || '#f3f4f6'};`;
+
+                const icon = document.createElement('i');
+                icon.className = `fa-solid ${icons[entry.type] || 'fa-note-sticky'}`;
+                icon.style.cssText = `color:${tcolors[entry.type] || '#666'};margin-top:2px;flex-shrink:0;`;
+
+                const info = document.createElement('div');
+                info.style.cssText = 'flex:1;min-width:0;';
+
+                const title = document.createElement('div');
+                title.style.cssText = 'font-size:0.85rem;font-weight:600;color:#333;';
+                title.textContent = `${entry.icon || ''} ${entry.label || entry.text || ''}`.trim();
+                info.appendChild(title);
+
+                if (entry.note) {
+                    const note = document.createElement('div');
+                    note.style.cssText = 'font-size:0.78rem;color:#666;margin-top:2px;';
+                    note.textContent = entry.note;
+                    info.appendChild(note);
+                }
+
+                const date = document.createElement('div');
+                date.style.cssText = 'font-size:0.72rem;color:#aaa;margin-top:2px;';
+                date.textContent = new Date(entry.date).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+                info.appendChild(date);
+
+                row.appendChild(icon);
+                row.appendChild(info);
+                el.appendChild(row);
+            });
         }
 
         // ===== Log Behavior modal =====
         function populateStudentSelect(selectId, preselect) {
             const sel = document.getElementById(selectId);
-            sel.innerHTML = students.map(s => `<option value="${s.name}" ${s.name===preselect?'selected':''}>${s.name}</option>`).join('');
+            sel.innerHTML = getStudentList().map(s => `<option value="${s.name}" ${s.name===preselect?'selected':''}>${s.name}</option>`).join('');
         }
         function openLogBehavior(s) {
             selectedBehavior = null;

@@ -241,22 +241,71 @@
             const card = document.createElement('div');
             card.className = 'lesson-card';
             const scls = subjectClass(lesson.subject);
-            card.innerHTML = `
-                <div class="lesson-icon ${scls}">${subjectEmoji(lesson.subject)}</div>
-                <div class="lesson-info">
-                    <div class="lesson-name">${lesson.title}</div>
-                    <div class="lesson-meta">
-                        <span class="lesson-tag ${scls}">${subjectLabel(lesson.subject)}</span>
-                        ${lesson.grade ? `<span>Grade ${lesson.grade}</span>` : ''}
-                        ${lesson.duration ? `<span><i class="fa-regular fa-clock"></i> ${lesson.duration}</span>` : ''}
-                        <span>${new Date(lesson.created).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>
-                    </div>
-                </div>
-                <div class="lesson-actions">
-                    <button class="icon-btn" title="Edit" onclick="event.stopPropagation();openLessonModal('${lesson.id}')"><i class="fa-solid fa-pencil"></i></button>
-                    <button class="icon-btn red" title="Delete" onclick="event.stopPropagation();deleteLesson('${lesson.id}')"><i class="fa-solid fa-trash"></i></button>
-                </div>
-            `;
+            const icon = document.createElement('div');
+            icon.className = 'lesson-icon ' + scls;
+            icon.textContent = subjectEmoji(lesson.subject);
+
+            const info = document.createElement('div');
+            info.className = 'lesson-info';
+
+            const name = document.createElement('div');
+            name.className = 'lesson-name';
+            name.textContent = lesson.title;
+            info.appendChild(name);
+
+            const meta = document.createElement('div');
+            meta.className = 'lesson-meta';
+
+            const tag = document.createElement('span');
+            tag.className = 'lesson-tag ' + scls;
+            tag.textContent = subjectLabel(lesson.subject);
+            meta.appendChild(tag);
+
+            if (lesson.grade) {
+                const grade = document.createElement('span');
+                grade.textContent = 'Grade ' + lesson.grade;
+                meta.appendChild(grade);
+            }
+
+            if (lesson.duration) {
+                const duration = document.createElement('span');
+                duration.innerHTML = '<i class="fa-regular fa-clock"></i> ';
+                duration.appendChild(document.createTextNode(lesson.duration));
+                meta.appendChild(duration);
+            }
+
+            const created = document.createElement('span');
+            created.textContent = new Date(lesson.created).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+            meta.appendChild(created);
+
+            info.appendChild(meta);
+
+            const actions = document.createElement('div');
+            actions.className = 'lesson-actions';
+
+            const editBtn = document.createElement('button');
+            editBtn.className = 'icon-btn';
+            editBtn.title = 'Edit';
+            editBtn.innerHTML = '<i class="fa-solid fa-pencil"></i>';
+            editBtn.addEventListener('click', event => {
+                event.stopPropagation();
+                openLessonModal(lesson.id);
+            });
+            actions.appendChild(editBtn);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'icon-btn red';
+            deleteBtn.title = 'Delete';
+            deleteBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+            deleteBtn.addEventListener('click', event => {
+                event.stopPropagation();
+                deleteLesson(lesson.id);
+            });
+            actions.appendChild(deleteBtn);
+
+            card.appendChild(icon);
+            card.appendChild(info);
+            card.appendChild(actions);
             card.addEventListener('click', () => openViewModal(lesson.id));
             body.appendChild(card);
         });
@@ -359,9 +408,31 @@
             {label:'Assessment / Notes', text:lesson.assessment},
         ].filter(s => s.text);
 
-        document.getElementById('view-body').innerHTML = sections.length
-            ? sections.map(s => `<div class="section-block"><div class="section-label">${s.label}</div><div class="section-text">${s.text}</div></div>`).join('')
-            : '<p style="color:#bbb;font-size:0.88rem;text-align:center;padding:20px 0;">No details added yet.</p>';
+        const viewBody = document.getElementById('view-body');
+        viewBody.innerHTML = '';
+        if (sections.length) {
+            sections.forEach(section => {
+                const block = document.createElement('div');
+                block.className = 'section-block';
+
+                const label = document.createElement('div');
+                label.className = 'section-label';
+                label.textContent = section.label;
+
+                const text = document.createElement('div');
+                text.className = 'section-text';
+                text.textContent = section.text;
+
+                block.appendChild(label);
+                block.appendChild(text);
+                viewBody.appendChild(block);
+            });
+        } else {
+            const empty = document.createElement('p');
+            empty.style.cssText = 'color:#bbb;font-size:0.88rem;text-align:center;padding:20px 0;';
+            empty.textContent = 'No details added yet.';
+            viewBody.appendChild(empty);
+        }
 
         document.getElementById('view-modal').style.display = 'flex';
     }

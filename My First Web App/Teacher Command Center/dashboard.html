@@ -142,7 +142,17 @@
         function renderSchedule() {
             const list = document.getElementById('schedule-list');
             if (!list) return;
-            if (schedItems.length === 0) { list.innerHTML = '<div class="sched-empty"><i class="fa-solid fa-calendar-xmark"></i><p>No items yet</p></div>'; }
+                if (schedItems.length === 0) {
+                    list.innerHTML = '';
+                    const empty = document.createElement('div');
+                    empty.className = 'sched-empty';
+                    const icon = document.createElement('i');
+                    icon.className = 'fa-solid fa-calendar-xmark';
+                    const text = document.createElement('p');
+                    text.textContent = 'No items yet';
+                    empty.append(icon, text);
+                    list.appendChild(empty);
+                }
             else {
                 const nowMins = new Date().getHours()*60+new Date().getMinutes();
                 schedItems.sort((a,b)=>toMins(a.start)-toMins(b.start));
@@ -152,7 +162,25 @@
                     const pct=done?100:active?Math.round(((nowMins-sM)/(eM-sM))*100):0;
                     const div=document.createElement('div');
                     div.className='sched-item'+(active?' active':'')+(done?' done':'');
-                    div.innerHTML=`<span class="sched-icon">${item.icon}</span><div class="sched-info"><div class="sched-name">${item.title}</div><div class="sched-time">${fmt12(item.start)} – ${fmt12(item.end)}</div><div class="sched-progress"><div class="sched-progress-fill" style="width:${pct}%"></div></div></div>`;
+                        const icon = document.createElement('span');
+                        icon.className = 'sched-icon';
+                        icon.textContent = item.icon;
+                        const info = document.createElement('div');
+                        info.className = 'sched-info';
+                        const name = document.createElement('div');
+                        name.className = 'sched-name';
+                        name.textContent = item.title;
+                        const time = document.createElement('div');
+                        time.className = 'sched-time';
+                        time.textContent = `${fmt12(item.start)} – ${fmt12(item.end)}`;
+                        const progress = document.createElement('div');
+                        progress.className = 'sched-progress';
+                        const fill = document.createElement('div');
+                        fill.className = 'sched-progress-fill';
+                        fill.style.width = `${pct}%`;
+                        progress.appendChild(fill);
+                        info.append(name, time, progress);
+                        div.append(icon, info);
                     div.addEventListener('click',()=>openSchedModal(i));
                     list.appendChild(div);
                 });
@@ -167,9 +195,42 @@
             const current = sorted.find(i=>nowMins>=toMins(i.start)&&nowMins<=toMins(i.end));
             const next = sorted.find(i=>toMins(i.start)>nowMins);
             const item = current||next;
-            if (!item) { el.innerHTML='<div class="up-next-empty"><i class="fa-solid fa-calendar-check"></i><p>'+(schedItems.length>0?'All done! 🎉':'Add schedule items')+'</p></div>'; return; }
+            if (!item) {
+                el.innerHTML = '';
+                const empty = document.createElement('div');
+                empty.className = 'up-next-empty';
+                const icon = document.createElement('i');
+                icon.className = 'fa-solid fa-calendar-check';
+                const text = document.createElement('p');
+                text.textContent = schedItems.length > 0 ? 'All done! 🎉' : 'Add schedule items';
+                empty.append(icon, text);
+                el.appendChild(empty);
+                return;
+            }
             const sM=toMins(item.start),eM=toMins(item.end),pct=current?Math.round(((nowMins-sM)/(eM-sM))*100):0;
-            el.innerHTML=`<div class="up-next-item"><div class="up-next-icon">${item.icon}</div><div class="up-next-name">${item.title}</div><div class="up-next-time">${current?'Happening now':'At '+fmt12(item.start)}</div>${current?`<div class="up-next-bar"><div class="up-next-bar-fill" style="width:${pct}%"></div></div>`:''}</div>`;
+            el.innerHTML = '';
+            const wrapper = document.createElement('div');
+            wrapper.className = 'up-next-item';
+            const icon = document.createElement('div');
+            icon.className = 'up-next-icon';
+            icon.textContent = item.icon;
+            const name = document.createElement('div');
+            name.className = 'up-next-name';
+            name.textContent = item.title;
+            const time = document.createElement('div');
+            time.className = 'up-next-time';
+            time.textContent = current ? 'Happening now' : `At ${fmt12(item.start)}`;
+            wrapper.append(icon, name, time);
+            if (current) {
+                const bar = document.createElement('div');
+                bar.className = 'up-next-bar';
+                const fill = document.createElement('div');
+                fill.className = 'up-next-bar-fill';
+                fill.style.width = `${pct}%`;
+                bar.appendChild(fill);
+                wrapper.appendChild(bar);
+            }
+            el.appendChild(wrapper);
         }
         function openSchedModal(editIndex=-1) {
             schedEditIndex=editIndex; const isEdit=editIndex>=0;
@@ -211,8 +272,24 @@
             list.innerHTML = '';
             if (todos.length === 0) { list.innerHTML='<p style="color:#999;font-size:0.85rem;text-align:center;padding:10px 0;">No to-dos yet!</p>'; return; }
             todos.forEach((t,i) => {
-                const item=document.createElement('div'); item.className='todo-item'+(t.done?' done':'');
-                item.innerHTML=`<button class="todo-check" onclick="toggleTodo(${i})"><i class="fa-solid ${t.done?'fa-circle-check':'fa-circle'}"></i></button><span class="todo-text">${t.text}</span><button class="todo-delete" onclick="deleteTodo(${i})"><i class="fa-solid fa-xmark"></i></button>`;
+                const item=document.createElement('div');
+                item.className='todo-item'+(t.done?' done':'');
+                const checkBtn = document.createElement('button');
+                checkBtn.className = 'todo-check';
+                checkBtn.addEventListener('click', () => toggleTodo(i));
+                const checkIcon = document.createElement('i');
+                checkIcon.className = `fa-solid ${t.done ? 'fa-circle-check' : 'fa-circle'}`;
+                checkBtn.appendChild(checkIcon);
+                const text = document.createElement('span');
+                text.className = 'todo-text';
+                text.textContent = t.text;
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'todo-delete';
+                deleteBtn.addEventListener('click', () => deleteTodo(i));
+                const deleteIcon = document.createElement('i');
+                deleteIcon.className = 'fa-solid fa-xmark';
+                deleteBtn.appendChild(deleteIcon);
+                item.append(checkBtn, text, deleteBtn);
                 list.appendChild(item);
             });
         }
@@ -581,7 +658,14 @@
     function populateStudentSelect(id, preselect) {
         const sel = document.getElementById(id);
         const studentList = getDashboardStudents();
-        sel.innerHTML = studentList.map(s => `<option value="${s.name}" ${s.name===preselect?'selected':''}>${s.name}</option>`).join('');
+        sel.innerHTML = '';
+        studentList.forEach(student => {
+            const option = document.createElement('option');
+            option.value = student.name;
+            option.textContent = student.name;
+            option.selected = student.name === preselect;
+            sel.appendChild(option);
+        });
     }
     function openLogBehavior(name) {
         selectedBehavior = null;
@@ -696,12 +780,27 @@
         stationGroups.forEach((group, gi) => {
             const card = document.createElement('div');
             card.style.cssText = `background:${COLORS[gi%COLORS.length]};border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;`;
-            card.innerHTML = `
-                <div style="display:flex;align-items:center;justify-content:space-between;">
-                    <input value="${group.label}" style="font-size:0.9rem;font-weight:700;color:${TCOLORS[gi%TCOLORS.length]};background:none;border:none;outline:none;width:100%;font-family:inherit;" onchange="stationGroups[${gi}].label=this.value;saveStations();">
-                </div>
-                <div style="font-size:0.8rem;color:#555;min-height:40px;">${group.members.join(', ') || '<em style="color:#aaa">No members</em>'}</div>
-            `;
+            const header = document.createElement('div');
+            header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;';
+            const input = document.createElement('input');
+            input.value = group.label;
+            input.style.cssText = `font-size:0.9rem;font-weight:700;color:${TCOLORS[gi%TCOLORS.length]};background:none;border:none;outline:none;width:100%;font-family:inherit;`;
+            input.addEventListener('change', () => {
+                stationGroups[gi].label = input.value;
+                saveStations();
+            });
+            header.appendChild(input);
+            const members = document.createElement('div');
+            members.style.cssText = 'font-size:0.8rem;color:#555;min-height:40px;';
+            if (group.members.length > 0) {
+                members.textContent = group.members.join(', ');
+            } else {
+                const empty = document.createElement('em');
+                empty.style.color = '#aaa';
+                empty.textContent = 'No members';
+                members.appendChild(empty);
+            }
+            card.append(header, members);
             grid.appendChild(card);
         });
     }
