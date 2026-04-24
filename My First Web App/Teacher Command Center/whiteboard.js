@@ -2052,28 +2052,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 120);
     }
 
-    function createImageOverlay(src, alt, x, y) {
+    function createImageOverlay(src, alt, x, y, options = {}) {
         const overlay = document.createElement('div');
         overlay.className = 'image-overlay';
         overlay.style.left = x + 'px';
         overlay.style.top = y + 'px';
+        if (options.width) overlay.style.width = options.width;
+        if (options.height) overlay.style.height = options.height;
         const image = document.createElement('img');
         image.src = src;
         image.alt = alt || '';
         image.draggable = false;
+        image.addEventListener('dragstart', event => event.preventDefault());
         const removeBtn = document.createElement('button');
         removeBtn.className = 'text-delete';
         removeBtn.textContent = '✕';
         overlay.append(image, removeBtn);
         widgetsLayer.appendChild(overlay);
-        App.makeDraggable(overlay, image, () => schedulePagePersist());
+        App.makeDraggable(overlay, overlay, () => schedulePagePersist());
+        if (typeof ResizeObserver !== 'undefined') {
+            let resizeFrame = null;
+            const resizeObserver = new ResizeObserver(() => {
+                if (resizeFrame) cancelAnimationFrame(resizeFrame);
+                resizeFrame = requestAnimationFrame(() => {
+                    resizeFrame = null;
+                    overlay.style.width = `${Math.round(overlay.offsetWidth)}px`;
+                    overlay.style.height = `${Math.round(overlay.offsetHeight)}px`;
+                    schedulePagePersist();
+                });
+            });
+            resizeObserver.observe(overlay);
+            overlay._resizeCleanup = () => {
+                if (resizeFrame) cancelAnimationFrame(resizeFrame);
+                resizeObserver.disconnect();
+            };
+        }
         ['mousedown', 'touchstart'].forEach(eventName => {
             removeBtn.addEventListener(eventName, (event) => {
                 event.stopPropagation();
+                if (event.cancelable) event.preventDefault();
             }, { passive: false });
         });
         removeBtn.addEventListener('click', () => {
             if (overlay._dragCleanup) overlay._dragCleanup();
+            if (typeof overlay._resizeCleanup === 'function') overlay._resizeCleanup();
             overlay.remove();
             schedulePagePersist();
         });
@@ -2086,6 +2108,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!widgetsLayer) return;
         Array.from(widgetsLayer.children).forEach(el => {
             if (typeof el._dragCleanup === 'function') el._dragCleanup();
+            if (typeof el._resizeCleanup === 'function') el._resizeCleanup();
             if (typeof el._cleanup === 'function') el._cleanup();
             if (typeof el._cwCleanup === 'function') el._cwCleanup();
         });
@@ -2175,6 +2198,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     y: parseInt(el.style.top, 10) || 0,
                     src: img?.getAttribute('src') || '',
                     alt: img?.getAttribute('alt') || '',
+                    width: el.style.width || '',
+                    height: el.style.height || '',
                 };
             }
             if (el.classList.contains('wb-canvas-widget')) {
@@ -2197,7 +2222,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 return overlay;
             }
             if (item.kind === 'image-overlay' && item.src) {
-                createImageOverlay(item.src, item.alt, item.x, item.y);
+                createImageOverlay(item.src, item.alt, item.x, item.y, {
+                    width: item.width,
+                    height: item.height,
+                });
                 return;
             }
             if (item.kind === 'canvas-widget' && item.name) {

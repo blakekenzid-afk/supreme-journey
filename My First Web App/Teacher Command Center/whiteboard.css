@@ -814,11 +814,21 @@ body {
   box-shadow: var(--wb-shadow-lg);
   z-index: var(--z-widget);
   border: 1px solid rgba(0,0,0,0.1);
+  resize: both;
+  overflow: auto;
+  min-width: 96px;
+  min-height: 96px;
+  max-width: calc(100% - 16px);
+  max-height: calc(100% - 16px);
+  touch-action: none;
 }
 .image-overlay img {
+  width: 100%;
   max-width: 400px;
   display: block;
   border-radius: 8px;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 .image-overlay .text-delete {
   position: absolute;
