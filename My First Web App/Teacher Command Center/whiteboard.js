@@ -1620,7 +1620,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'Stopwatch': {
             icon: '⏱️', headerBg: '#2e7d6b', headerColor: '#fff', width: 190,
             render(body, el) {
-                let ms = 0, iv = null, running = false;
+                let ms = 0, iv = null, running = false, startedAt = null;
                 body.innerHTML = `<div class="cwid-sw-display" id="cwsw">00:00.00</div>
                     <div class="cwid-timer-btns" style="margin-top:6px;">
                         <button class="cwid-ctrl" id="cwsw-start">▶</button>
@@ -1629,10 +1629,66 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>`;
                 const disp = body.querySelector('#cwsw');
                 const fmt = () => { const t=ms; const m=Math.floor(t/60000); const s=Math.floor((t%60000)/1000); const cs=Math.floor((t%1000)/10); return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`; };
-                body.querySelector('#cwsw-start').addEventListener('click', () => { if(running)return; running=true; const start=Date.now()-ms; iv=setInterval(()=>{ms=Date.now()-start;disp.textContent=fmt();},50); });
-                body.querySelector('#cwsw-stop').addEventListener('click', () => { clearInterval(iv); running=false; });
-                body.querySelector('#cwsw-reset').addEventListener('click', () => { clearInterval(iv); running=false; ms=0; disp.textContent='00:00.00'; });
-                el._cwCleanup = () => clearInterval(iv);
+                const persistWidgetState = () => {
+                    el._cwState = { ms, running, startedAt };
+                };
+                const clearTick = () => {
+                    if (!iv) return;
+                    clearInterval(iv);
+                    iv = null;
+                };
+                const syncFromClock = () => {
+                    if (!running || typeof startedAt !== 'number') return;
+                    ms = Math.max(0, Date.now() - startedAt);
+                };
+                const renderStopwatch = () => {
+                    syncFromClock();
+                    disp.textContent = fmt();
+                    persistWidgetState();
+                };
+                const startTick = () => {
+                    if (iv) return;
+                    if (typeof startedAt !== 'number') startedAt = Date.now() - ms;
+                    iv = setInterval(() => {
+                        ms = Date.now() - startedAt;
+                        renderStopwatch();
+                    }, 50);
+                };
+                body.querySelector('#cwsw-start').addEventListener('click', () => {
+                    if (running) return;
+                    running = true;
+                    startedAt = Date.now() - ms;
+                    startTick();
+                    persistWidgetState();
+                    schedulePagePersist();
+                });
+                body.querySelector('#cwsw-stop').addEventListener('click', () => {
+                    syncFromClock();
+                    clearTick();
+                    running = false;
+                    startedAt = null;
+                    persistWidgetState();
+                    renderStopwatch();
+                    schedulePagePersist();
+                });
+                body.querySelector('#cwsw-reset').addEventListener('click', () => {
+                    clearTick();
+                    running = false;
+                    startedAt = null;
+                    ms = 0;
+                    renderStopwatch();
+                    schedulePagePersist();
+                });
+                el._cwApplyState = state => {
+                    if (!state || typeof state !== 'object') return;
+                    ms = typeof state.ms === 'number' ? state.ms : 0;
+                    running = !!state.running;
+                    startedAt = typeof state.startedAt === 'number' ? state.startedAt : (running ? Date.now() - ms : null);
+                    renderStopwatch();
+                    if (running) startTick();
+                };
+                renderStopwatch();
+                el._cwCleanup = () => clearTick();
             }
         },
         'Clock': {
@@ -1651,20 +1707,38 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         'Name Picker': {
             icon: '🙋', headerBg: '#6366f1', headerColor: '#fff', width: 200,
-            render(body) {
+            render(body, el) {
                 body.innerHTML = `<div class="cwid-name-result" id="cwnp-result">?</div>
                     <button class="primary-action-btn big" id="cwnp-btn" style="font-size:0.82rem;padding:8px 12px;"><i class="fa-solid fa-shuffle"></i> Pick</button>
                     <div style="font-size:0.7rem;color:#999;text-align:center;" id="cwnp-hist"></div>`;
                 const names = getStudentNames();
                 let used = [];
+                let picked = '?';
+                const result = body.querySelector('#cwnp-result');
+                const history = body.querySelector('#cwnp-hist');
+                const renderNamePicker = () => {
+                    result.textContent = picked;
+                    history.textContent = used.length ? `${used.length} / ${names.length} picked` : '';
+                    el._cwState = {
+                        used: [...used],
+                        picked,
+                    };
+                };
                 body.querySelector('#cwnp-btn').addEventListener('click', () => {
                     if (used.length >= names.length) used = [];
                     const remaining = names.filter(n => !used.includes(n));
-                    const picked = remaining[Math.floor(Math.random()*remaining.length)];
+                    picked = remaining[Math.floor(Math.random()*remaining.length)];
                     used.push(picked);
-                    body.querySelector('#cwnp-result').textContent = picked;
-                    body.querySelector('#cwnp-hist').textContent = `${used.length} / ${names.length} picked`;
+                    renderNamePicker();
+                    schedulePagePersist();
                 });
+                el._cwApplyState = state => {
+                    if (!state || typeof state !== 'object') return;
+                    used = Array.isArray(state.used) ? state.used.filter(name => names.includes(name)) : [];
+                    picked = typeof state.picked === 'string' ? state.picked : '?';
+                    renderNamePicker();
+                };
+                renderNamePicker();
             }
         },
         'Sound Meter': {
@@ -1722,18 +1796,29 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         'QR Code': {
             icon: '📝', headerBg: '#0f766e', headerColor: '#fff', width: 220,
-            render(body) {
+            render(body, el) {
                 body.innerHTML = `<input type="text" id="cwqr-input" placeholder="Enter URL or text..." style="width:100%;box-sizing:border-box;padding:7px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.82rem;outline:none;">
                     <button class="primary-action-btn" id="cwqr-btn" style="font-size:0.82rem;padding:7px;">Generate</button>
                     <div class="cwid-qr-output" id="cwqr-out"></div>`;
-                body.querySelector('#cwqr-btn').addEventListener('click', () => {
-                    const val = body.querySelector('#cwqr-input').value.trim();
+                const input = body.querySelector('#cwqr-input');
+                const output = body.querySelector('#cwqr-out');
+                const renderQrCode = () => {
+                    const val = input.value.trim();
                     if (!val) return;
-                    const out = body.querySelector('#cwqr-out');
-                    out.innerHTML = '';
-                    if (typeof QRCode !== 'undefined') new QRCode(out, {text: val, width: 140, height: 140});
-                    else out.textContent = 'QR library not loaded';
+                    output.innerHTML = '';
+                    if (typeof QRCode !== 'undefined') new QRCode(output, {text: val, width: 140, height: 140});
+                    else output.textContent = 'QR library not loaded';
+                    el._cwState = { text: val };
+                };
+                body.querySelector('#cwqr-btn').addEventListener('click', renderQrCode);
+                input.addEventListener('input', () => {
+                    el._cwState = { text: input.value };
                 });
+                el._cwApplyState = state => {
+                    if (!state || typeof state.text !== 'string') return;
+                    input.value = state.text;
+                    if (state.text.trim()) renderQrCode();
+                };
             }
         },
         'Attendance': {
@@ -1799,8 +1884,27 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         'Text Box': {
             icon: '📝', width: 220,
-            render(body) {
+            render(body, el) {
                 body.innerHTML = `<textarea placeholder="Type here..." style="width:100%;box-sizing:border-box;height:100px;border:none;outline:none;resize:both;font-family:inherit;font-size:1rem;background:transparent;color:inherit;"></textarea>`;
+                const textarea = body.querySelector('textarea');
+                const syncState = () => {
+                    el._cwState = {
+                        text: textarea.value || '',
+                        width: textarea.style.width || '',
+                        height: textarea.style.height || '',
+                    };
+                };
+                textarea.addEventListener('input', syncState);
+                textarea.addEventListener('mouseup', syncState);
+                textarea.addEventListener('touchend', syncState);
+                el._cwApplyState = state => {
+                    if (!state || typeof state !== 'object') return;
+                    textarea.value = typeof state.text === 'string' ? state.text : '';
+                    textarea.style.width = typeof state.width === 'string' ? state.width : '';
+                    textarea.style.height = typeof state.height === 'string' ? state.height : '';
+                    syncState();
+                };
+                syncState();
             }
         },
     };
@@ -1842,11 +1946,29 @@ document.addEventListener('DOMContentLoaded', () => {
         if (restoreState && restoreState.state) restoreCanvasWidgetState(el, restoreState.state);
         el.querySelector('.cwid-close').addEventListener('click', () => {
             if (el._dragCleanup) el._dragCleanup();
+            if (typeof el._resizeCleanup === 'function') el._resizeCleanup();
             if (el._cwCleanup) el._cwCleanup();
             el.remove();
             schedulePagePersist();
         });
         App.makeDraggable(el, el.querySelector('.cwid-header'), () => schedulePagePersist());
+        if (typeof ResizeObserver !== 'undefined') {
+            let resizeFrame = null;
+            const resizeObserver = new ResizeObserver(() => {
+                if (resizeFrame) cancelAnimationFrame(resizeFrame);
+                resizeFrame = requestAnimationFrame(() => {
+                    resizeFrame = null;
+                    el.style.width = `${Math.round(el.offsetWidth)}px`;
+                    el.style.height = `${Math.round(el.offsetHeight)}px`;
+                    schedulePagePersist();
+                });
+            });
+            resizeObserver.observe(el);
+            el._resizeCleanup = () => {
+                if (resizeFrame) cancelAnimationFrame(resizeFrame);
+                resizeObserver.disconnect();
+            };
+        }
         el.addEventListener('input', schedulePagePersist);
         el.addEventListener('change', schedulePagePersist);
         el.addEventListener('click', schedulePagePersist);
@@ -1986,9 +2108,15 @@ document.addEventListener('DOMContentLoaded', () => {
             payload.state = el._cwState ? { ...el._cwState } : null;
         } else if (name === 'Timer') {
             payload.state = el._cwState ? { ...el._cwState } : null;
+        } else if (name === 'Name Picker') {
+            payload.state = el._cwState ? { ...el._cwState } : null;
+        } else if (name === 'Stopwatch') {
+            payload.state = el._cwState ? { ...el._cwState } : null;
         } else if (name === 'Text Box') {
-            payload.state = {
-                text: el.querySelector('textarea')?.value || ''
+            payload.state = el._cwState ? { ...el._cwState } : {
+                text: el.querySelector('textarea')?.value || '',
+                width: el.querySelector('textarea')?.style.width || '',
+                height: el.querySelector('textarea')?.style.height || '',
             };
         } else if (name === 'QR Code') {
             payload.state = {
@@ -2008,9 +2136,12 @@ document.addEventListener('DOMContentLoaded', () => {
             el._cwApplyState(state);
         } else if (name === 'Timer' && typeof el._cwApplyState === 'function') {
             el._cwApplyState(state);
-        } else if (name === 'Text Box' && typeof state.text === 'string') {
-            const textarea = el.querySelector('textarea');
-            if (textarea) textarea.value = state.text;
+        } else if (name === 'Name Picker' && typeof el._cwApplyState === 'function') {
+            el._cwApplyState(state);
+        } else if (name === 'Stopwatch' && typeof el._cwApplyState === 'function') {
+            el._cwApplyState(state);
+        } else if (name === 'Text Box' && typeof el._cwApplyState === 'function') {
+            el._cwApplyState(state);
         } else if (name === 'QR Code' && typeof state.text === 'string') {
             const input = el.querySelector('#cwqr-input');
             if (input) input.value = state.text;
