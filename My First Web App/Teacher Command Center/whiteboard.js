@@ -2058,7 +2058,6 @@ document.addEventListener('DOMContentLoaded', () => {
         overlay.style.left = x + 'px';
         overlay.style.top = y + 'px';
         if (options.width) overlay.style.width = options.width;
-        if (options.height) overlay.style.height = options.height;
         const image = document.createElement('img');
         image.src = src;
         image.alt = alt || '';
@@ -2077,7 +2076,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 resizeFrame = requestAnimationFrame(() => {
                     resizeFrame = null;
                     overlay.style.width = `${Math.round(overlay.offsetWidth)}px`;
-                    overlay.style.height = `${Math.round(overlay.offsetHeight)}px`;
                     schedulePagePersist();
                 });
             });
@@ -2199,7 +2197,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     src: img?.getAttribute('src') || '',
                     alt: img?.getAttribute('alt') || '',
                     width: el.style.width || '',
-                    height: el.style.height || '',
                 };
             }
             if (el.classList.contains('wb-canvas-widget')) {
@@ -2224,7 +2221,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (item.kind === 'image-overlay' && item.src) {
                 createImageOverlay(item.src, item.alt, item.x, item.y, {
                     width: item.width,
-                    height: item.height,
                 });
                 return;
             }
