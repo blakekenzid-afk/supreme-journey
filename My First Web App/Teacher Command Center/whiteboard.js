@@ -205,14 +205,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { passive: false });
 
     // ===================== TOOLBAR =====================
+    function setActiveDrawTool(toolName) {
+        currentTool = toolName;
+        document.querySelectorAll('.draw-tool').forEach(button => {
+            button.classList.toggle('active', button.getAttribute('data-tool') === toolName);
+        });
+        updateCanvasCursor();
+    }
+
     document.querySelectorAll('.draw-tool').forEach(tool => {
         tool.addEventListener('click', () => {
             const t = tool.getAttribute('data-tool');
             if (t) {
-                currentTool = t;
-                document.querySelectorAll('.draw-tool').forEach(b => b.classList.remove('active'));
-                tool.classList.add('active');
-                updateCanvasCursor();
+                if (t === 'shapes') return;
+                document.getElementById('shapes-submenu')?.classList.add('hidden');
+                setActiveDrawTool(t);
             }
         });
     });
@@ -1062,20 +1069,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const bgImageSearchBtn = document.getElementById('bg-image-search-btn');
     if (bgImageGrid) {
         const bgThemesByCategory = {
-            thematic: [
-                { label: 'Sunny Day',    bg: 'linear-gradient(to bottom, #87CEEB 0%, #fffde7 60%, #a5d6a7 100%)' },
-                { label: 'Night Sky',    bg: 'linear-gradient(to bottom, #0d1b2a 0%, #1a237e 50%, #283593 100%)' },
-                { label: 'Ocean',        bg: 'linear-gradient(to bottom, #29b6f6 0%, #0277bd 60%, #01579b 100%)' },
-                { label: 'Sunset',       bg: 'linear-gradient(to bottom right, #ff7043, #ffa726, #ffee58)' },
-                { label: 'Forest',       bg: 'linear-gradient(to bottom, #a5d6a7 0%, #388e3c 100%)' },
-                { label: 'Chalkboard',   bg: 'linear-gradient(135deg, #2d5016 0%, #3a6020 100%)' },
-                { label: 'Rainbow',      bg: 'linear-gradient(to right, #ef5350, #ff7043, #ffca28, #66bb6a, #42a5f5, #7e57c2)' },
-                { label: 'Outer Space',  bg: 'radial-gradient(ellipse at center, #1a237e 0%, #0d1b2a 70%)' },
-                { label: 'Cozy Library', bg: 'linear-gradient(135deg, #8d6e63 0%, #5d4037 100%)' },
-                { label: 'Teal',         bg: 'linear-gradient(135deg, #00695c, #004d40)' },
-                { label: 'Lavender',     bg: 'linear-gradient(135deg, #e8d5ff 0%, #c39bd3 100%)' },
-                { label: 'Mint',         bg: 'linear-gradient(135deg, #e0f7fa, #b2dfdb)' },
-            ],
             simple: [
                 { label: 'White',        bg: '#ffffff' },
                 { label: 'Cream',        bg: '#fffdf5' },
@@ -1120,7 +1113,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ],
         };
 
-        let currentBgCat = 'thematic';
+        let currentBgCat = 'simple';
 
         function renderBgHint(message) {
             bgImageGrid.innerHTML = `<div class="media-hint">${message}</div>`;
@@ -1134,7 +1127,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function renderBgGrid(cat) {
             bgImageGrid.innerHTML = '';
-            (bgThemesByCategory[cat] || bgThemesByCategory.thematic).forEach(theme => {
+            const normalizedCat = cat === 'thematic' ? 'simple' : cat;
+            (bgThemesByCategory[normalizedCat] || bgThemesByCategory.simple).forEach(theme => {
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'bg-image-thumb';
@@ -1207,6 +1201,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'Enter') searchPixabayBackgrounds(e.currentTarget.value.trim());
         });
 
+        document.querySelector('.bg-img-cat[data-imgcat="thematic"]')?.setAttribute('aria-selected', 'false');
+        document.querySelector('.bg-img-cat[data-imgcat="thematic"]')?.classList.remove('active');
+        document.querySelector('.bg-img-cat[data-imgcat="simple"]')?.setAttribute('aria-selected', 'true');
+        document.querySelector('.bg-img-cat[data-imgcat="simple"]')?.classList.add('active');
         setBackgroundImageCategory(currentBgCat);
     }
 
@@ -1936,12 +1934,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const image = document.createElement('img');
         image.src = src;
         image.alt = alt || '';
+        image.draggable = false;
         const removeBtn = document.createElement('button');
         removeBtn.className = 'text-delete';
         removeBtn.textContent = '✕';
         overlay.append(image, removeBtn);
         widgetsLayer.appendChild(overlay);
-        App.makeDraggable(overlay, null, () => schedulePagePersist());
+        App.makeDraggable(overlay, image, () => schedulePagePersist());
+        ['mousedown', 'touchstart'].forEach(eventName => {
+            removeBtn.addEventListener(eventName, (event) => {
+                event.stopPropagation();
+            }, { passive: false });
+        });
         removeBtn.addEventListener('click', () => {
             if (overlay._dragCleanup) overlay._dragCleanup();
             overlay.remove();
@@ -2076,16 +2080,57 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (wb_currentPage >= wb_pages.length) wb_currentPage = 0;
 
-    function saveCurrentPageState(dataUrl) {
-        if (!dataUrl) dataUrl = canvas.toDataURL('image/png');
-        wb_pages[wb_currentPage] = {
-            canvas: dataUrl,
+    function clonePageSnapshot(snapshot) {
+        return JSON.parse(JSON.stringify(snapshot));
+    }
+
+    function normalizePageSnapshot(snapshot) {
+        if (!snapshot) {
+            return { canvas: null, bgStyle: '', bgClass: 'wb-canvas-area', widgets: [] };
+        }
+        if (typeof snapshot === 'string') {
+            return { canvas: snapshot, bgStyle: '', bgClass: 'wb-canvas-area', widgets: [] };
+        }
+        return {
+            canvas: typeof snapshot.canvas === 'string' ? snapshot.canvas : null,
+            bgStyle: typeof snapshot.bgStyle === 'string' ? snapshot.bgStyle : '',
+            bgClass: typeof snapshot.bgClass === 'string' ? snapshot.bgClass : 'wb-canvas-area',
+            widgets: Array.isArray(snapshot.widgets) ? clonePageSnapshot(snapshot.widgets) : [],
+        };
+    }
+
+    function captureCurrentPageSnapshot(dataUrl) {
+        return {
+            canvas: dataUrl || canvas.toDataURL('image/png'),
             bgStyle: canvasArea.style.background || '',
             bgClass: canvasArea.className || 'wb-canvas-area',
-            widgets: serializeWidgetsLayer()
+            widgets: serializeWidgetsLayer(),
         };
+    }
+
+    function persistPageSnapshot(snapshot) {
+        wb_pages[wb_currentPage] = clonePageSnapshot(snapshot);
         try { localStorage.setItem('wb-pages', JSON.stringify(wb_pages)); } catch(e) {}
         localStorage.setItem('wb-current-page', String(wb_currentPage));
+    }
+
+    function restorePageSnapshot(snapshot) {
+        const normalized = normalizePageSnapshot(snapshot);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvasArea.className = normalized.bgClass || 'wb-canvas-area';
+        canvasArea.style.background = normalized.bgStyle || '';
+        restoreWidgetsLayer(normalized.widgets);
+        if (normalized.canvas) {
+            const img = new Image();
+            img.onload = () => { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0); };
+            img.src = normalized.canvas;
+        }
+        updateCanvasCursor();
+        return normalized;
+    }
+
+    function saveCurrentPageState(dataUrl) {
+        persistPageSnapshot(captureCurrentPageSnapshot(dataUrl));
     }
 
     function updatePageCounter() {
@@ -2102,45 +2147,27 @@ document.addEventListener('DOMContentLoaded', () => {
         saveCurrentPageState();
         wb_currentPage = index;
         localStorage.setItem('wb-current-page', String(wb_currentPage));
-        const page = wb_pages[wb_currentPage];
-        undoStack = []; redoStack = [];
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (page && page.canvas) {
-            const img = new Image();
-            img.onload = () => { ctx.drawImage(img, 0, 0); undoStack.push(page.canvas); };
-            img.src = page.canvas;
-        } else {
-            saveCanvasState();
-        }
-        canvasArea.className = (page && page.bgClass) ? page.bgClass : 'wb-canvas-area';
-        canvasArea.style.background = (page && page.bgStyle) ? page.bgStyle : '';
-        restoreWidgetsLayer(page && page.widgets ? page.widgets : []);
-        updateCanvasCursor();
+        const snapshot = restorePageSnapshot(wb_pages[wb_currentPage]);
+        undoStack = [clonePageSnapshot(snapshot)];
+        redoStack = [];
         updatePageCounter();
     }
 
     function saveCanvasState() {
-        const dataUrl = canvas.toDataURL();
-        undoStack.push(dataUrl);
+        const snapshot = captureCurrentPageSnapshot();
+        undoStack.push(clonePageSnapshot(snapshot));
         if (undoStack.length > 30) undoStack.shift();
         redoStack = [];
         // Persist current page to localStorage
-        try { saveCurrentPageState(dataUrl); } catch(e) {}
+        try { persistPageSnapshot(snapshot); } catch(e) {}
     }
 
     // Load current page on start
     {
-        const page = wb_pages[wb_currentPage];
-        if (page && page.canvas) {
-            const img = new Image();
-            img.onload = () => { ctx.drawImage(img, 0, 0); undoStack.push(page.canvas); };
-            img.src = page.canvas;
-            if (page.bgClass) { canvasArea.className = page.bgClass; updateCanvasCursor(); }
-            if (page.bgStyle) canvasArea.style.background = page.bgStyle;
-        } else {
-            saveCanvasState();
-        }
-        restoreWidgetsLayer(page && page.widgets ? page.widgets : []);
+        const snapshot = restorePageSnapshot(wb_pages[wb_currentPage]);
+        undoStack = [clonePageSnapshot(snapshot)];
+        redoStack = [];
+        if (!snapshot.canvas) persistPageSnapshot(snapshot);
         updatePageCounter();
     }
 
@@ -2183,17 +2210,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-undo').addEventListener('click', () => {
         if (undoStack.length <= 1) return;
         redoStack.push(undoStack.pop());
-        const img = new Image();
-        img.onload = () => { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0); };
-        img.src = undoStack[undoStack.length - 1];
+        const snapshot = restorePageSnapshot(undoStack[undoStack.length - 1]);
+        persistPageSnapshot(snapshot);
     });
     document.getElementById('btn-redo').addEventListener('click', () => {
         if (redoStack.length === 0) return;
         const state = redoStack.pop();
         undoStack.push(state);
-        const img = new Image();
-        img.onload = () => { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0); };
-        img.src = state;
+        const snapshot = restorePageSnapshot(state);
+        persistPageSnapshot(snapshot);
     });
 
     // ===================== PART 2: RANDOM STUDENT (in Randomizer modal) =====================
@@ -2470,6 +2495,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const shapesSubmenu = document.getElementById('shapes-submenu');
     document.getElementById('tool-shapes').addEventListener('click', (e) => {
         e.stopPropagation();
+        if (!shapesSubmenu.classList.contains('hidden')) {
+            shapesSubmenu.classList.add('hidden');
+            return;
+        }
         shapesSubmenu.classList.toggle('hidden');
         if (!shapesSubmenu.classList.contains('hidden')) {
             const btn = document.getElementById('tool-shapes');
@@ -2492,11 +2521,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.shape-option').forEach(o => o.classList.remove('active'));
             opt.classList.add('active');
             currentShape = opt.getAttribute('data-shape');
-            currentTool = 'shapes';
-            document.querySelectorAll('.draw-tool').forEach(b => b.classList.remove('active'));
-            document.getElementById('tool-shapes').classList.add('active');
+            setActiveDrawTool('shapes');
             shapesSubmenu.classList.add('hidden');
-            updateCanvasCursor();
         });
     });
 
