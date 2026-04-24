@@ -95,14 +95,18 @@ document.addEventListener('DOMContentLoaded', () => {
     canvas.width = canvasArea.clientWidth;
     canvas.height = canvasArea.clientHeight;
 
+    function isFreehandTool(toolName) {
+        return toolName === 'pen' || toolName === 'eraser';
+    }
+
     function startDrawing(e) {
-        if (currentTool === 'cursor') return;
+        if (!isFreehandTool(currentTool)) return;
         isDrawing = true;
         strokeDirty = false;
         [lastX, lastY] = [e.offsetX, e.offsetY];
     }
     function draw(e) {
-        if (!isDrawing) return;
+        if (!isDrawing || !isFreehandTool(currentTool)) return;
         ctx.beginPath();
         ctx.moveTo(lastX, lastY);
         ctx.lineTo(e.offsetX, e.offsetY);
@@ -120,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         [lastX, lastY] = [e.offsetX, e.offsetY];
     }
     function stopDrawing() {
-        const shouldSaveStroke = isDrawing && strokeDirty && (currentTool === 'pen' || currentTool === 'eraser');
+        const shouldSaveStroke = isDrawing && strokeDirty && isFreehandTool(currentTool);
         isDrawing = false;
         strokeDirty = false;
         if (shouldSaveStroke) saveCanvasState();
@@ -131,11 +135,74 @@ document.addEventListener('DOMContentLoaded', () => {
     canvas.addEventListener('mouseup', stopDrawing);
     canvas.addEventListener('mouseout', stopDrawing);
 
+    function getCanvasPointFromClient(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            offsetX: clientX - rect.left,
+            offsetY: clientY - rect.top,
+        };
+    }
+
+    let textTouchStartPoint = null;
+
     // Touch support
-    canvas.addEventListener('touchstart', e => { e.preventDefault(); const t = e.touches[0]; const r = canvas.getBoundingClientRect(); startDrawing({offsetX: t.clientX-r.left, offsetY: t.clientY-r.top}); });
-    canvas.addEventListener('touchmove', e => { e.preventDefault(); const t = e.touches[0]; const r = canvas.getBoundingClientRect(); draw({offsetX: t.clientX-r.left, offsetY: t.clientY-r.top}); });
-    canvas.addEventListener('touchend', stopDrawing);
-    canvas.addEventListener('touchcancel', stopDrawing);
+    canvas.addEventListener('touchstart', e => {
+        e.preventDefault();
+        const t = e.touches[0];
+        if (!t) return;
+        const point = getCanvasPointFromClient(t.clientX, t.clientY);
+        if (isFreehandTool(currentTool)) {
+            startDrawing(point);
+            return;
+        }
+        if (currentTool === 'shapes') {
+            beginShapeDrawing(point);
+            return;
+        }
+        if (currentTool === 'text') {
+            textTouchStartPoint = point;
+        }
+    }, { passive: false });
+    canvas.addEventListener('touchmove', e => {
+        e.preventDefault();
+        const t = e.touches[0];
+        if (!t) return;
+        const point = getCanvasPointFromClient(t.clientX, t.clientY);
+        if (isFreehandTool(currentTool)) {
+            draw(point);
+            return;
+        }
+        if (currentTool === 'shapes') {
+            updateShapePreview(point);
+            return;
+        }
+        if (currentTool === 'text' && textTouchStartPoint) {
+            const movedX = Math.abs(point.offsetX - textTouchStartPoint.offsetX);
+            const movedY = Math.abs(point.offsetY - textTouchStartPoint.offsetY);
+            if (movedX > 8 || movedY > 8) textTouchStartPoint = null;
+        }
+    }, { passive: false });
+    canvas.addEventListener('touchend', e => {
+        e.preventDefault();
+        if (isFreehandTool(currentTool)) {
+            stopDrawing();
+            return;
+        }
+        if (currentTool === 'shapes') {
+            finishShapeDrawing();
+            return;
+        }
+        if (currentTool === 'text' && textTouchStartPoint) {
+            createTextOverlay(textTouchStartPoint.offsetX, textTouchStartPoint.offsetY);
+            textTouchStartPoint = null;
+        }
+    }, { passive: false });
+    canvas.addEventListener('touchcancel', e => {
+        e.preventDefault();
+        if (isFreehandTool(currentTool)) stopDrawing();
+        if (currentTool === 'shapes') finishShapeDrawing();
+        textTouchStartPoint = null;
+    }, { passive: false });
 
     // ===================== TOOLBAR =====================
     document.querySelectorAll('.draw-tool').forEach(tool => {
@@ -271,6 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const imgSearchInput = document.getElementById('img-search-input');
     const imgSearchBtn = document.getElementById('img-search-btn');
     const imgResults = document.getElementById('img-results');
+    const imgSourceButtons = Array.from(document.querySelectorAll('#media-images .media-src'));
     const ytSearchInput = document.getElementById('yt-search-input');
     const ytSearchBtn = document.getElementById('yt-search-btn');
     const ytResults = document.getElementById('yt-results');
@@ -278,6 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ytPlayerContainer = document.getElementById('yt-player-container');
     let ytPlayer = null;
     let ytFloatDragBound = false;
+    let activeImageSource = 'search';
 
     // Load YouTube API
     if (!window.YT) {
@@ -287,40 +356,150 @@ document.addEventListener('DOMContentLoaded', () => {
         firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
     }
 
+    function getCanvasModeClass() {
+        return canvasArea.className.match(/mode-\S+/)?.[0] || '';
+    }
+
+    function resetCanvasAreaClasses() {
+        const modeClass = getCanvasModeClass();
+        canvasArea.className = 'wb-canvas-area' + (modeClass ? ' ' + modeClass : '');
+    }
+
+    function applyCanvasBackground(backgroundValue) {
+        resetCanvasAreaClasses();
+        canvasArea.style.background = backgroundValue || '';
+    }
+
+    function setImageResultsMessage(message) {
+        imgResults.innerHTML = `<div class="media-hint">${message}</div>`;
+    }
+
+    function setActiveImageSource(source) {
+        activeImageSource = source;
+        imgSourceButtons.forEach(button => {
+            const isActive = button.dataset.src === source;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+
+        if (source === 'gifs') {
+            imgSearchInput.placeholder = 'Search GIFs...';
+            setImageResultsMessage('Search Giphy for classroom-safe GIFs');
+            return;
+        }
+        if (source === 'creative') {
+            imgSearchInput.placeholder = 'Search Creative Commons images...';
+            setImageResultsMessage('Search Creative Commons images from Openverse');
+            return;
+        }
+
+        imgSearchInput.placeholder = 'Search images...';
+        setImageResultsMessage('Search for images to use on your whiteboard');
+    }
+
+    function renderImageResults(items) {
+        imgResults.innerHTML = '';
+        if (!items.length) {
+            setImageResultsMessage('No results found. Try different words.');
+            return;
+        }
+        items.forEach(item => {
+            const img = document.createElement('img');
+            img.src = item.preview;
+            img.className = 'media-item';
+            img.alt = item.alt || '';
+            img.title = item.title || item.alt || '';
+            img.addEventListener('click', () => {
+                createImageOverlay(item.full, item.alt || item.title || '', 100, 100);
+                App.closeModal('modal-media');
+            });
+            imgResults.appendChild(img);
+        });
+    }
+
+    function getStoredApiKey(storageKey, promptMessage) {
+        let apiKey = localStorage.getItem(storageKey);
+        if (!apiKey) {
+            apiKey = prompt(promptMessage);
+            if (!apiKey || !apiKey.trim()) return null;
+            apiKey = apiKey.trim();
+            localStorage.setItem(storageKey, apiKey);
+        }
+        return apiKey.trim();
+    }
+
     function searchImages(query) {
         if (!query) return;
-        let apiKey = localStorage.getItem('pixabay-key');
-        if (!apiKey) {
-            apiKey = prompt('To search for images, you need a free Pixabay API key.\n\n1. Go to pixabay.com/api/docs/ in a new tab\n2. Create a free account (no credit card needed)\n3. Copy your API Key and paste it here:');
-            if (!apiKey) return;
-            localStorage.setItem('pixabay-key', apiKey.trim());
-        }
-        imgResults.innerHTML = '<div class="media-hint">Searching...</div>';
+        const apiKey = getStoredApiKey('pixabay-key', 'To search for images, you need a free Pixabay API key.\n\n1. Go to pixabay.com/api/docs/ in a new tab\n2. Create a free account (no credit card needed)\n3. Copy your API Key and paste it here:');
+        if (!apiKey) return;
+        setImageResultsMessage('Searching Pixabay...');
         fetch(`https://pixabay.com/api/?key=${encodeURIComponent(apiKey.trim())}&q=${encodeURIComponent(query)}&image_type=photo&per_page=12&safesearch=true`)
             .then(r => { if (!r.ok) throw new Error('bad response'); return r.json(); })
             .then(data => {
-                imgResults.innerHTML = '';
-                if (!data.hits || data.hits.length === 0) {
-                    imgResults.innerHTML = '<div class="media-hint">No results found. Try different words.</div>';
-                    return;
-                }
-                data.hits.forEach(hit => {
-                    const img = document.createElement('img');
-                    img.src = hit.previewURL;
-                    img.className = 'media-item';
-                    img.alt = hit.tags;
-                    img.title = hit.tags;
-                    img.addEventListener('click', () => {
-                        createImageOverlay(hit.webformatURL, hit.tags, 100, 100);
-                        App.closeModal('modal-media');
-                    });
-                    imgResults.appendChild(img);
-                });
+                renderImageResults((data.hits || []).map(hit => ({
+                    preview: hit.previewURL,
+                    full: hit.webformatURL,
+                    alt: hit.tags,
+                    title: hit.tags,
+                })));
             })
             .catch(() => {
                 localStorage.removeItem('pixabay-key');
-                imgResults.innerHTML = '<div class="media-hint">Search failed. Your API key may be wrong — it has been cleared. Click Search again to re-enter it.</div>';
+                setImageResultsMessage('Search failed. Your API key may be wrong - it has been cleared. Click Search again to re-enter it.');
             });
+    }
+
+    function searchGifs(query) {
+        if (!query) return;
+        const apiKey = getStoredApiKey('giphy-key', 'To search for GIFs, you need a free Giphy API key.\n\n1. Go to developers.giphy.com in a new tab\n2. Create a free account\n3. Create an app and copy the API key\n4. Paste it here:');
+        if (!apiKey) return;
+        setImageResultsMessage('Searching Giphy...');
+        fetch(`https://api.giphy.com/v1/gifs/search?api_key=${encodeURIComponent(apiKey)}&q=${encodeURIComponent(query)}&limit=12&rating=g&lang=en`)
+            .then(r => { if (!r.ok) throw new Error('bad response'); return r.json(); })
+            .then(data => {
+                renderImageResults((data.data || []).map(item => ({
+                    preview: item.images?.fixed_height_small_still?.url || item.images?.fixed_height_small?.url || item.images?.preview_gif?.url,
+                    full: item.images?.original?.url || item.images?.downsized_large?.url || item.images?.downsized?.url,
+                    alt: item.title || 'GIF',
+                    title: item.title || 'GIF',
+                })).filter(item => item.preview && item.full));
+            })
+            .catch(() => {
+                localStorage.removeItem('giphy-key');
+                setImageResultsMessage('GIF search failed. Your Giphy API key may be wrong - it has been cleared. Click Search again to re-enter it.');
+            });
+    }
+
+    function searchCreativeCommonsImages(query) {
+        if (!query) return;
+        setImageResultsMessage('Searching Creative Commons...');
+        fetch(`https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=12&license_type=commercial,modification`)
+            .then(r => { if (!r.ok) throw new Error('bad response'); return r.json(); })
+            .then(data => {
+                renderImageResults((data.results || []).map(item => ({
+                    preview: item.thumbnail || item.url,
+                    full: item.url,
+                    alt: item.title || item.creator || 'Creative Commons image',
+                    title: item.title || item.creator || 'Creative Commons image',
+                })).filter(item => item.preview && item.full));
+            })
+            .catch(() => {
+                setImageResultsMessage('Creative Commons search failed right now. Please try again in a moment.');
+            });
+    }
+
+    function runImageSearch(query) {
+        const trimmedQuery = query.trim();
+        if (!trimmedQuery) return;
+        if (activeImageSource === 'gifs') {
+            searchGifs(trimmedQuery);
+            return;
+        }
+        if (activeImageSource === 'creative') {
+            searchCreativeCommonsImages(trimmedQuery);
+            return;
+        }
+        searchImages(trimmedQuery);
     }
 
     function extractYouTubeId(input) {
@@ -359,17 +538,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!query) return;
         let apiKey = localStorage.getItem('yt-api-key');
         if (!apiKey) {
-            apiKey = prompt(
-                'To search YouTube, you need a free YouTube Data API key.\n\n' +
-                '1. Go to console.cloud.google.com (free Google account)\n' +
-                '2. Create a project → Enable "YouTube Data API v3"\n' +
-                '3. Go to Credentials → Create API Key\n' +
-                '4. Paste it here:\n\n' +
-                '(Or leave blank to see educational suggestions instead)'
-            );
-            if (apiKey && apiKey.trim()) {
-                localStorage.setItem('yt-api-key', apiKey.trim());
-            } else {
+            apiKey = promptForYouTubeApiKey();
+            if (!apiKey) {
                 // Fall back to curated suggestions
                 showYtSuggestions(query);
                 return;
@@ -406,6 +576,20 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }
 
+    function promptForYouTubeApiKey() {
+        const apiKey = prompt(
+            'To search YouTube, you need a free YouTube Data API key.\n\n' +
+            '1. Go to console.cloud.google.com (free Google account)\n' +
+            '2. Create a project → Enable "YouTube Data API v3"\n' +
+            '3. Go to Credentials → Create API Key\n' +
+            '4. Paste it here:\n\n' +
+            '(Or leave blank to see educational suggestions instead)'
+        );
+        if (!apiKey || !apiKey.trim()) return null;
+        localStorage.setItem('yt-api-key', apiKey.trim());
+        return apiKey.trim();
+    }
+
     function showYtSuggestions(query) {
         const suggestions = [
             { id: 'RF4WHkOHivQ', title: 'Counting to 100 — Kindergarten' },
@@ -417,7 +601,15 @@ document.addEventListener('DOMContentLoaded', () => {
             { id: 'DR-cfDsHx7A', title: 'Colors Song — Learn Colors' },
             { id: 'W1XRkRWFbkk', title: 'Sight Words — Pre-K & K' },
         ];
-        ytResults.innerHTML = '<div class="media-hint" style="font-size:0.78rem;margin-bottom:8px;">No API key set — showing educational suggestions. Add a YouTube API key to search freely.<br><button style="margin-top:6px;background:#6366f1;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;" onclick="localStorage.removeItem(\'yt-api-key\');document.getElementById(\'yt-search-btn\').click()">Set API Key</button></div>';
+        ytResults.innerHTML = '<div class="media-hint" style="font-size:0.78rem;margin-bottom:8px;">No API key set - showing educational suggestions. Add a YouTube API key to search freely.<br><button id="yt-set-api-key-btn" style="margin-top:6px;background:#6366f1;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">Set API Key</button></div>';
+        document.getElementById('yt-set-api-key-btn')?.addEventListener('click', () => {
+            localStorage.removeItem('yt-api-key');
+            const apiKey = promptForYouTubeApiKey();
+            if (!apiKey) return;
+            const nextQuery = (query || ytSearchInput?.value || '').trim();
+            if (nextQuery) searchYouTube(nextQuery);
+            else ytResults.innerHTML = '<div class="media-hint">API key saved. Enter a YouTube search to see results.</div>';
+        });
         suggestions.forEach(v => {
             const div = document.createElement('div');
             div.className = 'yt-result-item';
@@ -464,8 +656,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (ytPlayer && ytPlayer.stopVideo) ytPlayer.stopVideo();
     }
 
-    imgSearchBtn?.addEventListener('click', () => searchImages(imgSearchInput.value));
-    imgSearchInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchImages(imgSearchInput.value); });
+    imgSourceButtons.forEach(button => {
+        button.addEventListener('click', () => setActiveImageSource(button.dataset.src || 'search'));
+    });
+
+    imgSearchBtn?.addEventListener('click', () => runImageSearch(imgSearchInput.value));
+    imgSearchInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') runImageSearch(e.currentTarget.value); });
     
     ytSearchBtn?.addEventListener('click', () => {
         const q = ytSearchInput.value.trim();
@@ -474,6 +670,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ytSearchInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchYouTube(e.currentTarget.value.trim()); });
 
     document.getElementById('yt-fw-close')?.addEventListener('click', closeFloatingYouTubePlayer);
+    setActiveImageSource(activeImageSource);
 
     // ===================== TIMER =====================
     const TIMER_STORAGE_KEY = 'wb-standalone-timer';
@@ -817,9 +1014,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('#bg-lines .bg-option').forEach(opt => {
         opt.addEventListener('click', () => {
             const bg = opt.getAttribute('data-bg');
-            const modeClass = canvasArea.className.match(/mode-\S+/);
-            canvasArea.className = 'wb-canvas-area' + (modeClass ? ' ' + modeClass[0] : '');
-            canvasArea.style.background = '';
+            applyCanvasBackground('');
             if (bg === 'lined') canvasArea.classList.add('bg-lined');
             else if (bg === 'grid') canvasArea.classList.add('bg-grid');
             else if (bg === 'dotted') canvasArea.classList.add('bg-dotted');
@@ -845,8 +1040,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sw.className = 'color-swatch';
             sw.style.background = c;
             sw.addEventListener('click', () => {
-                canvasArea.className = 'wb-canvas-area';
-                canvasArea.style.background = c;
+                applyCanvasBackground(c);
                 saveCurrentPageState();
                 App.closeModal('modal-background');
             });
@@ -856,16 +1050,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const bgApply = document.getElementById('bg-apply-custom');
     if (bgApply) bgApply.addEventListener('click', () => {
-        canvasArea.className = 'wb-canvas-area';
-        canvasArea.style.background = document.getElementById('bg-custom-color').value;
+        applyCanvasBackground(document.getElementById('bg-custom-color').value);
         saveCurrentPageState();
         App.closeModal('modal-background');
     });
 
     // Background image grid — themed backgrounds by category
     const bgImageGrid = document.getElementById('bg-image-grid');
+    const bgImageSearchBar = document.getElementById('bg-image-search-bar');
+    const bgImageSearchInput = document.getElementById('bg-image-search-input');
+    const bgImageSearchBtn = document.getElementById('bg-image-search-btn');
     if (bgImageGrid) {
         const bgThemesByCategory = {
+            thematic: [
+                { label: 'Sunny Day',    bg: 'linear-gradient(to bottom, #87CEEB 0%, #fffde7 60%, #a5d6a7 100%)' },
+                { label: 'Night Sky',    bg: 'linear-gradient(to bottom, #0d1b2a 0%, #1a237e 50%, #283593 100%)' },
+                { label: 'Ocean',        bg: 'linear-gradient(to bottom, #29b6f6 0%, #0277bd 60%, #01579b 100%)' },
+                { label: 'Sunset',       bg: 'linear-gradient(to bottom right, #ff7043, #ffa726, #ffee58)' },
+                { label: 'Forest',       bg: 'linear-gradient(to bottom, #a5d6a7 0%, #388e3c 100%)' },
+                { label: 'Chalkboard',   bg: 'linear-gradient(135deg, #2d5016 0%, #3a6020 100%)' },
+                { label: 'Rainbow',      bg: 'linear-gradient(to right, #ef5350, #ff7043, #ffca28, #66bb6a, #42a5f5, #7e57c2)' },
+                { label: 'Outer Space',  bg: 'radial-gradient(ellipse at center, #1a237e 0%, #0d1b2a 70%)' },
+                { label: 'Cozy Library', bg: 'linear-gradient(135deg, #8d6e63 0%, #5d4037 100%)' },
+                { label: 'Teal',         bg: 'linear-gradient(135deg, #00695c, #004d40)' },
+                { label: 'Lavender',     bg: 'linear-gradient(135deg, #e8d5ff 0%, #c39bd3 100%)' },
+                { label: 'Mint',         bg: 'linear-gradient(135deg, #e0f7fa, #b2dfdb)' },
+            ],
             simple: [
                 { label: 'White',        bg: '#ffffff' },
                 { label: 'Cream',        bg: '#fffdf5' },
@@ -910,19 +1120,28 @@ document.addEventListener('DOMContentLoaded', () => {
             ],
         };
 
-        let currentBgCat = 'simple';
+        let currentBgCat = 'thematic';
+
+        function renderBgHint(message) {
+            bgImageGrid.innerHTML = `<div class="media-hint">${message}</div>`;
+        }
+
+        function applyBackgroundImage(url) {
+            applyCanvasBackground(`center / cover no-repeat url("${url}")`);
+            saveCurrentPageState();
+            App.closeModal('modal-background');
+        }
 
         function renderBgGrid(cat) {
             bgImageGrid.innerHTML = '';
-            (bgThemesByCategory[cat] || bgThemesByCategory.simple).forEach(theme => {
+            (bgThemesByCategory[cat] || bgThemesByCategory.thematic).forEach(theme => {
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'bg-image-thumb';
                 btn.title = theme.label;
                 btn.innerHTML = `<div class="bg-img-preview" style="background:${theme.bg}"></div><span>${theme.label}</span>`;
                 btn.addEventListener('click', () => {
-                    canvasArea.className = 'wb-canvas-area';
-                    canvasArea.style.background = theme.bg;
+                    applyCanvasBackground(theme.bg);
                     saveCurrentPageState();
                     App.closeModal('modal-background');
                 });
@@ -930,22 +1149,72 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        function searchPixabayBackgrounds(query) {
+            if (!query) return;
+            const apiKey = getStoredApiKey('pixabay-key', 'To search Pixabay backgrounds, you need a free Pixabay API key.\n\n1. Go to pixabay.com/api/docs/ in a new tab\n2. Create a free account (no credit card needed)\n3. Copy your API Key and paste it here:');
+            if (!apiKey) return;
+            renderBgHint('Searching Pixabay backgrounds...');
+            fetch(`https://pixabay.com/api/?key=${encodeURIComponent(apiKey)}&q=${encodeURIComponent(query)}&image_type=photo&orientation=horizontal&per_page=12&safesearch=true`)
+                .then(r => { if (!r.ok) throw new Error('bad response'); return r.json(); })
+                .then(data => {
+                    const hits = data.hits || [];
+                    if (!hits.length) {
+                        renderBgHint('No Pixabay backgrounds found. Try different words.');
+                        return;
+                    }
+                    bgImageGrid.innerHTML = '';
+                    hits.forEach(hit => {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'bg-image-thumb pixabay-thumb';
+                        btn.title = hit.tags || 'Pixabay background';
+                        btn.innerHTML = `<div class="bg-img-preview" style="background:center / cover no-repeat url('${hit.webformatURL}')"></div><span>${hit.tags || 'Pixabay'}</span>`;
+                        btn.addEventListener('click', () => applyBackgroundImage(hit.largeImageURL || hit.webformatURL));
+                        bgImageGrid.appendChild(btn);
+                    });
+                })
+                .catch(() => {
+                    localStorage.removeItem('pixabay-key');
+                    renderBgHint('Pixabay search failed. Your API key may be wrong - it has been cleared. Search again to re-enter it.');
+                });
+        }
+
+        function setBackgroundImageCategory(cat) {
+            currentBgCat = cat;
+            document.querySelectorAll('.bg-img-cat').forEach(button => {
+                const isActive = button.dataset.imgcat === cat;
+                button.classList.toggle('active', isActive);
+                button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+            const searchMode = cat === 'pixabay';
+            bgImageSearchBar?.classList.toggle('hidden', !searchMode);
+            if (searchMode) {
+                renderBgHint('Search Pixabay to use a photo as your board background.');
+                return;
+            }
+            renderBgGrid(cat);
+        }
+
         // Wire sub-tab buttons
         document.querySelectorAll('.bg-img-cat').forEach(cat => {
             cat.addEventListener('click', () => {
-                currentBgCat = cat.dataset.imgcat;
-                renderBgGrid(currentBgCat);
+                setBackgroundImageCategory(cat.dataset.imgcat);
             });
         });
 
-        renderBgGrid(currentBgCat);
+        bgImageSearchBtn?.addEventListener('click', () => searchPixabayBackgrounds(bgImageSearchInput.value.trim()));
+        bgImageSearchInput?.addEventListener('keypress', e => {
+            if (e.key === 'Enter') searchPixabayBackgrounds(e.currentTarget.value.trim());
+        });
+
+        setBackgroundImageCategory(currentBgCat);
     }
 
     // Layout backgrounds
     document.querySelectorAll('#bg-layout .bg-option').forEach(opt => {
         opt.addEventListener('click', () => {
             const layout = opt.getAttribute('data-layout');
-            canvasArea.className = 'wb-canvas-area';
+            resetCanvasAreaClasses();
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.strokeStyle = App.getVar('--border-color', '#ccc');
             ctx.lineWidth = 2;
@@ -1154,7 +1423,7 @@ document.addEventListener('DOMContentLoaded', () => {
             { icon: '📝', name: 'QR Code', action: () => App.openModal('modal-qr') },
             { icon: '🔊', name: 'Text-to-Speech', action: () => App.openModal('modal-tts') },
             { icon: '🎬', name: 'Video Player', action: () => { App.openModal('modal-media'); document.querySelector('[data-tab="media-videos"]')?.click(); }},
-            { icon: '🖼️', name: 'Image Search', action: () => App.openModal('modal-media') },
+            { icon: '🖼️', name: 'Image Search', action: () => { App.openModal('modal-media'); document.querySelector('[data-tab="media-images"]')?.click(); }},
         ],
         games: [
             { icon: '🎡', name: 'Spin Wheel', action: () => { App.openModal('modal-random'); document.querySelector('[data-rtab="wheel"]').click(); }},
@@ -2112,13 +2381,42 @@ document.addEventListener('DOMContentLoaded', () => {
             isDrag = false;
         };
 
+        const onTouchStart = (e) => {
+            if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
+            const touch = e.touches[0];
+            if (!touch) return;
+            e.preventDefault();
+            isDrag = true;
+            dragOffX = touch.clientX - div.offsetLeft;
+            dragOffY = touch.clientY - div.offsetTop;
+        };
+        const onTouchMove = (e) => {
+            if (!isDrag) return;
+            const touch = e.touches[0];
+            if (!touch) return;
+            e.preventDefault();
+            div.style.left = (touch.clientX - dragOffX) + 'px';
+            div.style.top = (touch.clientY - dragOffY) + 'px';
+        };
+        const onTouchEnd = () => {
+            if (isDrag) schedulePagePersist();
+            isDrag = false;
+        };
+
         div.addEventListener('mousedown', onMouseDown);
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
+        div.addEventListener('touchstart', onTouchStart, { passive: false });
+        document.addEventListener('touchmove', onTouchMove, { passive: false });
+        document.addEventListener('touchend', onTouchEnd);
+        document.addEventListener('touchcancel', onTouchEnd);
 
         const cleanup = () => {
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
+            document.removeEventListener('touchmove', onTouchMove);
+            document.removeEventListener('touchend', onTouchEnd);
+            document.removeEventListener('touchcancel', onTouchEnd);
         };
 
         div.querySelector('.text-delete').addEventListener('click', () => {
@@ -2148,6 +2446,26 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentShape = 'rect';
     let shapeStartX = 0, shapeStartY = 0, shapeDrawing = false;
     let shapePreviewData = null;
+
+    function beginShapeDrawing(point) {
+        if (currentTool !== 'shapes') return;
+        shapeDrawing = true;
+        shapeStartX = point.offsetX;
+        shapeStartY = point.offsetY;
+        shapePreviewData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    }
+
+    function updateShapePreview(point) {
+        if (!shapeDrawing || currentTool !== 'shapes') return;
+        ctx.putImageData(shapePreviewData, 0, 0);
+        const color = document.getElementById('color-picker').value;
+        const lw = document.getElementById('brush-size').value;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lw;
+        ctx.lineCap = 'round';
+        ctx.globalCompositeOperation = 'source-over';
+        drawShape(ctx, currentShape, shapeStartX, shapeStartY, point.offsetX, point.offsetY);
+    }
 
     const shapesSubmenu = document.getElementById('shapes-submenu');
     document.getElementById('tool-shapes').addEventListener('click', (e) => {
@@ -2183,28 +2501,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     canvas.addEventListener('mousedown', (e) => {
-        if (currentTool !== 'shapes') return;
-        shapeDrawing = true;
-        shapeStartX = e.offsetX;
-        shapeStartY = e.offsetY;
-        shapePreviewData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        beginShapeDrawing(e);
     });
     canvas.addEventListener('mousemove', (e) => {
-        if (!shapeDrawing || currentTool !== 'shapes') return;
-        ctx.putImageData(shapePreviewData, 0, 0);
-        const color = document.getElementById('color-picker').value;
-        const lw = document.getElementById('brush-size').value;
-        ctx.strokeStyle = color;
-        ctx.lineWidth = lw;
-        ctx.lineCap = 'round';
-        ctx.globalCompositeOperation = 'source-over';
-        drawShape(ctx, currentShape, shapeStartX, shapeStartY, e.offsetX, e.offsetY);
+        updateShapePreview(e);
     });
-    canvas.addEventListener('mouseup', (e) => {
+
+    function finishShapeDrawing() {
         if (!shapeDrawing || currentTool !== 'shapes') return;
         shapeDrawing = false;
         saveCanvasState();
-    });
+    }
+
+    canvas.addEventListener('mouseup', finishShapeDrawing);
+    document.addEventListener('mouseup', finishShapeDrawing);
 
     function drawShape(c, shape, x1, y1, x2, y2) {
         c.beginPath();

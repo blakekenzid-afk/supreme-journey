@@ -142,9 +142,17 @@
                 <button type="button" class="bg-img-cat" data-imgcat="simple" aria-selected="false">🟦 Simple</button>
                 <button type="button" class="bg-img-cat" data-imgcat="photos" aria-selected="false">🌄 Photos</button>
                 <button type="button" class="bg-img-cat" data-imgcat="textures" aria-selected="false">🧱 Textures</button>
+                <button type="button" class="bg-img-cat" data-imgcat="pixabay" aria-selected="false">🔎 Pixabay</button>
             </div>
-            <div class="bg-image-grid" id="bg-image-grid">
-                <!-- populated by JS -->
+            <div class="bg-image-main">
+                <div class="media-search-bar bg-image-search hidden" id="bg-image-search-bar">
+                    <label for="bg-image-search-input" class="sr-only">Search Pixabay backgrounds</label>
+                    <input type="text" id="bg-image-search-input" placeholder="Search Pixabay backgrounds..." class="media-search-input">
+                    <button type="button" class="media-search-btn" id="bg-image-search-btn" title="Search" aria-label="Search Pixabay backgrounds"><i class="fa-solid fa-magnifying-glass"></i></button>
+                </div>
+                <div class="bg-image-grid" id="bg-image-grid">
+                    <!-- populated by JS -->
+                </div>
             </div>
         </div>
         <div class="bg-tab-content" id="bg-color">
