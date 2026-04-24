@@ -814,6 +814,7 @@ body {
   box-shadow: var(--wb-shadow-lg);
   z-index: var(--z-widget);
   border: 1px solid rgba(0,0,0,0.1);
+  pointer-events: all;
   resize: both;
   overflow: auto;
   min-width: 96px;
