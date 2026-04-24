@@ -2069,7 +2069,7 @@ document.addEventListener('DOMContentLoaded', () => {
         removeBtn.textContent = '✕';
         overlay.append(image, removeBtn);
         widgetsLayer.appendChild(overlay);
-        App.makeDraggable(overlay, overlay, () => schedulePagePersist());
+        App.makeDraggable(overlay, image, () => schedulePagePersist());
         if (typeof ResizeObserver !== 'undefined') {
             let resizeFrame = null;
             const resizeObserver = new ResizeObserver(() => {
