@@ -1894,9 +1894,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         height: textarea.style.height || '',
                     };
                 };
-                textarea.addEventListener('input', syncState);
-                textarea.addEventListener('mouseup', syncState);
-                textarea.addEventListener('touchend', syncState);
+                const persistTextBoxState = () => {
+                    syncState();
+                    schedulePagePersist();
+                };
+                textarea.addEventListener('input', persistTextBoxState);
+                textarea.addEventListener('mouseup', persistTextBoxState);
+                textarea.addEventListener('touchend', persistTextBoxState);
                 el._cwApplyState = state => {
                     if (!state || typeof state !== 'object') return;
                     textarea.value = typeof state.text === 'string' ? state.text : '';
@@ -2586,7 +2590,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if (options.width) textarea.style.width = options.width;
         if (options.height) textarea.style.height = options.height;
         textarea.addEventListener('input', schedulePagePersist);
-        div._cleanup = cleanup;
+        if (typeof ResizeObserver !== 'undefined') {
+            let resizeFrame = null;
+            const resizeObserver = new ResizeObserver(() => {
+                if (resizeFrame) cancelAnimationFrame(resizeFrame);
+                resizeFrame = requestAnimationFrame(() => {
+                    resizeFrame = null;
+                    schedulePagePersist();
+                });
+            });
+            resizeObserver.observe(textarea);
+            const previousCleanup = cleanup;
+            div._cleanup = () => {
+                previousCleanup();
+                if (resizeFrame) cancelAnimationFrame(resizeFrame);
+                resizeObserver.disconnect();
+            };
+        }
+        if (!div._cleanup) div._cleanup = cleanup;
         if (options.focus !== false) textarea.focus();
         schedulePagePersist();
         return div;
