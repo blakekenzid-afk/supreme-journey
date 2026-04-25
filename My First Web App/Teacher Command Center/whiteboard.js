@@ -2660,6 +2660,18 @@ document.addEventListener('DOMContentLoaded', () => {
         div.style.pointerEvents = 'all';
         div.innerHTML = `<textarea placeholder="Type here..." rows="2"></textarea><button class="text-delete">✕</button>`;
 
+        const clampTextOverlayPosition = (left, top) => {
+            const parent = div.parentElement;
+            if (!parent) return { left, top };
+            const edgePadding = 8;
+            const maxLeft = Math.max(edgePadding, parent.clientWidth - div.offsetWidth - edgePadding);
+            const maxTop = Math.max(edgePadding, parent.clientHeight - div.offsetHeight - edgePadding);
+            return {
+                left: Math.min(Math.max(edgePadding, left), maxLeft),
+                top: Math.min(Math.max(edgePadding, top), maxTop),
+            };
+        };
+
         // Drag support
         let isDrag = false, dragOffX = 0, dragOffY = 0;
         const onMouseDown = (e) => {
@@ -2670,8 +2682,9 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         const onMouseMove = (e) => {
             if (!isDrag) return;
-            div.style.left = (e.clientX - dragOffX) + 'px';
-            div.style.top = (e.clientY - dragOffY) + 'px';
+            const position = clampTextOverlayPosition(e.clientX - dragOffX, e.clientY - dragOffY);
+            div.style.left = position.left + 'px';
+            div.style.top = position.top + 'px';
         };
         const onMouseUp = () => {
             if (isDrag) schedulePagePersist();
@@ -2692,8 +2705,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const touch = e.touches[0];
             if (!touch) return;
             e.preventDefault();
-            div.style.left = (touch.clientX - dragOffX) + 'px';
-            div.style.top = (touch.clientY - dragOffY) + 'px';
+            const position = clampTextOverlayPosition(touch.clientX - dragOffX, touch.clientY - dragOffY);
+            div.style.left = position.left + 'px';
+            div.style.top = position.top + 'px';
         };
         const onTouchEnd = () => {
             if (isDrag) schedulePagePersist();
