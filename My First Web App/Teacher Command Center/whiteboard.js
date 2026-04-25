@@ -234,6 +234,8 @@ document.addEventListener('DOMContentLoaded', () => {
             schedule = [];
             Storage.writeJSON('wb-schedule', schedule);
             renderSchedule();
+            resetStandaloneTimer();
+            setTrafficLight('red');
             // Reset undo/redo stacks and save blank page state
             undoStack = [];
             redoStack = [];
@@ -841,6 +843,20 @@ document.addEventListener('DOMContentLoaded', () => {
         updateTimerDisplay();
     }
 
+    function resetStandaloneTimer(seconds = 300) {
+        clearTimerTick();
+        timerRunning = false;
+        timerEndsAt = null;
+        timerSeconds = timerTotal = seconds;
+        document.getElementById('timer-display').style.color = 'var(--text-main)';
+        const timerMinInput = document.getElementById('timer-min');
+        const timerSecInput = document.getElementById('timer-sec-input');
+        if (timerMinInput) timerMinInput.value = String(Math.floor(seconds / 60));
+        if (timerSecInput) timerSecInput.value = String(seconds % 60).padStart(2, '0');
+        persistTimerState();
+        updateTimerDisplay();
+    }
+
     function timerFinished() {
         document.getElementById('timer-display').style.color = 'var(--color-red)';
         updateTimerDisplay();
@@ -876,13 +892,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateTimerDisplay();
     });
     document.getElementById('timer-reset').addEventListener('click', () => {
-        clearTimerTick();
-        timerRunning = false;
-        timerEndsAt = null;
-        timerSeconds = timerTotal;
-        document.getElementById('timer-display').style.color = 'var(--text-main)';
-        persistTimerState();
-        updateTimerDisplay();
+        resetStandaloneTimer(timerTotal);
     });
 
     document.querySelectorAll('.preset-btn').forEach(btn => {
@@ -922,10 +932,22 @@ document.addEventListener('DOMContentLoaded', () => {
     updateTimerDisplay();
 
     // ===================== TRAFFIC LIGHT =====================
+    const TRAFFIC_LIGHT_STORAGE_KEY = 'wb-standalone-traffic-light';
+
     function setTrafficLight(color) {
         document.querySelectorAll('.tl-light').forEach(l => l.classList.remove('active'));
         const light = document.getElementById('tl-' + color);
         if (light) light.classList.add('active');
+        try { localStorage.setItem(TRAFFIC_LIGHT_STORAGE_KEY, color); } catch (e) {}
+    }
+
+    function loadTrafficLightState() {
+        const savedColor = localStorage.getItem(TRAFFIC_LIGHT_STORAGE_KEY);
+        if (savedColor === 'red' || savedColor === 'yellow' || savedColor === 'green') {
+            setTrafficLight(savedColor);
+            return;
+        }
+        setTrafficLight('red');
     }
 
     document.querySelectorAll('.tl-label-btn').forEach(btn => {
@@ -949,6 +971,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    loadTrafficLightState();
 
     // ===================== QR CODE =====================
     document.getElementById('qr-generate-btn').addEventListener('click', () => {
