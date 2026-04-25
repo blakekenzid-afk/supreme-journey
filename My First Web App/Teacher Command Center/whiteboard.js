@@ -2132,8 +2132,10 @@ document.addEventListener('DOMContentLoaded', () => {
     */
     let undoStack = [], redoStack = [];
     let persistWidgetsTimer = null;
+    let isRestoringPageSnapshot = false;
 
     function schedulePagePersist() {
+        if (isRestoringPageSnapshot) return;
         clearTimeout(persistWidgetsTimer);
         persistWidgetsTimer = setTimeout(() => {
             try { saveCurrentPageState(); } catch (e) {}
@@ -2385,14 +2387,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function restorePageSnapshot(snapshot) {
         const normalized = normalizePageSnapshot(snapshot);
+        isRestoringPageSnapshot = true;
+        clearTimeout(persistWidgetsTimer);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         canvasArea.className = normalized.bgClass || 'wb-canvas-area';
         canvasArea.style.background = normalized.bgStyle || '';
         restoreWidgetsLayer(normalized.widgets);
         if (normalized.canvas) {
             const img = new Image();
-            img.onload = () => { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0); };
+            img.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                isRestoringPageSnapshot = false;
+            };
+            img.onerror = () => {
+                isRestoringPageSnapshot = false;
+            };
             img.src = normalized.canvas;
+        } else {
+            isRestoringPageSnapshot = false;
         }
         updateCanvasCursor();
         return normalized;
@@ -2459,20 +2472,10 @@ document.addEventListener('DOMContentLoaded', () => {
         wb_currentPage = newIndex;
         localStorage.setItem('wb-current-page', String(wb_currentPage));
         try { localStorage.setItem('wb-pages', JSON.stringify(wb_pages)); } catch(e) {}
-        const page = wb_pages[wb_currentPage];
-        undoStack = []; redoStack = [];
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (page && page.canvas) {
-            const img = new Image();
-            img.onload = () => { ctx.drawImage(img, 0, 0); undoStack.push(page.canvas); };
-            img.src = page.canvas;
-        } else {
-            saveCanvasState();
-        }
-        canvasArea.className = (page && page.bgClass) ? page.bgClass : 'wb-canvas-area';
-        canvasArea.style.background = (page && page.bgStyle) ? page.bgStyle : '';
-        restoreWidgetsLayer(page && page.widgets ? page.widgets : []);
-        updateCanvasCursor();
+        const snapshot = restorePageSnapshot(wb_pages[wb_currentPage]);
+        undoStack = [clonePageSnapshot(snapshot)];
+        redoStack = [];
+        if (!snapshot.canvas) persistPageSnapshot(snapshot);
         updatePageCounter();
     });
 
