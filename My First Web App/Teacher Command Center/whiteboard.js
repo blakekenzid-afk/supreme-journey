@@ -231,6 +231,9 @@ document.addEventListener('DOMContentLoaded', () => {
             canvasArea.style.background = '';
             updateCanvasCursor();
             clearWidgetsLayer();
+            schedule = [];
+            Storage.writeJSON('wb-schedule', schedule);
+            renderSchedule();
             // Reset undo/redo stacks and save blank page state
             undoStack = [];
             redoStack = [];
@@ -239,11 +242,58 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ===================== EXPORT =====================
+    let html2CanvasLoader = null;
+
+    function loadHtml2Canvas() {
+        if (window.html2canvas) return Promise.resolve(window.html2canvas);
+        if (html2CanvasLoader) return html2CanvasLoader;
+
+        html2CanvasLoader = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+            script.onload = () => resolve(window.html2canvas);
+            script.onerror = () => {
+                html2CanvasLoader = null;
+                reject(new Error('Failed to load export renderer'));
+            };
+            document.head.appendChild(script);
+        });
+
+        return html2CanvasLoader;
+    }
+
+    async function exportBoardAsImage() {
+        const exportBtn = document.getElementById('btn-export');
+        if (exportBtn) exportBtn.disabled = true;
+
+        const cursorWasHidden = cursorPreview.classList.contains('hidden');
+        cursorPreview.classList.add('hidden');
+
+        try {
+            const html2canvas = await loadHtml2Canvas();
+            const boardSnapshot = await html2canvas(canvasArea, {
+                backgroundColor: null,
+                useCORS: true,
+                allowTaint: false,
+                logging: false,
+                scale: Math.max(2, window.devicePixelRatio || 1),
+            });
+
+            const link = document.createElement('a');
+            link.download = 'whiteboard-' + new Date().toISOString().slice(0, 10) + '.png';
+            link.href = boardSnapshot.toDataURL('image/png');
+            link.click();
+        } catch (error) {
+            console.error('Whiteboard export failed', error);
+            alert('Export failed. Some remote media may block image export.');
+        } finally {
+            if (!cursorWasHidden) cursorPreview.classList.remove('hidden');
+            if (exportBtn) exportBtn.disabled = false;
+        }
+    }
+
     document.getElementById('btn-export')?.addEventListener('click', () => {
-        const link = document.createElement('a');
-        link.download = 'whiteboard-' + new Date().toISOString().slice(0, 10) + '.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        exportBoardAsImage();
     });
 
     // ===================== FULLSCREEN =====================
@@ -352,6 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ytFloatWidget = document.getElementById('yt-float-widget');
     const ytPlayerContainer = document.getElementById('yt-player-container');
     let ytPlayer = null;
+    let ytCurrentVideoId = '';
     let ytFloatDragBound = false;
     let activeImageSource = 'search';
 
@@ -632,6 +683,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function playVideo(id) {
+        ytCurrentVideoId = id;
         ytFloatWidget.classList.remove('hidden');
         if (ytPlayer) {
             ytPlayer.loadVideoById(id);
@@ -653,14 +705,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         App.closeModal('modal-media');
         if (!ytFloatDragBound) {
-            App.makeDraggable(ytFloatWidget, ytFloatWidget.querySelector('.yt-fw-header'));
+            App.makeDraggable(ytFloatWidget, ytFloatWidget.querySelector('.yt-fw-header'), () => schedulePagePersist());
             ytFloatDragBound = true;
         }
+        schedulePagePersist();
     }
 
-    function closeFloatingYouTubePlayer() {
+    function closeFloatingYouTubePlayer(options = {}) {
+        const { persist = true } = options;
         ytFloatWidget.classList.add('hidden');
         if (ytPlayer && ytPlayer.stopVideo) ytPlayer.stopVideo();
+        if (persist) schedulePagePersist();
     }
 
     imgSourceButtons.forEach(button => {
@@ -676,7 +731,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     ytSearchInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchYouTube(e.currentTarget.value.trim()); });
 
-    document.getElementById('yt-fw-close')?.addEventListener('click', closeFloatingYouTubePlayer);
+    document.getElementById('yt-fw-close')?.addEventListener('click', () => closeFloatingYouTubePlayer());
     setActiveImageSource(activeImageSource);
 
     // ===================== TIMER =====================
@@ -1309,6 +1364,12 @@ document.addEventListener('DOMContentLoaded', () => {
         renderSchedule();
     };
 
+    function clearScheduleInputs() {
+        document.getElementById('sw-item-title').value = '';
+        document.getElementById('sw-item-start').value = '';
+        document.getElementById('sw-item-end').value = '';
+    }
+
     document.getElementById('sw-add-btn').addEventListener('click', () => App.openModal('modal-schedule'));
 
     document.getElementById('sw-save-btn').addEventListener('click', () => {
@@ -1325,7 +1386,7 @@ document.addEventListener('DOMContentLoaded', () => {
         Storage.writeJSON('wb-schedule', schedule);
         renderSchedule();
         App.closeModal('modal-schedule');
-        document.getElementById('sw-item-title').value = '';
+        clearScheduleInputs();
     });
 
     renderSchedule();
@@ -2059,6 +2120,7 @@ document.addEventListener('DOMContentLoaded', () => {
         overlay.style.top = y + 'px';
         if (options.width) overlay.style.width = options.width;
         const image = document.createElement('img');
+        image.crossOrigin = 'anonymous';
         image.src = src;
         image.alt = alt || '';
         image.draggable = false;
@@ -2102,7 +2164,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function clearWidgetsLayer() {
-        closeFloatingYouTubePlayer();
+        closeFloatingYouTubePlayer({ persist: false });
         if (!widgetsLayer) return;
         Array.from(widgetsLayer.children).forEach(el => {
             if (typeof el._dragCleanup === 'function') el._dragCleanup();
@@ -2174,9 +2236,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function serializeVisibleYouTubeWidget() {
+        if (!ytFloatWidget || ytFloatWidget.classList.contains('hidden') || !ytCurrentVideoId) {
+            return null;
+        }
+        return {
+            kind: 'youtube-player',
+            videoId: ytCurrentVideoId,
+            x: parseInt(ytFloatWidget.style.left, 10) || 0,
+            y: parseInt(ytFloatWidget.style.top, 10) || 0,
+        };
+    }
+
     function serializeWidgetsLayer() {
         if (!widgetsLayer) return [];
-        return Array.from(widgetsLayer.children).map(el => {
+        const widgets = Array.from(widgetsLayer.children).map(el => {
             if (el.classList.contains('text-overlay')) {
                 const textarea = el.querySelector('textarea');
                 return {
@@ -2204,6 +2278,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return null;
         }).filter(Boolean);
+        const youtubeWidget = serializeVisibleYouTubeWidget();
+        if (youtubeWidget) widgets.push(youtubeWidget);
+        return widgets;
     }
 
     function restoreWidgetsLayer(savedWidgets) {
@@ -2226,6 +2303,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (item.kind === 'canvas-widget' && item.name) {
                 spawnCanvasWidget(item.name, item.x, item.y, item);
+                return;
+            }
+            if (item.kind === 'youtube-player' && item.videoId) {
+                if (typeof item.x === 'number') ytFloatWidget.style.left = `${item.x}px`;
+                if (typeof item.y === 'number') ytFloatWidget.style.top = `${item.y}px`;
+                playVideo(item.videoId);
             }
         });
     }
