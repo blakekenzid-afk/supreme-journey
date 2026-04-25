@@ -103,6 +103,12 @@ window.WhiteboardApp = {
             const parentRect = el.parentElement.getBoundingClientRect();
             let x = clientX - parentRect.left - offsetX;
             let y = clientY - parentRect.top - offsetY;
+            const edgePadding = 8;
+            const maxX = Math.max(edgePadding, parentRect.width - el.offsetWidth - edgePadding);
+            const maxY = Math.max(edgePadding, parentRect.height - el.offsetHeight - edgePadding);
+
+            x = Math.min(Math.max(edgePadding, x), maxX);
+            y = Math.min(Math.max(edgePadding, y), maxY);
             
             el.style.left = x + 'px';
             el.style.top = y + 'px';

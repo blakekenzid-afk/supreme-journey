@@ -839,8 +839,8 @@ body {
 }
 .image-overlay .text-delete {
   position: absolute;
-  top: -12px;
-  right: -12px;
+  top: 8px;
+  right: 8px;
   width: 30px;
   height: 30px;
   background: var(--wb-red);
@@ -980,8 +980,8 @@ body {
 .ruler-mark { position: absolute; bottom: 0; width: 1px; height: 10px; background: var(--wb-ruler-mark); }
 .ruler-mark.major { height: 20px; width: 2px; }
 .ruler-mark span { position: absolute; top: -15px; left: -4px; font-size: 10px; font-weight: 700; color: var(--wb-ruler-mark); }
-.ruler-close { position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; border-radius: 50%; border: none; background: var(--wb-red); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; }
-.ruler-rotate { position: absolute; top: -8px; left: -8px; width: 20px; height: 20px; border-radius: 50%; border: none; background: var(--wb-blue); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+.ruler-close { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; border: none; background: var(--wb-red); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+.ruler-rotate { position: absolute; top: 6px; left: 6px; width: 22px; height: 22px; border-radius: 50%; border: none; background: var(--wb-blue); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; }
 
 
 /* SPIN WHEEL */
@@ -1024,10 +1024,11 @@ body {
 }
 .text-overlay textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(99, 102, 241, 0.15);}
 .text-overlay .text-delete{
-  position:absolute;top:-10px;right:-10px;width:22px;height:22px;
+  position:absolute;top:8px;right:8px;width:24px;height:24px;
   border-radius:50%;background:var(--wb-red);color:white;border:none;cursor:pointer;
-  font-size:0.65rem;display:flex;align-items:center;justify-content:center;
+  font-size:0.75rem;display:flex;align-items:center;justify-content:center;
   opacity:0;transition:opacity 0.2s;box-shadow: var(--wb-shadow-sm, 0 2px 4px rgba(0,0,0,0.05));
+  z-index:2;
 }
 .text-overlay:hover .text-delete{opacity:1;}
 
