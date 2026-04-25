@@ -403,10 +403,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const ytPlayerContainer = document.getElementById('yt-player-container');
     let ytPlayer = null;
     let ytCurrentVideoId = '';
+    let ytPendingVideoId = '';
     let ytFloatDragBound = false;
     let activeImageSource = 'search';
 
     // Load YouTube API
+    const previousOnYouTubeIframeAPIReady = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+        if (typeof previousOnYouTubeIframeAPIReady === 'function') previousOnYouTubeIframeAPIReady();
+        if (!ytPendingVideoId) return;
+        const pendingVideoId = ytPendingVideoId;
+        ytPendingVideoId = '';
+        playVideo(pendingVideoId);
+    };
+
+    function isYouTubeApiReady() {
+        return Boolean(window.YT && typeof window.YT.Player === 'function');
+    }
+
     if (!window.YT) {
         const tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
@@ -685,6 +699,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function playVideo(id) {
         ytCurrentVideoId = id;
         ytFloatWidget.classList.remove('hidden');
+        if (!isYouTubeApiReady()) {
+            ytPendingVideoId = id;
+            return;
+        }
         if (ytPlayer) {
             ytPlayer.loadVideoById(id);
         } else {
@@ -1305,6 +1323,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===================== SCHEDULE WIDGET =====================
     let schedule = Storage.readJSON('wb-schedule', []);
 
+    function formatScheduleTime(value) {
+        if (!value || typeof value !== 'string') return '';
+        const [rawHours, rawMinutes] = value.split(':').map(Number);
+        if (!Number.isFinite(rawHours) || !Number.isFinite(rawMinutes)) return value;
+        const period = rawHours >= 12 ? 'PM' : 'AM';
+        const hours12 = rawHours % 12 || 12;
+        return `${hours12}:${String(rawMinutes).padStart(2, '0')} ${period}`;
+    }
+
     function renderSchedule() {
         const container = document.getElementById('schedule-items');
         container.innerHTML = '';
@@ -1333,7 +1360,7 @@ document.addEventListener('DOMContentLoaded', () => {
             title.textContent = item.title;
             const time = document.createElement('div');
             time.className = 'si-time';
-            time.textContent = `${item.startTime} – ${item.endTime}`;
+            time.textContent = `${formatScheduleTime(item.startTime)} - ${formatScheduleTime(item.endTime)}`;
             const progress = document.createElement('div');
             progress.className = 'si-progress';
             const fill = document.createElement('div');
@@ -3664,9 +3691,56 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('✅ Teacherstack Whiteboard Part 3 Tools Initialized');
     console.log('✅ Teacherstack Whiteboard Parts 1 & 2 Initialized');
     // Initialize draggables
+    const SCHEDULE_WIDGET_POSITION_KEY = 'wb-schedule-widget-position';
     const scheduleWidget = document.getElementById('schedule-widget');
     if (scheduleWidget) {
-        App.makeDraggable(scheduleWidget, scheduleWidget.querySelector('.sw-header'));
+        const savedScheduleWidgetPosition = Storage.readJSON(SCHEDULE_WIDGET_POSITION_KEY, null);
+        const saveScheduleWidgetLayout = () => {
+            Storage.writeJSON(SCHEDULE_WIDGET_POSITION_KEY, {
+                left: parseInt(scheduleWidget.style.left, 10) || scheduleWidget.offsetLeft || 0,
+                top: parseInt(scheduleWidget.style.top, 10) || scheduleWidget.offsetTop || 0,
+                width: scheduleWidget.style.width || '',
+                height: scheduleWidget.style.height || '',
+            });
+        };
+
+        if (savedScheduleWidgetPosition && typeof savedScheduleWidgetPosition.left === 'number' && typeof savedScheduleWidgetPosition.top === 'number') {
+            scheduleWidget.style.left = `${savedScheduleWidgetPosition.left}px`;
+            scheduleWidget.style.top = `${savedScheduleWidgetPosition.top}px`;
+            scheduleWidget.style.right = 'auto';
+            scheduleWidget.style.bottom = 'auto';
+            if (savedScheduleWidgetPosition.width) scheduleWidget.style.width = savedScheduleWidgetPosition.width;
+            if (savedScheduleWidgetPosition.height) scheduleWidget.style.height = savedScheduleWidgetPosition.height;
+        } else {
+            scheduleWidget.style.left = `${scheduleWidget.offsetLeft}px`;
+            scheduleWidget.style.top = `${scheduleWidget.offsetTop}px`;
+            scheduleWidget.style.right = 'auto';
+            scheduleWidget.style.bottom = 'auto';
+        }
+        App.makeDraggable(scheduleWidget, scheduleWidget.querySelector('.sw-header'), (left, top) => {
+            scheduleWidget.style.left = `${left}px`;
+            scheduleWidget.style.top = `${top}px`;
+            scheduleWidget.style.right = 'auto';
+            scheduleWidget.style.bottom = 'auto';
+            saveScheduleWidgetLayout();
+        });
+        if (typeof ResizeObserver !== 'undefined') {
+            let resizeFrame = null;
+            const resizeObserver = new ResizeObserver(() => {
+                if (resizeFrame) cancelAnimationFrame(resizeFrame);
+                resizeFrame = requestAnimationFrame(() => {
+                    resizeFrame = null;
+                    scheduleWidget.style.width = `${Math.round(scheduleWidget.offsetWidth)}px`;
+                    scheduleWidget.style.height = `${Math.round(scheduleWidget.offsetHeight)}px`;
+                    saveScheduleWidgetLayout();
+                });
+            });
+            resizeObserver.observe(scheduleWidget);
+            scheduleWidget._scheduleResizeCleanup = () => {
+                if (resizeFrame) cancelAnimationFrame(resizeFrame);
+                resizeObserver.disconnect();
+            };
+        }
     }
 
     // Make all modals draggable
