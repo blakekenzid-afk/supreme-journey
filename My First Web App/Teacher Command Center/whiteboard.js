@@ -236,6 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderSchedule();
             resetStandaloneTimer();
             setTrafficLight('red');
+            resetStandaloneSoundMeterUi();
             resetScheduleWidgetLayout();
             // Reset undo/redo stacks and save blank page state
             undoStack = [];
@@ -2437,6 +2438,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveCurrentPageState(dataUrl) {
+        if (isRestoringPageSnapshot) return;
         persistPageSnapshot(captureCurrentPageSnapshot(dataUrl));
     }
 
