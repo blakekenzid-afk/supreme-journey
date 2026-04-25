@@ -237,6 +237,8 @@ document.addEventListener('DOMContentLoaded', () => {
             resetStandaloneTimer();
             setTrafficLight('red');
             resetStandaloneSoundMeterUi();
+            resetStandaloneNamePicker();
+            resetStandaloneStopwatch();
             resetScheduleWidgetLayout();
             // Reset undo/redo stacks and save blank page state
             undoStack = [];
@@ -989,6 +991,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===================== NAME PICKER =====================
     let pickedNames = [];
     let namepickShuffleInterval = null;
+
+    function resetStandaloneNamePicker() {
+        pickedNames = [];
+        if (namepickShuffleInterval) {
+            clearInterval(namepickShuffleInterval);
+            namepickShuffleInterval = null;
+        }
+        const display = document.getElementById('namepick-display');
+        if (display) {
+            display.textContent = '?';
+            display.style.animation = 'none';
+        }
+        const history = document.getElementById('namepick-history');
+        if (history) history.innerHTML = '';
+    }
+
     document.getElementById('namepick-btn').addEventListener('click', () => {
         const studentNames = getStudentNames();
         const available = studentNames.filter(n => !pickedNames.includes(n));
@@ -2996,6 +3014,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===================== PART 2: STOPWATCH =====================
     let swTime = 0, swRunning = false, swInterval = null, swLaps = [];
+
+    function resetStandaloneStopwatch() {
+        swRunning = false;
+        clearInterval(swInterval);
+        swInterval = null;
+        swTime = 0;
+        swLaps = [];
+        updateSWDisplay();
+        const lapsEl = document.getElementById('sw-laps');
+        if (lapsEl) lapsEl.innerHTML = '';
+    }
+
     function updateSWDisplay() {
         const min = Math.floor(swTime / 6000);
         const sec = Math.floor((swTime % 6000) / 100);
@@ -3013,12 +3043,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clearInterval(swInterval);
     });
     document.getElementById('sw-reset-btn').addEventListener('click', () => {
-        swRunning = false;
-        clearInterval(swInterval);
-        swTime = 0;
-        swLaps = [];
-        updateSWDisplay();
-        document.getElementById('sw-laps').innerHTML = '';
+        resetStandaloneStopwatch();
     });
     document.getElementById('sw-lap-btn').addEventListener('click', () => {
         if (!swRunning) return;
