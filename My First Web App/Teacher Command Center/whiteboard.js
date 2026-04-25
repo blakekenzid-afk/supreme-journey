@@ -236,6 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderSchedule();
             resetStandaloneTimer();
             setTrafficLight('red');
+            resetScheduleWidgetLayout();
             // Reset undo/redo stacks and save blank page state
             undoStack = [];
             redoStack = [];
@@ -3735,6 +3736,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const SCHEDULE_WIDGET_POSITION_KEY = 'wb-schedule-widget-position';
     const scheduleWidget = document.getElementById('schedule-widget');
     if (scheduleWidget) {
+        function resetScheduleWidgetLayout() {
+            scheduleWidget.style.left = '';
+            scheduleWidget.style.top = '16px';
+            scheduleWidget.style.right = '16px';
+            scheduleWidget.style.bottom = '';
+            scheduleWidget.style.width = '';
+            scheduleWidget.style.height = '';
+            try { localStorage.removeItem(SCHEDULE_WIDGET_POSITION_KEY); } catch (e) {}
+        }
+
         const savedScheduleWidgetPosition = Storage.readJSON(SCHEDULE_WIDGET_POSITION_KEY, null);
         const saveScheduleWidgetLayout = () => {
             Storage.writeJSON(SCHEDULE_WIDGET_POSITION_KEY, {
