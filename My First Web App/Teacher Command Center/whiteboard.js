@@ -3236,6 +3236,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const attPresentCount = document.getElementById('att-present-count');
     const attAbsentCount = document.getElementById('att-absent-count');
     const attLateCount = document.getElementById('att-late-count');
+    let attendanceSaveFeedbackTimeout = null;
 
     function initAttendance() {
         if (!attGrid) return;
@@ -3297,6 +3298,21 @@ document.addEventListener('DOMContentLoaded', () => {
         attLateCount.textContent = l;
     }
 
+    function resetAttendanceModal() {
+        if (attendanceSaveFeedbackTimeout) {
+            clearTimeout(attendanceSaveFeedbackTimeout);
+            attendanceSaveFeedbackTimeout = null;
+        }
+        initAttendance();
+        const resultEl = document.getElementById('att-pick-result');
+        if (resultEl) resultEl.textContent = '';
+        const saveBtn = document.getElementById('att-save-btn');
+        if (saveBtn) {
+            saveBtn.textContent = 'Save Attendance';
+            saveBtn.style.background = '';
+        }
+    }
+
     document.getElementById('att-reset-btn')?.addEventListener('click', () => {
         document.querySelectorAll('.att-card').forEach(c => {
             c.dataset.status = 'none';
@@ -3319,13 +3335,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const oldText = btn.textContent;
         btn.textContent = '✅ Saved';
         btn.style.background = '#10b981';
-        setTimeout(() => {
+        if (attendanceSaveFeedbackTimeout) clearTimeout(attendanceSaveFeedbackTimeout);
+        attendanceSaveFeedbackTimeout = setTimeout(() => {
             btn.textContent = oldText;
             btn.style.background = '';
+            attendanceSaveFeedbackTimeout = null;
         }, 2000);
     });
 
     initAttendance();
+
+    const attendanceModal = document.getElementById('modal-attendance');
+    if (attendanceModal) {
+        new MutationObserver(() => {
+            if (attendanceModal.classList.contains('hidden')) {
+                resetAttendanceModal();
+            }
+        }).observe(attendanceModal, { attributes: true, attributeFilter: ['class'] });
+    }
 
     document.getElementById('att-pick-btn')?.addEventListener('click', () => {
         const presentCards = Array.from(document.querySelectorAll('.att-card')).filter(c => c.dataset.status === 'present');
