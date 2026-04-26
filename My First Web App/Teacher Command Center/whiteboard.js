@@ -979,6 +979,13 @@ document.addEventListener('DOMContentLoaded', () => {
     loadTrafficLightState();
 
     // ===================== QR CODE =====================
+    function resetQrGenerator() {
+        const input = document.getElementById('qr-input');
+        if (input) input.value = '';
+        const output = document.getElementById('qr-output');
+        if (output) output.innerHTML = '';
+    }
+
     document.getElementById('qr-generate-btn').addEventListener('click', () => {
         const text = document.getElementById('qr-input').value;
         const output = document.getElementById('qr-output');
@@ -987,6 +994,15 @@ document.addEventListener('DOMContentLoaded', () => {
             new QRCode(output, { text, width: 180, height: 180 });
         }
     });
+
+    const qrModal = document.getElementById('modal-qr');
+    if (qrModal) {
+        new MutationObserver(() => {
+            if (qrModal.classList.contains('hidden')) {
+                resetQrGenerator();
+            }
+        }).observe(qrModal, { attributes: true, attributeFilter: ['class'] });
+    }
 
     // ===================== NAME PICKER =====================
     let pickedNames = [];
@@ -1045,6 +1061,15 @@ document.addEventListener('DOMContentLoaded', () => {
             hist.appendChild(chip);
         });
     });
+
+    const namePickerModal = document.getElementById('modal-namepick');
+    if (namePickerModal) {
+        new MutationObserver(() => {
+            if (namePickerModal.classList.contains('hidden')) {
+                resetStandaloneNamePicker();
+            }
+        }).observe(namePickerModal, { attributes: true, attributeFilter: ['class'] });
+    }
 
     // ===================== SOUND METER =====================
     /*
@@ -2540,6 +2565,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===================== PART 2: RANDOM STUDENT (in Randomizer modal) =====================
     let randStudentShuffleInterval = null;
+
+    function resetRandomizerModal() {
+        if (randStudentShuffleInterval) {
+            clearInterval(randStudentShuffleInterval);
+            randStudentShuffleInterval = null;
+        }
+        const studentDisplay = document.getElementById('rand-student-display');
+        if (studentDisplay) {
+            studentDisplay.textContent = '?';
+            studentDisplay.style.animation = 'none';
+        }
+        const groupsOutput = document.getElementById('groups-output');
+        if (groupsOutput) groupsOutput.innerHTML = '';
+        const spinResult = document.getElementById('spin-result');
+        if (spinResult) {
+            spinResult.textContent = '';
+            spinResult.style.animation = 'none';
+        }
+        document.querySelectorAll('.rand-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.rtab === 'student');
+        });
+        document.querySelectorAll('.rand-content').forEach(content => {
+            content.classList.toggle('active', content.id === 'rtab-student');
+        });
+    }
+
     document.getElementById('rand-pick-btn').addEventListener('click', () => {
         const display = document.getElementById('rand-student-display');
         display.textContent = '';
@@ -2612,6 +2663,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const wheelCanvas = document.getElementById('spin-wheel-canvas');
     const wheelCtx = wheelCanvas.getContext('2d');
     let wheelAngle = 0, wheelSpinning = false;
+    let wheelSpinToken = 0;
     const wheelColors = [
         App.getVar('--wheel-1', '#6366f1'), App.getVar('--wheel-2', '#a855f7'), App.getVar('--wheel-3', '#ec4899'),
         App.getVar('--wheel-4', '#f59e0b'), App.getVar('--wheel-5', '#10b981'), App.getVar('--wheel-6', '#3b82f6'),
@@ -2659,6 +2711,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('spin-btn').addEventListener('click', () => {
         if (wheelSpinning) return;
         wheelSpinning = true;
+        const currentSpinToken = ++wheelSpinToken;
         const spinSpeed = 0.2 + Math.random() * 0.15;
         let speed = spinSpeed;
         const decel = 0.997;
@@ -2666,6 +2719,11 @@ document.addEventListener('DOMContentLoaded', () => {
         result.textContent = '🎰 Spinning...';
 
         function animate() {
+            if (currentSpinToken !== wheelSpinToken) {
+                wheelSpinning = false;
+                drawWheel();
+                return;
+            }
             wheelAngle += speed;
             speed *= decel;
             drawWheel();
@@ -2694,6 +2752,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         animate();
     });
+
+    const randomizerModal = document.getElementById('modal-random');
+    if (randomizerModal) {
+        new MutationObserver(() => {
+            if (randomizerModal.classList.contains('hidden')) {
+                wheelSpinning = false;
+                wheelSpinToken++;
+                resetRandomizerModal();
+                drawWheel();
+            }
+        }).observe(randomizerModal, { attributes: true, attributeFilter: ['class'] });
+    }
 
     // ===================== PART 2: TEXT TOOL =====================
 
@@ -3062,9 +3132,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (stopwatchModal) {
         new MutationObserver(() => {
             if (stopwatchModal.classList.contains('hidden')) {
-                swRunning = false;
-                clearInterval(swInterval);
-                swInterval = null;
+                resetStandaloneStopwatch();
             }
         }).observe(stopwatchModal, { attributes: true, attributeFilter: ['class'] });
     }
