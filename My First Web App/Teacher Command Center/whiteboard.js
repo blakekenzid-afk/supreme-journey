@@ -1464,6 +1464,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('sw-item-title').value = '';
         document.getElementById('sw-item-start').value = '';
         document.getElementById('sw-item-end').value = '';
+        document.getElementById('sw-item-icon').value = '🍽️';
     }
 
     document.getElementById('sw-add-btn').addEventListener('click', () => App.openModal('modal-schedule'));
@@ -1484,6 +1485,15 @@ document.addEventListener('DOMContentLoaded', () => {
         App.closeModal('modal-schedule');
         clearScheduleInputs();
     });
+
+    const scheduleModal = document.getElementById('modal-schedule');
+    if (scheduleModal) {
+        new MutationObserver(() => {
+            if (scheduleModal.classList.contains('hidden')) {
+                clearScheduleInputs();
+            }
+        }).observe(scheduleModal, { attributes: true, attributeFilter: ['class'] });
+    }
 
     renderSchedule();
     setInterval(renderSchedule, 60000); // Update every minute
