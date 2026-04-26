@@ -1504,6 +1504,15 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (hash === '#random') App.openModal('modal-random');
 
     // ===================== TEXT-TO-SPEECH =====================
+    function resetTtsControls(inputId, voiceId, rateId) {
+        const input = document.getElementById(inputId);
+        if (input) input.value = '';
+        const voiceSelect = document.getElementById(voiceId);
+        if (voiceSelect && voiceSelect.options.length > 0) voiceSelect.selectedIndex = 0;
+        const rate = document.getElementById(rateId);
+        if (rate) rate.value = '1';
+    }
+
     function setupTTS(inputId, voiceId, rateId, speakBtnId, stopBtnId) {
         const synth = window.speechSynthesis;
         const supportsTTS = !!(synth && typeof synth.cancel === 'function' && typeof synth.speak === 'function' && typeof window.SpeechSynthesisUtterance === 'function');
@@ -1568,6 +1577,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setupTTS('tts-text-area', 'tts-voice-select', 'tts-rate', 'tts-speak-btn', 'tts-stop-btn');
     setupTTS('tts-input', 'tts-voice-select2', 'tts-rate2', 'tts-speak2', 'tts-stop2');
+
+    function resetTextToSpeechUi() {
+        const synth = window.speechSynthesis;
+        if (synth && typeof synth.cancel === 'function') synth.cancel();
+        resetTtsControls('tts-text-area', 'tts-voice-select', 'tts-rate');
+        resetTtsControls('tts-input', 'tts-voice-select2', 'tts-rate2');
+    }
+
+    const ttsModal = document.getElementById('modal-tts');
+    if (ttsModal) {
+        new MutationObserver(() => {
+            if (ttsModal.classList.contains('hidden')) {
+                resetTextToSpeechUi();
+            }
+        }).observe(ttsModal, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    const mediaModal = document.getElementById('modal-media');
+    if (mediaModal) {
+        new MutationObserver(() => {
+            if (mediaModal.classList.contains('hidden')) {
+                const synth = window.speechSynthesis;
+                if (synth && typeof synth.cancel === 'function') synth.cancel();
+                resetTtsControls('tts-text-area', 'tts-voice-select', 'tts-rate');
+            }
+        }).observe(mediaModal, { attributes: true, attributeFilter: ['class'] });
+    }
 
     // ===================== TOOLS PANEL =====================
     const toolsData = {
@@ -3178,6 +3214,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let fcCards = Storage.readJSON('wb-flashcards', []);
     let fcIndex = 0;
 
+    function resetFlashcardsModal() {
+        fcIndex = 0;
+        document.getElementById('fc-q-input').value = '';
+        document.getElementById('fc-a-input').value = '';
+        renderFlashcard();
+    }
+
     function renderFlashcard() {
         const front = document.getElementById('fc-front');
         const back = document.getElementById('fc-back');
@@ -3226,6 +3269,15 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('fc-a-input').value = '';
     });
     renderFlashcard();
+
+    const flashcardsModal = document.getElementById('modal-flashcards');
+    if (flashcardsModal) {
+        new MutationObserver(() => {
+            if (flashcardsModal.classList.contains('hidden')) {
+                resetFlashcardsModal();
+            }
+        }).observe(flashcardsModal, { attributes: true, attributeFilter: ['class'] });
+    }
 
     // ===================== PART 2: MORE TOOLS TOGGLE =====================
     const bbMore = document.getElementById('bb-more');
@@ -3390,6 +3442,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const chartCanvas = document.getElementById('chart-canvas');
     const chartRows = document.getElementById('chart-data-rows');
 
+    function resetChartsModal() {
+        chartType = 'bar';
+        document.querySelectorAll('.chart-type-btn').forEach(btn => {
+            const isBar = btn.dataset.type === 'bar';
+            btn.classList.toggle('active', isBar);
+        });
+        const titleInput = document.getElementById('chart-title-input');
+        if (titleInput) titleInput.value = '';
+        if (chartRows) {
+            chartRows.innerHTML = '';
+            const row = document.createElement('div');
+            row.className = 'chart-row';
+            row.innerHTML = `
+            <input type="text" placeholder="Label" class="row-label">
+            <input type="number" placeholder="Value" class="row-value">
+            <button type="button" class="row-remove">✕</button>
+        `;
+            row.querySelector('.row-remove').addEventListener('click', () => row.remove());
+            chartRows.appendChild(row);
+        }
+        if (chartCanvas) {
+            const ctx = chartCanvas.getContext('2d');
+            ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+        }
+    }
+
     document.getElementById('chart-add-row')?.addEventListener('click', () => {
         const row = document.createElement('div');
         row.className = 'chart-row';
@@ -3481,8 +3559,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('chart-render-btn')?.addEventListener('click', renderChart);
 
+    const chartsModal = document.getElementById('modal-charts');
+    if (chartsModal) {
+        new MutationObserver(() => {
+            if (chartsModal.classList.contains('hidden')) {
+                resetChartsModal();
+            }
+        }).observe(chartsModal, { attributes: true, attributeFilter: ['class'] });
+    }
+
     // ===================== PART 3: TEN FRAME =====================
     let tfColor = 'red';
+
+    function resetTenFrameModal() {
+        tfColor = 'red';
+        document.querySelectorAll('.tf-cell').forEach(c => c.innerHTML = '');
+        document.querySelectorAll('.tf-color-btn').forEach(btn => {
+            const isRed = btn.dataset.color === 'red';
+            btn.classList.toggle('active', isRed);
+            btn.setAttribute('aria-pressed', isRed ? 'true' : 'false');
+        });
+        updateTfCount();
+    }
+
     document.querySelectorAll('.tf-cell').forEach(cell => {
         cell.addEventListener('click', () => {
             if (cell.innerHTML === '') {
@@ -3516,12 +3615,30 @@ document.addEventListener('DOMContentLoaded', () => {
         updateTfCount();
     });
 
+    const tenFrameModal = document.getElementById('modal-tenframe');
+    if (tenFrameModal) {
+        new MutationObserver(() => {
+            if (tenFrameModal.classList.contains('hidden')) {
+                resetTenFrameModal();
+            }
+        }).observe(tenFrameModal, { attributes: true, attributeFilter: ['class'] });
+    }
+
     // ===================== PART 3: THERMOMETER =====================
     const thermoLiquid = document.getElementById('thermo-liquid');
     const thermoSlider = document.getElementById('thermo-slider');
     const thermoValDisplay = document.getElementById('thermo-val');
     const thermoUnitDisplay = document.getElementById('thermo-unit');
     let thermoUnit = 'C';
+
+    function resetThermometerModal() {
+        thermoUnit = 'C';
+        if (thermoSlider) thermoSlider.value = '20';
+        document.querySelectorAll('.unit-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.unit === 'C');
+        });
+        updateThermo();
+    }
 
     function updateThermo() {
         if (!thermoSlider || !thermoLiquid) return;
@@ -3548,13 +3665,30 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    const thermometerModal = document.getElementById('modal-thermometer');
+    if (thermometerModal) {
+        new MutationObserver(() => {
+            if (thermometerModal.classList.contains('hidden')) {
+                resetThermometerModal();
+            }
+        }).observe(thermometerModal, { attributes: true, attributeFilter: ['class'] });
+    }
+
     // Helper for Draggable Elements
     // makeDraggable is now provided by WhiteboardApp alias above
 
     // ===================== PART 3: MONEY TOOL =====================
     const moneyItemsLayer = document.getElementById('money-items-layer');
     const moneyTotalVal = document.getElementById('money-total-val');
+    const moneyMat = document.getElementById('money-mat');
     let moneyTotal = 0;
+
+    function resetMoneyToolModal() {
+        if (moneyItemsLayer) moneyItemsLayer.innerHTML = '';
+        moneyTotal = 0;
+        updateMoneyTotal();
+        moneyMat?.querySelector('.mat-hint')?.style.setProperty('display', 'block');
+    }
 
     function addCoinToMat(val, html, isBill) {
         const clone = document.createElement('div');
@@ -3563,7 +3697,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clone.dataset.value = val;
         clone.style.position = 'absolute';
         
-        const matRect = document.querySelector('.money-mat').getBoundingClientRect();
+        const matRect = moneyMat.getBoundingClientRect();
         const startX = matRect.width / 2 - 20 + (Math.random() * 40 - 20);
         const startY = matRect.height / 2 - 20 + (Math.random() * 40 - 20);
         
@@ -3587,7 +3721,7 @@ document.addEventListener('DOMContentLoaded', () => {
         moneyTotal += val;
         updateMoneyTotal();
         
-        const hint = document.querySelector('.mat-hint');
+        const hint = moneyMat?.querySelector('.mat-hint');
         if (hint) hint.style.display = 'none';
     }
 
@@ -3605,7 +3739,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    const moneyMat = document.querySelector('.money-mat');
     if (moneyMat) {
         moneyMat.addEventListener('dragover', (e) => e.preventDefault());
         moneyMat.addEventListener('drop', (e) => {
@@ -3622,12 +3755,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.getElementById('money-clear')?.addEventListener('click', () => {
-        moneyItemsLayer.innerHTML = '';
-        moneyTotal = 0;
-        updateMoneyTotal();
-        const hint = document.querySelector('.mat-hint');
-        if (hint) hint.style.display = 'block';
+        resetMoneyToolModal();
     });
+
+    const moneyModal = document.getElementById('modal-money');
+    if (moneyModal) {
+        new MutationObserver(() => {
+            if (moneyModal.classList.contains('hidden')) {
+                resetMoneyToolModal();
+            }
+        }).observe(moneyModal, { attributes: true, attributeFilter: ['class'] });
+    }
 
     // ===================== PART 3: RULER TOOL =====================
     const ruler = document.getElementById('ruler-tool');
@@ -3750,6 +3888,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentShopItem = null;
     let shopPaid = 0;
+    let resetShoppingGameModal = null;
 
     function initShop() {
         const iconEl = document.getElementById('shop-item-icon');
@@ -3773,6 +3912,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (feedbackEl) feedbackEl.textContent = '';
             updateShopUI();
         }
+
+        resetShoppingGameModal = () => {
+            nextShopItem();
+        };
 
         nextShopItem();
         
@@ -3861,6 +4004,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     initShop();
+
+    const shoppingModal = document.getElementById('modal-shopping');
+    if (shoppingModal) {
+        new MutationObserver(() => {
+            if (shoppingModal.classList.contains('hidden')) {
+                resetShoppingGameModal?.();
+            }
+        }).observe(shoppingModal, { attributes: true, attributeFilter: ['class'] });
+    }
 
     console.log('✅ Teacherstack Whiteboard Part 3 Tools Initialized');
     console.log('✅ Teacherstack Whiteboard Parts 1 & 2 Initialized');
