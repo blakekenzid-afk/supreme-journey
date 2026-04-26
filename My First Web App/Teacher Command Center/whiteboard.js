@@ -475,6 +475,24 @@ document.addEventListener('DOMContentLoaded', () => {
         setImageResultsMessage('Search for images to use on your whiteboard');
     }
 
+    function resetMediaModalState() {
+        if (imgSearchInput) imgSearchInput.value = '';
+        setActiveImageSource('search');
+        if (ytSearchInput) ytSearchInput.value = '';
+        if (ytResults) ytResults.innerHTML = '<div class="media-hint">Search for videos — great for Brain Breaks!</div>';
+        const ytUrlInput = document.getElementById('yt-url-input');
+        if (ytUrlInput) ytUrlInput.value = '';
+        const mediaTabs = document.querySelectorAll('#modal-media .bg-tab');
+        const mediaPanels = document.querySelectorAll('#modal-media .bg-tab-content');
+        mediaTabs.forEach(tab => {
+            const isImages = tab.getAttribute('data-tab') === 'media-images';
+            tab.classList.toggle('active', isImages);
+        });
+        mediaPanels.forEach(panel => {
+            panel.classList.toggle('active', panel.id === 'media-images');
+        });
+    }
+
     function renderImageResults(items) {
         imgResults.innerHTML = '';
         if (!items.length) {
@@ -705,10 +723,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function playVideo(id) {
         ytCurrentVideoId = id;
         ytFloatWidget.classList.remove('hidden');
+        App.closeModal('modal-media');
+        if (!ytFloatDragBound) {
+            App.makeDraggable(ytFloatWidget, ytFloatWidget.querySelector('.yt-fw-header'), () => schedulePagePersist());
+            ytFloatDragBound = true;
+        }
         if (!isYouTubeApiReady()) {
             ytPendingVideoId = id;
+            schedulePagePersist();
             return;
         }
+        ytPendingVideoId = '';
         if (ytPlayer) {
             ytPlayer.loadVideoById(id);
         } else {
@@ -727,16 +752,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
-        App.closeModal('modal-media');
-        if (!ytFloatDragBound) {
-            App.makeDraggable(ytFloatWidget, ytFloatWidget.querySelector('.yt-fw-header'), () => schedulePagePersist());
-            ytFloatDragBound = true;
-        }
         schedulePagePersist();
     }
 
     function closeFloatingYouTubePlayer(options = {}) {
         const { persist = true } = options;
+        ytPendingVideoId = '';
+        ytCurrentVideoId = '';
         ytFloatWidget.classList.add('hidden');
         if (ytPlayer && ytPlayer.stopVideo) ytPlayer.stopVideo();
         if (persist) schedulePagePersist();
@@ -1601,6 +1623,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const synth = window.speechSynthesis;
                 if (synth && typeof synth.cancel === 'function') synth.cancel();
                 resetTtsControls('tts-text-area', 'tts-voice-select', 'tts-rate');
+                resetMediaModalState();
             }
         }).observe(mediaModal, { attributes: true, attributeFilter: ['class'] });
     }
