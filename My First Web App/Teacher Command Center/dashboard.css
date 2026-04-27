@@ -2,16 +2,16 @@
 
 :root {
     --sidebar-width: 260px;
-    --sidebar-bg: #ffffff;
-    --main-bg: #c1c2c5;
-    --accent-blue: #e3f2fd;
-    --text-active: #1976d2;
+    --sidebar-bg: #fff9fc;
+    --main-bg: #eef6ff;
+    --accent-blue: #e7ddff;
+    --text-active: #7a6ef4;
     --text-main: #333333;
     --text-muted: #757575;
-    --border-color: #e0e0e0;
-    --card-bg: #e0e0e0; /* Updated to match action cards */
-    --content-card-bg: #d1d2d5;
-    --top-nav-bg: #f8f9fa;
+    --border-color: #e9e0f2;
+    --card-bg: #fff7fb;
+    --content-card-bg: #f8fbff;
+    --top-nav-bg: #fff9fd;
     --text-header: #444444;
     
     /* Elevation */
@@ -20,12 +20,12 @@
     --fab-shadow: 0 4px 12px rgba(0,0,0,0.2);
     
     /* Profile & UI Colors */
-    --profile-icon-bg: #ce93d8;
-    --avatar-bg: #5c6bc0;
-    --nav-hover-bg: #f5f5f5;
-    --back-icon-color: #90caf9;
-    --slider-bg: #ccc;
-    --slider-checked-bg: #2196f3;
+    --profile-icon-bg: #f4bfd6;
+    --avatar-bg: #a5bfff;
+    --nav-hover-bg: #f5efff;
+    --back-icon-color: #9bc7ff;
+    --slider-bg: #ddd5ea;
+    --slider-checked-bg: #8ea0ff;
     
     /* Widget Colors */
     --clock-bg: #1a2332;
@@ -33,13 +33,13 @@
     --notes-bg: #b3b1bd;
     
     /* Action Card Colors */
-    --color-blue: #4a90e2;
-    --color-red: #a83836;
-    --color-orange: #d48e37;
-    --color-green: #388e3c;
-    --color-grey: #9e9e9e;
-    --color-dark-grey: #424242;
-    --color-teal: #26a69a;
+    --color-blue: #7aa7ef;
+    --color-red: #db8ea3;
+    --color-orange: #e6b36f;
+    --color-green: #7ebca1;
+    --color-grey: #9f99ba;
+    --color-dark-grey: #5c5670;
+    --color-teal: #72c5be;
 }
 
 /* Utilities */
@@ -72,10 +72,73 @@ a:focus-visible {
 
 body {
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    background-color: var(--main-bg);
+    background: linear-gradient(180deg, var(--main-bg) 0%, var(--content-card-bg) 100%);
     color: var(--text-main);
     overflow: hidden;
     min-height: 100dvh;
+}
+
+.settings-theme-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.theme-swatch {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px;
+    border: 1.5px solid var(--border-color);
+    border-radius: 12px;
+    background: #fff;
+    color: var(--text-main);
+    cursor: pointer;
+    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    font-family: inherit;
+}
+
+.theme-swatch:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.theme-swatch.active {
+    border-color: var(--text-active);
+    box-shadow: 0 0 0 3px rgba(122, 110, 244, 0.14);
+}
+
+.theme-swatch-preview {
+    width: 100%;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.theme-swatch-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.theme-preview-pastel {
+    background: linear-gradient(135deg, #f8c9dd 0%, #cde7ff 45%, #dff5e8 100%);
+}
+
+.theme-preview-blush {
+    background: linear-gradient(135deg, #ffdce8 0%, #ffeef4 55%, #f6d4e2 100%);
+}
+
+.theme-preview-sky {
+    background: linear-gradient(135deg, #dff0ff 0%, #eef7ff 55%, #cfe4ff 100%);
+}
+
+.theme-preview-mint {
+    background: linear-gradient(135deg, #ddf5ec 0%, #eefcf6 55%, #cceee0 100%);
+}
+
+.theme-preview-lavender {
+    background: linear-gradient(135deg, #eadfff 0%, #f4efff 55%, #d9cbff 100%);
 }
 
 .app-container {

@@ -40,7 +40,6 @@
                     <i class="fa-solid fa-users" aria-hidden="true"></i>
                     <span>Students</span>
                 </a>
-                
                 <div class="nav-section">PLANNING</div>
                 <a href="planner.html" class="nav-item">
                     <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
@@ -82,11 +81,13 @@
                         </label>
                         <span>Make this my landing page</span>
                     </div>
-                    <button class="edit-btn" onclick="openDashSettings()"><i class="fa-solid fa-pencil" aria-hidden="true"></i> Edit Dashboard</button>
+                    <button onclick="openDashSettings()" style="background:var(--accent-blue);color:var(--text-active);border:1.5px solid var(--border-color);border-radius:10px;padding:9px 14px;font-size:0.86rem;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;">
+                        <i class="fa-solid fa-pencil" aria-hidden="true"></i>
+                        Edit Dashboard
+                    </button>
                 </div>
             </header>
 
-            <!-- Widget Picker Bar -->
             <div class="widget-picker" id="widget-picker">
                 <span class="picker-label"><i class="fa-solid fa-plus-circle"></i> Add Widget</span>
                 <button class="pick-btn" data-wid="clock"><i class="fa-solid fa-clock"></i> Clock</button>
@@ -98,10 +99,9 @@
                 <button class="pick-btn" data-wid="actions"><i class="fa-solid fa-bolt"></i> Quick Actions</button>
                 <button class="pick-btn" data-wid="checkin"><i class="fa-solid fa-face-smile"></i> Check-In</button>
             </div>
-            <!-- Widget Canvas -->
+
             <div class="widget-canvas" id="widget-canvas"></div>
 
-            <!-- Floating Action Buttons -->
             <div class="fab-container" id="fab-container">
                 <button class="fab-text"><i class="fa-solid fa-clipboard-user" aria-hidden="true"></i> Log Behavior</button>
                 <button class="fab-text"><i class="fa-solid fa-pen-nib" aria-hidden="true"></i> Student Note</button>
@@ -117,22 +117,164 @@
 
     <script>
         // ===== FAB TOGGLE =====
-            const LANDING_PAGE_KEY = 'teacherstack-landing-page';
+        const DASH_THEME_KEY = 'dash-theme';
+        const DASH_THEMES = {
+            pastel: {
+                '--sidebar-bg': '#fff9fc',
+                '--main-bg': '#eef6ff',
+                '--accent-blue': '#e7ddff',
+                '--text-active': '#7a6ef4',
+                '--border-color': '#e9e0f2',
+                '--card-bg': '#fff7fb',
+                '--content-card-bg': '#f8fbff',
+                '--top-nav-bg': '#fff9fd',
+                '--profile-icon-bg': '#f4bfd6',
+                '--avatar-bg': '#a5bfff',
+                '--nav-hover-bg': '#f5efff',
+                '--back-icon-color': '#9bc7ff',
+                '--slider-bg': '#ddd5ea',
+                '--slider-checked-bg': '#8ea0ff',
+                '--color-blue': '#7aa7ef',
+                '--color-red': '#db8ea3',
+                '--color-orange': '#e6b36f',
+                '--color-green': '#7ebca1',
+                '--color-grey': '#9f99ba',
+                '--color-dark-grey': '#5c5670',
+                '--color-teal': '#72c5be'
+            },
+            blush: {
+                '--sidebar-bg': '#fff8fb',
+                '--main-bg': '#fff1f6',
+                '--accent-blue': '#ffd9ea',
+                '--text-active': '#d46a9b',
+                '--border-color': '#f1d7e4',
+                '--card-bg': '#fff8fb',
+                '--content-card-bg': '#fff6fa',
+                '--top-nav-bg': '#fffafc',
+                '--profile-icon-bg': '#f5b9d0',
+                '--avatar-bg': '#e7a9c3',
+                '--nav-hover-bg': '#ffedf5',
+                '--back-icon-color': '#f0aac7',
+                '--slider-bg': '#edd1dd',
+                '--slider-checked-bg': '#e28cb1',
+                '--color-blue': '#9aa9f4',
+                '--color-red': '#da8198',
+                '--color-orange': '#efb282',
+                '--color-green': '#99c9aa',
+                '--color-grey': '#ae92a3',
+                '--color-dark-grey': '#6d5563',
+                '--color-teal': '#83cfc3'
+            },
+            sky: {
+                '--sidebar-bg': '#f8fcff',
+                '--main-bg': '#edf7ff',
+                '--accent-blue': '#dcefff',
+                '--text-active': '#5d88dd',
+                '--border-color': '#d9e8f5',
+                '--card-bg': '#fafdff',
+                '--content-card-bg': '#f5fbff',
+                '--top-nav-bg': '#fafdff',
+                '--profile-icon-bg': '#c6ddff',
+                '--avatar-bg': '#91bfff',
+                '--nav-hover-bg': '#edf5ff',
+                '--back-icon-color': '#7eb4f4',
+                '--slider-bg': '#d8e5f5',
+                '--slider-checked-bg': '#7fa8f1',
+                '--color-blue': '#6b9de8',
+                '--color-red': '#e29fb1',
+                '--color-orange': '#e6bf87',
+                '--color-green': '#8fc3b5',
+                '--color-grey': '#95a6ba',
+                '--color-dark-grey': '#576678',
+                '--color-teal': '#79becf'
+            },
+            mint: {
+                '--sidebar-bg': '#f7fffb',
+                '--main-bg': '#eef9f4',
+                '--accent-blue': '#daf3ea',
+                '--text-active': '#53a18f',
+                '--border-color': '#d8ebe2',
+                '--card-bg': '#fbfffd',
+                '--content-card-bg': '#f4fcf8',
+                '--top-nav-bg': '#f9fffc',
+                '--profile-icon-bg': '#bfe7d4',
+                '--avatar-bg': '#90d1bd',
+                '--nav-hover-bg': '#eaf8f1',
+                '--back-icon-color': '#90cfc6',
+                '--slider-bg': '#d6ebe3',
+                '--slider-checked-bg': '#77c5ad',
+                '--color-blue': '#8cb3ef',
+                '--color-red': '#df9dac',
+                '--color-orange': '#e8be82',
+                '--color-green': '#71ba96',
+                '--color-grey': '#96afa6',
+                '--color-dark-grey': '#56736d',
+                '--color-teal': '#63c3ba'
+            },
+            lavender: {
+                '--sidebar-bg': '#fbf9ff',
+                '--main-bg': '#f4f0ff',
+                '--accent-blue': '#e7dcff',
+                '--text-active': '#8c72db',
+                '--border-color': '#e4dbf5',
+                '--card-bg': '#fcfaff',
+                '--content-card-bg': '#f8f5ff',
+                '--top-nav-bg': '#fdfbff',
+                '--profile-icon-bg': '#d8c4f4',
+                '--avatar-bg': '#b6a3ea',
+                '--nav-hover-bg': '#f1ebff',
+                '--back-icon-color': '#b1b1f5',
+                '--slider-bg': '#dfd8f0',
+                '--slider-checked-bg': '#9d8fe6',
+                '--color-blue': '#8da4ee',
+                '--color-red': '#d8a3cb',
+                '--color-orange': '#e5c087',
+                '--color-green': '#91c4a8',
+                '--color-grey': '#a398ba',
+                '--color-dark-grey': '#635a7c',
+                '--color-teal': '#84c7d3'
+            }
+        };
+        let selectedDashTheme = localStorage.getItem(DASH_THEME_KEY) || 'pastel';
+        let pendingDashTheme = selectedDashTheme;
+
+        function applyDashTheme(themeName) {
+            const resolvedThemeName = Object.prototype.hasOwnProperty.call(DASH_THEMES, themeName) ? themeName : 'pastel';
+            const theme = DASH_THEMES[resolvedThemeName];
+            Object.entries(theme).forEach(([variableName, value]) => {
+                document.documentElement.style.setProperty(variableName, value);
+            });
+        }
+
+        function syncDashThemePicker(themeName) {
+            document.querySelectorAll('#ds-theme-picker .theme-swatch').forEach(button => {
+                button.classList.toggle('active', button.dataset.theme === themeName);
+            });
+        }
+
+        const LANDING_PAGE_KEY = 'teacherstack-landing-page';
         const fabContainer = document.getElementById('fab-container');
         const fabOpen = document.getElementById('fab-toggle-open');
         const fabClose = document.getElementById('fab-toggle-close');
-            const landingPageToggle = document.getElementById('landing-page-toggle');
+        const landingPageToggle = document.getElementById('landing-page-toggle');
         if (fabOpen && fabClose && fabContainer) {
             fabOpen.addEventListener('click', () => fabContainer.classList.add('active'));
             fabClose.addEventListener('click', () => fabContainer.classList.remove('active'));
         }
-            if (landingPageToggle) {
-                landingPageToggle.checked = (localStorage.getItem(LANDING_PAGE_KEY) || 'dashboard.html') === 'dashboard.html';
-                landingPageToggle.addEventListener('change', () => {
-                    if (landingPageToggle.checked) localStorage.setItem(LANDING_PAGE_KEY, 'dashboard.html');
-                    else localStorage.removeItem(LANDING_PAGE_KEY);
-                });
-            }
+        if (landingPageToggle) {
+            landingPageToggle.checked = (localStorage.getItem(LANDING_PAGE_KEY) || 'dashboard.html') === 'dashboard.html';
+            landingPageToggle.addEventListener('change', () => {
+                if (landingPageToggle.checked) localStorage.setItem(LANDING_PAGE_KEY, 'dashboard.html');
+                else localStorage.removeItem(LANDING_PAGE_KEY);
+            });
+        }
+        document.querySelectorAll('#ds-theme-picker .theme-swatch').forEach(button => {
+            button.addEventListener('click', () => {
+                pendingDashTheme = button.dataset.theme || 'pastel';
+                applyDashTheme(pendingDashTheme);
+                syncDashThemePicker(pendingDashTheme);
+            });
+        });
         document.querySelectorAll('.fab-text').forEach(btn => {
             btn.addEventListener('click', () => {
                 fabContainer.classList.remove('active');
@@ -253,8 +395,8 @@
             const iconsEl=document.getElementById('sched-icons'); iconsEl.innerHTML='';
             SCHED_ICONS.forEach(ic=>{
                 const btn=document.createElement('button'); btn.type='button'; btn.textContent=ic;
-                btn.style.cssText='font-size:1.3rem;background:'+(ic===selectedIcon?'#ede9fe':'#f5f5f5')+';border:2px solid '+(ic===selectedIcon?'#6366f1':'transparent')+';border-radius:8px;padding:4px 7px;cursor:pointer;';
-                btn.addEventListener('click',()=>{ selectedIcon=ic; iconsEl.querySelectorAll('button').forEach(b=>{b.style.background='#f5f5f5';b.style.borderColor='transparent';}); btn.style.background='#ede9fe'; btn.style.borderColor='#6366f1'; });
+                btn.style.cssText='font-size:1.3rem;background:'+(ic===selectedIcon?'var(--accent-blue)':'var(--top-nav-bg)')+';border:2px solid '+(ic===selectedIcon?'var(--text-active)':'transparent')+';border-radius:8px;padding:4px 7px;cursor:pointer;';
+                btn.addEventListener('click',()=>{ selectedIcon=ic; iconsEl.querySelectorAll('button').forEach(b=>{b.style.background='var(--top-nav-bg)';b.style.borderColor='transparent';}); btn.style.background='var(--accent-blue)'; btn.style.borderColor='var(--text-active)'; });
                 iconsEl.appendChild(btn);
             });
             document.getElementById('sched-modal').style.display='flex';
@@ -279,7 +421,7 @@
             const list = document.getElementById('todo-list');
             if (!list) return;
             list.innerHTML = '';
-            if (todos.length === 0) { list.innerHTML='<p style="color:#999;font-size:0.85rem;text-align:center;padding:10px 0;">No to-dos yet!</p>'; return; }
+            if (todos.length === 0) { list.innerHTML='<p style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:10px 0;">No to-dos yet!</p>'; return; }
             todos.forEach((t,i) => {
                 const item=document.createElement('div');
                 item.className='todo-item'+(t.done?' done':'');
@@ -334,7 +476,7 @@
                 }
             },
             schedule: {
-                title:"Today's Schedule", icon:'fa-calendar-day', headerBg:'#6366f1', headerColor:'#fff', width:300,
+                title:"Today's Schedule", icon:'fa-calendar-day', headerBg:'var(--text-active)', headerColor:'#fff', width:300,
                 render(body) {
                     body.style.cssText='padding:10px;display:flex;flex-direction:column;gap:8px;';
                     body.innerHTML=`<div style="display:flex;justify-content:flex-end;"><button id="sched-add-btn" class="sched-add-btn"><i class="fa-solid fa-plus"></i> Add</button></div><div id="schedule-list" class="schedule-list" style="max-height:300px;overflow-y:auto;"></div>`;
@@ -344,7 +486,7 @@
                 }, onClose(el){clearInterval(el._schedIv);}
             },
             upnext: {
-                title:'Up Next', icon:'fa-play', headerBg:'#4f46e5', headerColor:'#fff', width:260,
+                title:'Up Next', icon:'fa-play', headerBg:'var(--avatar-bg)', headerColor:'#fff', width:260,
                 render(body) {
                     body.style.cssText='padding:12px;min-height:80px;';
                     body.innerHTML=`<div id="up-next-content" class="up-next-content"></div>`;
@@ -353,7 +495,7 @@
                 }, onClose(el){clearInterval(el._upIv);}
             },
             notes: {
-                title:'Notes', icon:'fa-note-sticky', headerBg:'#b3b1bd', headerColor:'#333', width:300,
+                title:'Notes', icon:'fa-note-sticky', headerBg:'var(--accent-blue)', headerColor:'var(--text-active)', width:300,
                 render(body) {
                     body.style.cssText='padding:8px;';
                     body.innerHTML=`<textarea id="dashboard-notes" placeholder="Click to add notes..." style="width:100%;height:160px;border:none;outline:none;resize:vertical;font-family:inherit;font-size:0.88rem;line-height:1.5;background:transparent;box-sizing:border-box;"></textarea>`;
@@ -366,7 +508,7 @@
                 title:'To-Dos', icon:'fa-list-ul', width:280,
                 render(body) {
                     body.style.cssText='padding:10px;display:flex;flex-direction:column;gap:8px;';
-                    body.innerHTML=`<div id="todo-list" style="display:flex;flex-direction:column;gap:5px;max-height:240px;overflow-y:auto;"></div><div style="display:flex;gap:6px;"><input id="todo-input" type="text" placeholder="Add to-do..." style="flex:1;padding:7px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.85rem;outline:none;"><button id="todo-add-btn" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:7px 12px;cursor:pointer;"><i class="fa-solid fa-plus"></i></button></div><button id="todo-clear-done" style="background:none;border:1.5px solid #e0e0e0;border-radius:8px;padding:6px;font-size:0.78rem;color:#aaa;cursor:pointer;">Clear completed</button>`;
+                    body.innerHTML=`<div id="todo-list" style="display:flex;flex-direction:column;gap:5px;max-height:240px;overflow-y:auto;"></div><div style="display:flex;gap:6px;"><input id="todo-input" type="text" placeholder="Add to-do..." style="flex:1;padding:7px 10px;border:1.5px solid var(--border-color);border-radius:8px;font-family:inherit;font-size:0.85rem;outline:none;background:rgba(255,255,255,0.88);"><button id="todo-add-btn" style="background:var(--text-active);color:#fff;border:none;border-radius:8px;padding:7px 12px;cursor:pointer;"><i class="fa-solid fa-plus"></i></button></div><button id="todo-clear-done" style="background:none;border:1.5px solid var(--border-color);border-radius:8px;padding:6px;font-size:0.78rem;color:var(--text-muted);cursor:pointer;">Clear completed</button>`;
                     renderTodos();
                     document.getElementById('todo-add-btn').addEventListener('click',()=>{ const inp=document.getElementById('todo-input'),text=inp.value.trim(); if(!text)return; todos.push({text,done:false}); saveTodos(); renderTodos(); inp.value=''; inp.focus(); });
                     document.getElementById('todo-input').addEventListener('keypress',e=>{ if(e.key==='Enter')document.getElementById('todo-add-btn').click(); });
@@ -378,22 +520,22 @@
                 render(body) {
                     body.style.cssText='padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;';
                     const btns=[
-                        {label:'Boards',icon:'fa-chalkboard',color:'#4a90e2',action:`window.location.href='whiteboard.html'`},
-                        {label:'Stations',icon:'fa-arrows-rotate',color:'#a83836',action:`openStationsModal()`},
-                        {label:'Timer',icon:'fa-stopwatch',color:'#d48e37',action:`window.location.href='whiteboard.html#timer'`},
-                        {label:'Random',icon:'fa-shuffle',color:'#388e3c',action:`window.location.href='whiteboard.html#random'`},
-                        {label:'Log Behavior',icon:'fa-clipboard-user',color:'#6366f1',action:`openLogBehavior(null)`},
-                        {label:'Student Note',icon:'fa-pen-nib',color:'#d97706',action:`openStudentNote(null)`},
+                        {label:'Boards',icon:'fa-chalkboard',color:'var(--color-blue)',action:`window.location.href='whiteboard.html'`},
+                        {label:'Stations',icon:'fa-arrows-rotate',color:'var(--color-red)',action:`openStationsModal()`},
+                        {label:'Timer',icon:'fa-stopwatch',color:'var(--color-orange)',action:`window.location.href='whiteboard.html#timer'`},
+                        {label:'Random',icon:'fa-shuffle',color:'var(--color-green)',action:`window.location.href='whiteboard.html#random'`},
+                        {label:'Log Behavior',icon:'fa-clipboard-user',color:'var(--text-active)',action:`openLogBehavior(null)`},
+                        {label:'Student Note',icon:'fa-pen-nib',color:'var(--color-orange)',action:`openStudentNote(null)`},
                     ];
-                    body.innerHTML=btns.map(b=>`<button onclick="${b.action}" style="background:${b.color}18;border:1.5px solid ${b.color}40;border-radius:10px;padding:10px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;font-family:inherit;"><i class="fa-solid ${b.icon}" style="color:${b.color};font-size:1.2rem;"></i><span style="font-size:0.72rem;font-weight:600;color:#444;">${b.label}</span></button>`).join('');
+                    body.innerHTML=btns.map(b=>`<button onclick="${b.action}" style="background:color-mix(in srgb, ${b.color} 16%, white);border:1.5px solid color-mix(in srgb, ${b.color} 34%, white);border-radius:10px;padding:10px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;font-family:inherit;"><i class="fa-solid ${b.icon}" style="color:${b.color};font-size:1.2rem;"></i><span style="font-size:0.72rem;font-weight:600;color:var(--text-main);">${b.label}</span></button>`).join('');
                 }
             },
             checkin: {
-                title:'Check-In', icon:'fa-face-smile', headerBg:'#fce4ec', headerColor:'#d81b60', width:300,
+                title:'Check-In', icon:'fa-face-smile', headerBg:'var(--accent-blue)', headerColor:'var(--text-active)', width:300,
                 render(body) {
                     const emojis=['😊','😎','🤩','😴','😤','😢','🤔','😁','🥱','😰'], labels=['Happy','Cool','Excited','Tired','Frustrated','Sad','Thinking','Great','Bored','Anxious'];
                     body.style.cssText='padding:12px;';
-                    body.innerHTML=`<div style="font-size:0.82rem;color:#888;margin-bottom:10px;text-align:center;">How are you feeling today, Ms. Young?</div><div class="checkin-emojis">${emojis.map((e,i)=>`<button class="checkin-emoji" title="${labels[i]}" onclick="checkinPick('${labels[i]}',this)">${e}</button>`).join('')}</div><div id="checkin-result" style="text-align:center;font-size:0.85rem;color:#6366f1;min-height:20px;margin-top:8px;"></div>`;
+                    body.innerHTML=`<div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:10px;text-align:center;">How are you feeling today, Ms. Young?</div><div class="checkin-emojis">${emojis.map((e,i)=>`<button class="checkin-emoji" title="${labels[i]}" onclick="checkinPick('${labels[i]}',this)">${e}</button>`).join('')}</div><div id="checkin-result" style="text-align:center;font-size:0.85rem;color:var(--text-active);min-height:20px;margin-top:8px;"></div>`;
                     const saved=JSON.parse(localStorage.getItem('dashboard-checkin')||'null');
                     if (saved&&saved.date===new Date().toDateString()) { const r=document.getElementById('checkin-result'); if(r)r.textContent=`Feeling ${saved.label} today 🌟`; }
                 }
@@ -478,113 +620,138 @@
 
     <!-- Schedule Add/Edit Modal -->
     <div id="sched-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)closeSchedModal()">
-        <div style="background:#fff;border-radius:16px;padding:24px;width:360px;max-width:95vw;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+                <div style="background:var(--card-bg);border-radius:16px;padding:24px;width:360px;max-width:95vw;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 40px rgba(0,0,0,0.2);">
             <div style="display:flex;align-items:center;justify-content:space-between;">
-                <span style="font-size:1.1rem;font-weight:600;"><i class="fa-solid fa-calendar-day" style="color:#6366f1;margin-right:8px;"></i><span id="sched-modal-title">Add Schedule Item</span></span>
-                <button onclick="closeSchedModal()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#999;">✕</button>
+                                <span style="font-size:1.1rem;font-weight:600;"><i class="fa-solid fa-calendar-day" style="color:var(--text-active);margin-right:8px;"></i><span id="sched-modal-title">Add Schedule Item</span></span>
+                                <button onclick="closeSchedModal()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted);">✕</button>
             </div>
             <div style="display:flex;flex-direction:column;gap:10px;">
-                <input id="sched-title" type="text" placeholder="Activity name (e.g. Morning Meeting)" style="padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;width:100%;box-sizing:border-box;">
+                                <input id="sched-title" type="text" placeholder="Activity name (e.g. Morning Meeting)" style="padding:10px 12px;border:1.5px solid var(--border-color);border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;width:100%;box-sizing:border-box;background:rgba(255,255,255,0.88);">
                 <div style="display:flex;gap:10px;">
-                    <div style="flex:1;"><label style="font-size:0.78rem;color:#999;display:block;margin-bottom:4px;">Start time</label><input id="sched-start" type="time" style="padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;width:100%;box-sizing:border-box;"></div>
-                    <div style="flex:1;"><label style="font-size:0.78rem;color:#999;display:block;margin-bottom:4px;">End time</label><input id="sched-end" type="time" style="padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;width:100%;box-sizing:border-box;"></div>
+                                        <div style="flex:1;"><label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:4px;">Start time</label><input id="sched-start" type="time" style="padding:10px 12px;border:1.5px solid var(--border-color);border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;width:100%;box-sizing:border-box;background:rgba(255,255,255,0.88);"></div>
+                                        <div style="flex:1;"><label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:4px;">End time</label><input id="sched-end" type="time" style="padding:10px 12px;border:1.5px solid var(--border-color);border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;width:100%;box-sizing:border-box;background:rgba(255,255,255,0.88);"></div>
                 </div>
-                <div><label style="font-size:0.78rem;color:#999;display:block;margin-bottom:6px;">Icon</label><div id="sched-icons" style="display:flex;flex-wrap:wrap;gap:6px;"></div></div>
+                                <div><label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:6px;">Icon</label><div id="sched-icons" style="display:flex;flex-wrap:wrap;gap:6px;"></div></div>
             </div>
             <div style="display:flex;gap:8px;justify-content:flex-end;">
                 <button id="sched-delete-btn" onclick="deleteSchedItem()" style="display:none;background:#fee2e2;color:#ef4444;border:none;border-radius:10px;padding:10px 16px;cursor:pointer;font-size:0.9rem;">Delete</button>
-                <button onclick="saveSchedItem()" style="background:#6366f1;color:#fff;border:none;border-radius:10px;padding:10px 20px;cursor:pointer;font-size:0.9rem;font-weight:600;">Save</button>
+                                <button onclick="saveSchedItem()" style="background:var(--text-active);color:#fff;border:none;border-radius:10px;padding:10px 20px;cursor:pointer;font-size:0.9rem;font-weight:600;">Save</button>
             </div>
         </div>
     </div>
 
     <style>
-        .todo-item { display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:#f8f9fa;transition:background 0.2s; }
-        .todo-item.done .todo-text { text-decoration:line-through;color:#aaa; }
-        .todo-check { background:none;border:none;cursor:pointer;color:#6366f1;font-size:1.1rem;flex-shrink:0; }
-        .todo-delete { background:none;border:none;cursor:pointer;color:#ccc;font-size:0.85rem;margin-left:auto;flex-shrink:0; }
+                .todo-item { display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:var(--top-nav-bg);transition:background 0.2s; }
+                .todo-item.done .todo-text { text-decoration:line-through;color:var(--text-muted); }
+                .todo-check { background:none;border:none;cursor:pointer;color:var(--text-active);font-size:1.1rem;flex-shrink:0; }
+                .todo-delete { background:none;border:none;cursor:pointer;color:var(--color-grey);font-size:0.85rem;margin-left:auto;flex-shrink:0; }
         .todo-delete:hover { color:#ef4444; }
         .todo-text { flex:1;font-size:0.9rem; }
         .checkin-header { font-weight:600;font-size:0.95rem;margin-bottom:14px; }
         .checkin-emojis { display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:10px; }
-        .checkin-emoji { background:#f5f5f5;border:2px solid transparent;border-radius:10px;font-size:1.5rem;padding:6px 10px;cursor:pointer;transition:all 0.15s; }
-        .checkin-emoji:hover, .checkin-emoji.selected { border-color:#6366f1;background:#ede9fe; }
+                .checkin-emoji { background:var(--top-nav-bg);border:2px solid transparent;border-radius:10px;font-size:1.5rem;padding:6px 10px;cursor:pointer;transition:all 0.15s; }
+                .checkin-emoji:hover, .checkin-emoji.selected { border-color:var(--text-active);background:var(--accent-blue); }
 
         /* Schedule styles */
         .schedule-list { display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1; }
-        .sched-item { display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#f8f9fa;cursor:pointer;transition:background 0.15s;position:relative; }
-        .sched-item:hover { background:#ede9fe; }
-        .sched-item.active { background:#ede9fe;border-left:4px solid #6366f1; }
+                .sched-item { display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--top-nav-bg);cursor:pointer;transition:background 0.15s;position:relative; }
+                .sched-item:hover { background:var(--accent-blue); }
+                .sched-item.active { background:var(--accent-blue);border-left:4px solid var(--text-active); }
         .sched-item.done { opacity:0.45; }
         .sched-icon { font-size:1.3rem;flex-shrink:0; }
         .sched-info { flex:1;min-width:0; }
-        .sched-name { font-size:0.88rem;font-weight:600;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-        .sched-time { font-size:0.76rem;color:#999;margin-top:1px; }
-        .sched-progress { height:3px;background:#e0e0e0;border-radius:2px;margin-top:5px; }
-        .sched-progress-fill { height:100%;background:#6366f1;border-radius:2px;transition:width 0.5s; }
-        .sched-add-btn { background:#6366f1;color:#fff;border:none;border-radius:8px;padding:5px 12px;font-size:0.8rem;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0; }
+                .sched-name { font-size:0.88rem;font-weight:600;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+                .sched-time { font-size:0.76rem;color:var(--text-muted);margin-top:1px; }
+                .sched-progress { height:3px;background:var(--border-color);border-radius:2px;margin-top:5px; }
+                .sched-progress-fill { height:100%;background:var(--text-active);border-radius:2px;transition:width 0.5s; }
+                .sched-add-btn { background:var(--text-active);color:#fff;border:none;border-radius:8px;padding:5px 12px;font-size:0.8rem;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0; }
         .sched-empty { flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#bbb;gap:10px; }
         .sched-empty i { font-size:2.5rem;opacity:0.4; }
         .sched-empty p { font-size:0.85rem; }
         .up-next-content { flex:1;display:flex;flex-direction:column;justify-content:center; }
-        .up-next-item { padding:20px;border-radius:14px;background:#ede9fe;display:flex;flex-direction:column;gap:8px; }
+                .up-next-item { padding:20px;border-radius:14px;background:var(--accent-blue);display:flex;flex-direction:column;gap:8px; }
         .up-next-icon { font-size:2.2rem; }
-        .up-next-name { font-size:1.2rem;font-weight:700;color:#333; }
-        .up-next-time { font-size:0.85rem;color:#6366f1;font-weight:500; }
-        .up-next-bar { height:6px;background:#d8d4f7;border-radius:3px;margin-top:4px; }
-        .up-next-bar-fill { height:100%;background:#6366f1;border-radius:3px;transition:width 1s; }
+                .up-next-name { font-size:1.2rem;font-weight:700;color:var(--text-main); }
+                .up-next-time { font-size:0.85rem;color:var(--text-active);font-weight:500; }
+                .up-next-bar { height:6px;background:var(--border-color);border-radius:3px;margin-top:4px; }
+                .up-next-bar-fill { height:100%;background:var(--text-active);border-radius:3px;transition:width 1s; }
         .up-next-empty { flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#bbb;gap:10px; }
         .up-next-empty i { font-size:2.5rem;opacity:0.4; }
         .up-next-empty p { font-size:0.85rem; }
         /* ===== Widget Picker Bar ===== */
-        .widget-picker { display:flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(255,255,255,0.88);border-bottom:1px solid #e0e0e0;overflow-x:auto;flex-shrink:0;backdrop-filter:blur(4px); }
+                .widget-picker { display:flex;align-items:center;gap:6px;padding:8px 16px;background:color-mix(in srgb, var(--top-nav-bg) 88%, white 12%);border-bottom:1px solid var(--border-color);overflow-x:auto;flex-shrink:0;backdrop-filter:blur(4px); }
         .widget-picker::-webkit-scrollbar { height:3px; }
-        .widget-picker::-webkit-scrollbar-thumb { background:#d0d0d0;border-radius:2px; }
-        .picker-label { font-size:0.75rem;font-weight:700;color:#999;white-space:nowrap;flex-shrink:0;display:flex;align-items:center;gap:5px;padding-right:4px;border-right:1px solid #e0e0e0;margin-right:2px; }
-        .pick-btn { display:flex;align-items:center;gap:5px;padding:5px 13px;border-radius:8px;border:1.5px solid #e0e0e0;background:#fff;font-family:inherit;font-size:0.78rem;font-weight:600;color:#555;cursor:pointer;white-space:nowrap;transition:all 0.15s;flex-shrink:0; }
-        .pick-btn:hover { background:#f4f4f8;border-color:#c0c0c8; }
-        .pick-btn.active { background:#ede9fe;border-color:#6366f1;color:#6366f1; }
+                .widget-picker::-webkit-scrollbar-thumb { background:var(--border-color);border-radius:2px; }
+                .picker-label { font-size:0.75rem;font-weight:700;color:var(--text-muted);white-space:nowrap;flex-shrink:0;display:flex;align-items:center;gap:5px;padding-right:4px;border-right:1px solid var(--border-color);margin-right:2px; }
+                .pick-btn { display:flex;align-items:center;gap:5px;padding:5px 13px;border-radius:8px;border:1.5px solid var(--border-color);background:rgba(255,255,255,0.92);font-family:inherit;font-size:0.78rem;font-weight:600;color:var(--text-main);cursor:pointer;white-space:nowrap;transition:all 0.15s;flex-shrink:0; }
+                .pick-btn:hover { background:var(--top-nav-bg);border-color:var(--profile-icon-bg); }
+                .pick-btn.active { background:var(--accent-blue);border-color:var(--text-active);color:var(--text-active); }
         /* ===== Widget Canvas ===== */
         .widget-canvas { position:relative;flex:1;overflow:hidden;background:var(--main-bg,#f0f0f5); }
         /* ===== Individual Widgets ===== */
-        .dash-widget { position:absolute;background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.14);z-index:10;display:flex;flex-direction:column;overflow:hidden;transition:box-shadow 0.15s; }
+                .dash-widget { position:absolute;background:var(--card-bg);border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.14);z-index:10;display:flex;flex-direction:column;overflow:hidden;transition:box-shadow 0.15s; }
         .dash-widget:hover { box-shadow:0 8px 32px rgba(0,0,0,0.18); }
         .wid-header { display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px;cursor:grab;user-select:none;border-bottom:1px solid rgba(0,0,0,0.07);gap:8px;flex-shrink:0; }
         .wid-header:active { cursor:grabbing; }
-        .wid-title { font-size:0.82rem;font-weight:700;color:#333;display:flex;align-items:center;gap:7px;flex:1;min-width:0; }
-        .wid-close { background:none;border:none;cursor:pointer;color:#bbb;font-size:1rem;line-height:1;padding:2px 4px;flex-shrink:0;border-radius:4px;transition:color 0.1s; }
+                .wid-title { font-size:0.82rem;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:7px;flex:1;min-width:0; }
+                .wid-close { background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:1rem;line-height:1;padding:2px 4px;flex-shrink:0;border-radius:4px;transition:color 0.1s; }
         .wid-close:hover { color:#ef4444; }
         .wid-body { overflow-y:auto;flex:1; }
-        .wid-body::-webkit-scrollbar { width:4px; }
-        .wid-body::-webkit-scrollbar-thumb { background:#d0d0d0;border-radius:2px; }
+                .wid-body::-webkit-scrollbar { width:4px; }
+                .wid-body::-webkit-scrollbar-thumb { background:var(--border-color);border-radius:2px; }
     </style>
 
 <!-- ===== Edit Dashboard Settings Modal ===== -->
 <div id="ds-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center;" onclick="if(event.target===this)closeDashSettings()">
-  <div style="background:#fff;border-radius:18px;padding:24px;width:400px;max-width:96vw;display:flex;flex-direction:column;gap:14px;box-shadow:0 24px 48px rgba(0,0,0,0.22);">
+    <div style="background:var(--card-bg);border-radius:18px;padding:24px;width:400px;max-width:96vw;display:flex;flex-direction:column;gap:14px;box-shadow:0 24px 48px rgba(0,0,0,0.22);">
     <div style="display:flex;align-items:center;justify-content:space-between;">
-      <span style="font-size:1.05rem;font-weight:700;"><i class="fa-solid fa-pencil" style="color:#6366f1;margin-right:8px;"></i>Edit Dashboard</span>
-      <button onclick="closeDashSettings()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#aaa;">✕</button>
+            <span style="font-size:1.05rem;font-weight:700;"><i class="fa-solid fa-pencil" style="color:var(--text-active);margin-right:8px;"></i>Edit Dashboard</span>
+            <button onclick="closeDashSettings()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text-muted);">✕</button>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px;">
       <div>
-        <label style="font-size:0.78rem;color:#888;display:block;margin-bottom:4px;">Class Name</label>
-        <input id="ds-class-name" type="text" placeholder="e.g. Regulation Station" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;">
+                <label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:4px;">Class Name</label>
+                <input id="ds-class-name" type="text" placeholder="e.g. Regulation Station" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid var(--border-color);border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;background:rgba(255,255,255,0.88);">
       </div>
       <div>
-        <label style="font-size:0.78rem;color:#888;display:block;margin-bottom:4px;">Grade</label>
-        <input id="ds-grade" type="text" placeholder="e.g. Grade K" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;">
+                <label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:4px;">Grade</label>
+                <input id="ds-grade" type="text" placeholder="e.g. Grade K" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid var(--border-color);border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;background:rgba(255,255,255,0.88);">
       </div>
       <div>
-        <label style="font-size:0.78rem;color:#888;display:block;margin-bottom:4px;">Teacher Name</label>
-        <input id="ds-teacher" type="text" placeholder="e.g. Ms. Young" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;">
+                <label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:4px;">Teacher Name</label>
+                <input id="ds-teacher" type="text" placeholder="e.g. Ms. Young" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid var(--border-color);border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;background:rgba(255,255,255,0.88);">
       </div>
       <div>
-        <label style="font-size:0.78rem;color:#888;display:block;margin-bottom:4px;">Email</label>
-        <input id="ds-email" type="email" placeholder="e.g. kenzi@gmail.com" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;">
+                <label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:4px;">Email</label>
+                <input id="ds-email" type="email" placeholder="e.g. kenzi@gmail.com" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid var(--border-color);border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;background:rgba(255,255,255,0.88);">
       </div>
+            <div>
+                                <label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:6px;">Color Theme</label>
+                <div class="settings-theme-grid" id="ds-theme-picker">
+                    <button type="button" class="theme-swatch" data-theme="pastel">
+                        <span class="theme-swatch-preview theme-preview-pastel"></span>
+                        <span class="theme-swatch-label">Pastel Mix</span>
+                    </button>
+                    <button type="button" class="theme-swatch" data-theme="blush">
+                        <span class="theme-swatch-preview theme-preview-blush"></span>
+                        <span class="theme-swatch-label">Blush</span>
+                    </button>
+                    <button type="button" class="theme-swatch" data-theme="sky">
+                        <span class="theme-swatch-preview theme-preview-sky"></span>
+                        <span class="theme-swatch-label">Sky</span>
+                    </button>
+                    <button type="button" class="theme-swatch" data-theme="mint">
+                        <span class="theme-swatch-preview theme-preview-mint"></span>
+                        <span class="theme-swatch-label">Mint</span>
+                    </button>
+                    <button type="button" class="theme-swatch" data-theme="lavender">
+                        <span class="theme-swatch-preview theme-preview-lavender"></span>
+                        <span class="theme-swatch-label">Lavender</span>
+                    </button>
+                </div>
+            </div>
     </div>
-    <button onclick="saveDashSettings()" style="background:#6366f1;color:#fff;border:none;border-radius:10px;padding:11px;font-size:0.95rem;font-weight:600;cursor:pointer;">Save Changes</button>
+        <button onclick="saveDashSettings()" style="background:var(--text-active);color:#fff;border:none;border-radius:10px;padding:11px;font-size:0.95rem;font-weight:600;cursor:pointer;">Save Changes</button>
   </div>
 </div>
 
@@ -731,13 +898,19 @@
         const gd = localStorage.getItem('dash-grade') || 'Grade K';
         const te = localStorage.getItem('dash-teacher') || 'Kenzi Young';
         const em = localStorage.getItem('dash-email') || 'kenzi@gmail.com';
+        pendingDashTheme = selectedDashTheme;
         document.getElementById('ds-class-name').value = cn;
         document.getElementById('ds-grade').value = gd;
         document.getElementById('ds-teacher').value = te;
         document.getElementById('ds-email').value = em;
+        syncDashThemePicker(pendingDashTheme);
         document.getElementById('ds-modal').style.display = 'flex';
     }
-    function closeDashSettings() { document.getElementById('ds-modal').style.display = 'none'; }
+    function closeDashSettings(saveTheme = false) {
+        if (!saveTheme) applyDashTheme(selectedDashTheme);
+        pendingDashTheme = selectedDashTheme;
+        document.getElementById('ds-modal').style.display = 'none';
+    }
     function saveDashSettings() {
         const cn = document.getElementById('ds-class-name').value.trim();
         const gd = document.getElementById('ds-grade').value.trim();
@@ -747,12 +920,14 @@
         if (gd) localStorage.setItem('dash-grade', gd);
         if (te) localStorage.setItem('dash-teacher', te);
         if (em) localStorage.setItem('dash-email', em);
+        selectedDashTheme = pendingDashTheme;
+        localStorage.setItem(DASH_THEME_KEY, selectedDashTheme);
         // Apply live
         document.querySelectorAll('.class-name').forEach(el => el.textContent = cn || el.textContent);
         document.querySelectorAll('.grade').forEach(el => el.textContent = gd || el.textContent);
         document.querySelectorAll('.user-name').forEach(el => el.textContent = te || el.textContent);
         document.querySelectorAll('.user-email').forEach(el => el.textContent = em || el.textContent);
-        closeDashSettings();
+        closeDashSettings(true);
     }
     // Apply saved settings on load
     (function applyDashSettings() {
@@ -760,6 +935,7 @@
         const gd = localStorage.getItem('dash-grade');
         const te = localStorage.getItem('dash-teacher');
         const em = localStorage.getItem('dash-email');
+        applyDashTheme(selectedDashTheme);
         if (cn) document.querySelectorAll('.class-name').forEach(el => el.textContent = cn);
         if (gd) document.querySelectorAll('.grade').forEach(el => el.textContent = gd);
         if (te) document.querySelectorAll('.user-name').forEach(el => el.textContent = te);
