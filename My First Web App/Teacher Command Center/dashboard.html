@@ -77,7 +77,7 @@
                 <div class="nav-right">
                     <div class="landing-toggle">
                         <label class="switch">
-                            <input type="checkbox">
+                            <input type="checkbox" id="landing-page-toggle">
                             <span class="slider round"></span>
                         </label>
                         <span>Make this my landing page</span>
@@ -117,13 +117,22 @@
 
     <script>
         // ===== FAB TOGGLE =====
+            const LANDING_PAGE_KEY = 'teacherstack-landing-page';
         const fabContainer = document.getElementById('fab-container');
         const fabOpen = document.getElementById('fab-toggle-open');
         const fabClose = document.getElementById('fab-toggle-close');
+            const landingPageToggle = document.getElementById('landing-page-toggle');
         if (fabOpen && fabClose && fabContainer) {
             fabOpen.addEventListener('click', () => fabContainer.classList.add('active'));
             fabClose.addEventListener('click', () => fabContainer.classList.remove('active'));
         }
+            if (landingPageToggle) {
+                landingPageToggle.checked = (localStorage.getItem(LANDING_PAGE_KEY) || 'dashboard.html') === 'dashboard.html';
+                landingPageToggle.addEventListener('change', () => {
+                    if (landingPageToggle.checked) localStorage.setItem(LANDING_PAGE_KEY, 'dashboard.html');
+                    else localStorage.removeItem(LANDING_PAGE_KEY);
+                });
+            }
         document.querySelectorAll('.fab-text').forEach(btn => {
             btn.addEventListener('click', () => {
                 fabContainer.classList.remove('active');
@@ -453,10 +462,11 @@
         });
 
         document.addEventListener('DOMContentLoaded', () => {
-            const saved = JSON.parse(localStorage.getItem('dash-widget-pos') || '{}');
+            const savedLayout = localStorage.getItem('dash-widget-pos');
+            const saved = JSON.parse(savedLayout || '{}');
             const open = Object.keys(saved).filter(w => saved[w].open !== false && WIDGET_DEFS[w]);
             setTimeout(() => {
-                if (open.length === 0) {
+                if (!savedLayout) {
                     spawnWidget('clock'); spawnWidget('schedule'); spawnWidget('notes'); spawnWidget('actions');
                 } else {
                     open.forEach(wid => spawnWidget(wid));
@@ -733,7 +743,7 @@
         const gd = document.getElementById('ds-grade').value.trim();
         const te = document.getElementById('ds-teacher').value.trim();
         const em = document.getElementById('ds-email').value.trim();
-        if (cn) { localStorage.setItem('dash-class-name','dash-class-name'); localStorage.setItem('dash-class-name', cn); }
+        if (cn) localStorage.setItem('dash-class-name', cn);
         if (gd) localStorage.setItem('dash-grade', gd);
         if (te) localStorage.setItem('dash-teacher', te);
         if (em) localStorage.setItem('dash-email', em);
@@ -760,12 +770,12 @@
     const STATION_GROUPS = ['Group 1','Group 2','Group 3','Group 4','Group 5','Group 6'];
     let stationGroups = JSON.parse(localStorage.getItem('station-groups') || 'null');
     if (!stationGroups) {
-        if (cn) localStorage.setItem('dash-class-name', cn);
         const names = getDashboardStudents().map(s => s.name);
         stationGroups = STATION_GROUPS.map((label, i) => ({
             label,
             members: names.filter((_, ni) => ni % STATION_GROUPS.length === i)
         }));
+        localStorage.setItem('station-groups', JSON.stringify(stationGroups));
     }
     function openStationsModal() {
         renderStations();
