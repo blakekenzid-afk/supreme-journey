@@ -2052,7 +2052,7 @@ document.addEventListener('DOMContentLoaded', () => {
             render(body, el) {
                 const names = getStudentNames();
                 const state = {};
-                names.forEach(n => state[n] = 'present');
+                names.forEach(n => state[n] = 'none');
                 const syncState = () => {
                     el._cwState = {
                         attendance: { ...state }
@@ -2075,14 +2075,18 @@ document.addEventListener('DOMContentLoaded', () => {
                             btn.style.background = '#fee2e2';
                             btn.style.borderColor = '#ef4444';
                             btn.style.color = '#b91c1c';
-                        } else {
+                        } else if (status === 'late') {
                             btn.style.background = '#fef9c3';
                             btn.style.borderColor = '#f59e0b';
                             btn.style.color = '#92400e';
+                        } else {
+                            btn.style.background = '#fff';
+                            btn.style.borderColor = '#d1d5db';
+                            btn.style.color = '#6b7280';
                         }
                         btn.textContent = name;
                         btn.addEventListener('click', () => {
-                            const cycle = {present:'absent',absent:'late',late:'present'};
+                            const cycle = { none: 'present', present: 'absent', absent: 'late', late: 'none' };
                             state[name] = cycle[state[name]];
                             syncState();
                             render();
@@ -2091,7 +2095,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     const hint = document.createElement('div');
                     hint.style.cssText = 'font-size:0.72rem;color:#888;margin-top:6px;text-align:center;';
-                    hint.textContent = 'Click to cycle: present → absent → late';
+                    hint.textContent = 'Click to cycle: none → present → absent → late';
                     body.append(list, hint);
                 };
                 el._cwApplyState = savedState => {
@@ -2099,7 +2103,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!attendance) return;
                     names.forEach(name => {
                         const saved = attendance[name];
-                        state[name] = (saved === 'absent' || saved === 'late' || saved === 'present') ? saved : 'present';
+                        state[name] = (saved === 'none' || saved === 'absent' || saved === 'late' || saved === 'present') ? saved : 'none';
                     });
                     syncState();
                     render();
