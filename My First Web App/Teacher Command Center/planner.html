@@ -239,6 +239,9 @@
         const nextMonday = getWeekMonday(weekOffset);
         const nextWeekKey = weekKey(nextMonday);
         if (!force && nextWeekKey === weekKey(mondayDate)) return false;
+        if (document.getElementById('entry-modal').style.display === 'flex') {
+            closeEntryModal();
+        }
         mondayDate = nextMonday;
         plannerData = loadWeek(mondayDate);
         buildGrid();
@@ -356,7 +359,11 @@
         setTimeout(() => document.getElementById('entry-title').focus(), 50);
     }
 
-    function closeEntryModal() { document.getElementById('entry-modal').style.display = 'none'; editKey = null; }
+    function closeEntryModal() {
+        document.getElementById('entry-modal').style.display = 'none';
+        editKey = null;
+        pendingCell = null;
+    }
 
     function saveEntry() {
         syncPlannerSession();
