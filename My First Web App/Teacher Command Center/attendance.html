@@ -185,21 +185,19 @@
         return typeof getContrastColor === 'function' ? getContrastColor(color) : '#ffffff';
     }
 
-    // Today's date key e.g. "2026-04-21"
-    function todayKey() {
-        return formatLocalDateKey(new Date());
-    }
+    const activeAttendanceDate = new Date();
+    const activeAttendanceKey = formatLocalDateKey(activeAttendanceDate);
 
-    // Load saved state for today
-    let attState = JSON.parse(localStorage.getItem('att-' + todayKey()) || '{}');
+    // Load saved state for the date this page session was opened.
+    let attState = JSON.parse(localStorage.getItem('att-' + activeAttendanceKey) || '{}');
     const studentList = getStudentList();
 
     function saveState() {
-        localStorage.setItem('att-' + todayKey(), JSON.stringify(attState));
+        localStorage.setItem('att-' + activeAttendanceKey, JSON.stringify(attState));
     }
 
     // Set today label
-    document.getElementById('att-today-label').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    document.getElementById('att-today-label').textContent = activeAttendanceDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
     // Render grid
     const grid = document.getElementById('att-student-grid');
@@ -271,11 +269,10 @@
     }
 
     function saveAttendance() {
-        const key = 'att-history-' + todayKey();
-        const record = { date: todayKey(), state: { ...attState }, saved: new Date().toISOString() };
+        const record = { date: activeAttendanceKey, state: { ...attState }, saved: new Date().toISOString() };
         // Keep rolling history (last 60 days)
         let history = JSON.parse(localStorage.getItem('att-history') || '[]');
-        history = history.filter(r => r.date !== todayKey());
+        history = history.filter(r => r.date !== activeAttendanceKey);
         history.unshift(record);
         if (history.length > 60) history = history.slice(0, 60);
         localStorage.setItem('att-history', JSON.stringify(history));

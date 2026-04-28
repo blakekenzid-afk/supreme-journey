@@ -234,7 +234,10 @@
             renderStudentActivity(s.name);
             document.getElementById('student-modal').style.display = 'flex';
         }
-        function closeStudentModal() { document.getElementById('student-modal').style.display = 'none'; }
+        function closeStudentModal() {
+            currentStudent = null;
+            document.getElementById('student-modal').style.display = 'none';
+        }
 
         function renderStudentActivity(name) {
             const log = getStudentLog(name).slice().reverse();
@@ -287,11 +290,22 @@
         // ===== Log Behavior modal =====
         function populateStudentSelect(selectId, preselect) {
             const sel = document.getElementById(selectId);
-            sel.innerHTML = getStudentList().map(s => `<option value="${s.name}" ${s.name===preselect?'selected':''}>${s.name}</option>`).join('');
+            const list = getStudentList();
+            if (list.length === 0) {
+                sel.innerHTML = '<option value="">Student roster unavailable</option>';
+                sel.disabled = true;
+                return false;
+            }
+            sel.disabled = false;
+            sel.innerHTML = list.map(s => `<option value="${s.name}" ${s.name===preselect?'selected':''}>${s.name}</option>`).join('');
+            return true;
         }
         function openLogBehavior(s) {
             selectedBehavior = null;
-            populateStudentSelect('beh-student', s ? s.name : null);
+            if (!populateStudentSelect('beh-student', s ? s.name : null)) {
+                alert('Student roster unavailable.');
+                return;
+            }
             document.getElementById('beh-note').value = '';
             const opts = document.getElementById('beh-options');
             opts.innerHTML = [
@@ -309,10 +323,14 @@
             });
             document.getElementById('behavior-modal').style.display = 'flex';
         }
-        function closeBehaviorModal() { document.getElementById('behavior-modal').style.display = 'none'; }
+        function closeBehaviorModal() {
+            selectedBehavior = null;
+            document.getElementById('behavior-modal').style.display = 'none';
+        }
         function saveBehavior() {
             if (!selectedBehavior) { alert('Please select a behavior.'); return; }
             const name = document.getElementById('beh-student').value;
+            if (!name) { alert('Student roster unavailable.'); return; }
             const note = document.getElementById('beh-note').value.trim();
             const log = getStudentLog(name);
             log.push({ type: selectedBehavior.type, label: selectedBehavior.label, icon: selectedBehavior.icon, note, date: new Date().toISOString() });
@@ -323,7 +341,10 @@
 
         // ===== Student Note modal =====
         function openStudentNote(s) {
-            populateStudentSelect('note-student', s ? s.name : null);
+            if (!populateStudentSelect('note-student', s ? s.name : null)) {
+                alert('Student roster unavailable.');
+                return;
+            }
             document.getElementById('note-text').value = '';
             document.getElementById('note-modal').style.display = 'flex';
             setTimeout(() => document.getElementById('note-text').focus(), 50);
@@ -331,6 +352,7 @@
         function closeNoteModal() { document.getElementById('note-modal').style.display = 'none'; }
         function saveStudentNote() {
             const name = document.getElementById('note-student').value;
+            if (!name) { alert('Student roster unavailable.'); return; }
             const text = document.getElementById('note-text').value.trim();
             if (!text) { document.getElementById('note-text').focus(); return; }
             const log = getStudentLog(name);
