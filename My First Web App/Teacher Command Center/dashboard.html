@@ -268,12 +268,12 @@
                 else localStorage.removeItem(LANDING_PAGE_KEY);
             });
         }
-        document.querySelectorAll('#ds-theme-picker .theme-swatch').forEach(button => {
-            button.addEventListener('click', () => {
-                pendingDashTheme = button.dataset.theme || 'pastel';
-                applyDashTheme(pendingDashTheme);
-                syncDashThemePicker(pendingDashTheme);
-            });
+        document.addEventListener('click', event => {
+            const themeButton = event.target.closest('#ds-theme-picker .theme-swatch');
+            if (!themeButton) return;
+            pendingDashTheme = themeButton.dataset.theme || 'pastel';
+            applyDashTheme(pendingDashTheme);
+            syncDashThemePicker(pendingDashTheme);
         });
         document.querySelectorAll('.fab-text').forEach(btn => {
             btn.addEventListener('click', () => {
