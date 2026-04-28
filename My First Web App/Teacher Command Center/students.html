@@ -207,6 +207,18 @@
             });
         });
 
+        (function applyShellSettings() {
+            const className = localStorage.getItem('dash-class-name');
+            const grade = localStorage.getItem('dash-grade');
+            const teacher = localStorage.getItem('dash-teacher');
+            const email = localStorage.getItem('dash-email');
+
+            if (className) document.querySelectorAll('.class-name').forEach(el => el.textContent = className);
+            if (grade) document.querySelectorAll('.grade').forEach(el => el.textContent = grade);
+            if (teacher) document.querySelectorAll('.user-name').forEach(el => el.textContent = teacher);
+            if (email) document.querySelectorAll('.user-email').forEach(el => el.textContent = email);
+        })();
+
         // ===== Student data helpers =====
         let currentStudent = null;
         const BEHAVIORS_POS = [
