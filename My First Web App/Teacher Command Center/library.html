@@ -200,9 +200,17 @@
 
     function catInfo(key) { return CATEGORIES.find(c => c.key === key) || {label:'Other',icon:'📁'}; }
 
+    function normalizeResourceUrl(url) {
+        const trimmedUrl = (url || '').trim();
+        if (!trimmedUrl) return '';
+        if (/^[a-z][a-z0-9+.-]*:/i.test(trimmedUrl)) return trimmedUrl;
+        return 'https://' + trimmedUrl;
+    }
+
     function openResourceUrl(url) {
-        if (!url) return;
-        window.open(url, '_blank', 'noopener,noreferrer');
+        const normalizedUrl = normalizeResourceUrl(url);
+        if (!normalizedUrl) return;
+        window.open(normalizedUrl, '_blank', 'noopener,noreferrer');
     }
 
     function renderLibrary() {
@@ -341,7 +349,7 @@
         const data = {
             id: editingId || ('lib-' + Date.now()),
             name,
-            url: document.getElementById('lib-url').value.trim(),
+            url: normalizeResourceUrl(document.getElementById('lib-url').value),
             desc: document.getElementById('lib-desc-input').value.trim(),
             category: selectedCat || 'other',
             created: editingId ? (resources.find(r => r.id === editingId) || {}).created || new Date().toISOString() : new Date().toISOString(),
