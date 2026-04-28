@@ -234,6 +234,17 @@
     let mondayDate = getWeekMonday(0);
     let plannerData = loadWeek(mondayDate);
 
+    function syncPlannerSession(force = false) {
+        if (!force && weekOffset !== 0) return false;
+        const nextMonday = getWeekMonday(weekOffset);
+        const nextWeekKey = weekKey(nextMonday);
+        if (!force && nextWeekKey === weekKey(mondayDate)) return false;
+        mondayDate = nextMonday;
+        plannerData = loadWeek(mondayDate);
+        buildGrid();
+        return true;
+    }
+
     function buildGrid() {
         mondayDate = getWeekMonday(weekOffset);
         plannerData = loadWeek(mondayDate);
@@ -312,7 +323,7 @@
     }
 
     function shiftWeek(dir) { weekOffset += dir; buildGrid(); }
-    function goToday() { weekOffset = 0; buildGrid(); }
+    function goToday() { weekOffset = 0; syncPlannerSession(true); }
 
     // ===== Entry modal =====
     function openEntryModal(dayIndex, slotIndex, entryIndex) {
@@ -348,6 +359,7 @@
     function closeEntryModal() { document.getElementById('entry-modal').style.display = 'none'; editKey = null; }
 
     function saveEntry() {
+        syncPlannerSession();
         const title = document.getElementById('entry-title').value.trim();
         if (!title) { document.getElementById('entry-title').focus(); return; }
         const notes = document.getElementById('entry-notes').value.trim();
@@ -366,6 +378,7 @@
     }
 
     function deleteEntry() {
+        syncPlannerSession();
         if (!editKey) return;
         const parts = editKey.split('-');
         const cellKey = parts[0] + '-' + parts[1];
@@ -378,6 +391,10 @@
     }
 
     buildGrid();
+    setInterval(syncPlannerSession, 60000);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) syncPlannerSession();
+    });
 </script>
 </body>
 </html>
