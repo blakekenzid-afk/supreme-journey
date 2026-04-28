@@ -197,19 +197,39 @@
         return typeof getContrastColor === 'function' ? getContrastColor(color) : '#ffffff';
     }
 
-    const activeAttendanceDate = new Date();
-    const activeAttendanceKey = formatLocalDateKey(activeAttendanceDate);
-
-    // Load saved state for the date this page session was opened.
+    let activeAttendanceDate = new Date();
+    let activeAttendanceKey = formatLocalDateKey(activeAttendanceDate);
     let attState = JSON.parse(localStorage.getItem('att-' + activeAttendanceKey) || '{}');
     const studentList = getStudentList();
+
+    function updateAttendanceHeader() {
+        document.getElementById('att-today-label').textContent = activeAttendanceDate.toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+        });
+    }
+
+    function syncAttendanceSession() {
+        const nextDate = new Date();
+        const nextKey = formatLocalDateKey(nextDate);
+        if (nextKey === activeAttendanceKey) return false;
+        activeAttendanceDate = nextDate;
+        activeAttendanceKey = nextKey;
+        attState = JSON.parse(localStorage.getItem('att-' + activeAttendanceKey) || '{}');
+        updateAttendanceHeader();
+        studentList.forEach(s => applyStatus(s.name));
+        updateCounts();
+        renderHistory();
+        return true;
+    }
 
     function saveState() {
         localStorage.setItem('att-' + activeAttendanceKey, JSON.stringify(attState));
     }
 
-    // Set today label
-    document.getElementById('att-today-label').textContent = activeAttendanceDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    updateAttendanceHeader();
 
     // Render grid
     const grid = document.getElementById('att-student-grid');
@@ -231,8 +251,13 @@
         applyStatus(s.name);
     });
     updateCounts();
+    setInterval(syncAttendanceSession, 60000);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) syncAttendanceSession();
+    });
 
     function cycleStatus(name) {
+        syncAttendanceSession();
         const current = attState[name] || '';
         const idx = STATUS_CYCLE.indexOf(current);
         const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
@@ -268,12 +293,14 @@
     }
 
     function markAll(status) {
+        syncAttendanceSession();
         studentList.forEach(s => { attState[s.name] = status; applyStatus(s.name); });
         saveState();
         updateCounts();
     }
 
     function resetAll() {
+        syncAttendanceSession();
         attState = {};
         saveState();
         studentList.forEach(s => applyStatus(s.name));
@@ -281,6 +308,7 @@
     }
 
     function saveAttendance() {
+        syncAttendanceSession();
         const record = { date: activeAttendanceKey, state: { ...attState }, saved: new Date().toISOString() };
         // Keep rolling history (last 60 days)
         let history = JSON.parse(localStorage.getItem('att-history') || '[]');
@@ -305,6 +333,7 @@
 
     // History
     function toggleHistory() {
+        syncAttendanceSession();
         const rows = document.getElementById('history-rows');
         const chev = document.getElementById('history-chevron');
         const open = rows.style.display !== 'none';
