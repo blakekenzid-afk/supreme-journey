@@ -233,7 +233,7 @@
     let lessons = JSON.parse(localStorage.getItem('teacherstack-lessons') || '[]');
     let editingId = null;
     let viewingId = null;
-    let selectedSubject = '';
+    let selectedSubject = 'other';
 
     function saveLessons() { localStorage.setItem('teacherstack-lessons', JSON.stringify(lessons)); }
 
@@ -332,7 +332,7 @@
     function buildSubjectPicker(selected) {
         const picker = document.getElementById('lm-subject-picker');
         picker.innerHTML = '';
-        selectedSubject = selected || '';
+        selectedSubject = selected || 'other';
         SUBJECTS.forEach(s => {
             const btn = document.createElement('button');
             btn.type = 'button';
@@ -372,7 +372,7 @@
         const data = {
             id: editingId || ('lesson-' + Date.now()),
             title,
-            subject: selectedSubject,
+            subject: selectedSubject || 'other',
             grade: document.getElementById('lm-grade').value.trim(),
             duration: document.getElementById('lm-duration').value.trim(),
             objective: document.getElementById('lm-objective').value.trim(),
