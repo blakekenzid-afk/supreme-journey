@@ -329,8 +329,8 @@
     }
 
     function openAddModal(id) {
-        editingId = id || null;
         const r = id ? resources.find(x => x.id === id) : null;
+        editingId = r ? r.id : null;
         document.getElementById('lib-modal-title').textContent = r ? 'Edit Resource' : 'Add Resource';
         document.getElementById('lib-delete-btn').style.display = r ? 'inline-flex' : 'none';
         document.getElementById('lib-name').value = r ? r.name : '';
@@ -341,7 +341,11 @@
         setTimeout(() => document.getElementById('lib-name').focus(), 50);
     }
 
-    function closeLibModal() { document.getElementById('lib-modal').style.display = 'none'; }
+    function closeLibModal() {
+        document.getElementById('lib-modal').style.display = 'none';
+        editingId = null;
+        selectedCat = 'other';
+    }
 
     function saveResource() {
         const name = document.getElementById('lib-name').value.trim();
@@ -357,6 +361,7 @@
         if (editingId) {
             const idx = resources.findIndex(r => r.id === editingId);
             if (idx >= 0) resources[idx] = data;
+            else resources.push(data);
         } else {
             resources.push(data);
         }
