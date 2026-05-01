@@ -110,8 +110,8 @@
       <button onclick="closeStudentModal()" style="background:none;border:none;cursor:pointer;font-size:1.3rem;color:#aaa;padding:4px;">✕</button>
     </div>
     <div style="display:flex;gap:8px;padding:0 24px 12px;">
-      <button onclick="openLogBehavior(currentStudent)" style="flex:1;background:#ede9fe;color:#6366f1;border:none;border-radius:10px;padding:9px;font-size:0.85rem;font-weight:600;cursor:pointer;"><i class="fa-solid fa-clipboard-user"></i> Log Behavior</button>
-      <button onclick="openStudentNote(currentStudent)" style="flex:1;background:#fef3c7;color:#d97706;border:none;border-radius:10px;padding:9px;font-size:0.85rem;font-weight:600;cursor:pointer;"><i class="fa-solid fa-pen-nib"></i> Add Note</button>
+    <button onclick="openBehaviorForCurrentStudent()" style="flex:1;background:#ede9fe;color:#6366f1;border:none;border-radius:10px;padding:9px;font-size:0.85rem;font-weight:600;cursor:pointer;"><i class="fa-solid fa-clipboard-user"></i> Log Behavior</button>
+    <button onclick="openNoteForCurrentStudent()" style="flex:1;background:#fef3c7;color:#d97706;border:none;border-radius:10px;padding:9px;font-size:0.85rem;font-weight:600;cursor:pointer;"><i class="fa-solid fa-pen-nib"></i> Add Note</button>
     </div>
     <div style="flex:1;overflow-y:auto;padding:0 24px 20px;">
       <div style="font-size:0.78rem;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Recent Activity</div>
@@ -249,6 +249,18 @@
         function closeStudentModal() {
             currentStudent = null;
             document.getElementById('student-modal').style.display = 'none';
+        }
+
+        function openBehaviorForCurrentStudent() {
+            const selectedStudent = currentStudent;
+            closeStudentModal();
+            openLogBehavior(selectedStudent);
+        }
+
+        function openNoteForCurrentStudent() {
+            const selectedStudent = currentStudent;
+            closeStudentModal();
+            openStudentNote(selectedStudent);
         }
 
         function renderStudentActivity(name) {
