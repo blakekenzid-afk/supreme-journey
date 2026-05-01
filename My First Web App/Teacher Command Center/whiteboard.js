@@ -397,6 +397,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    function openRandomizerTab(tabName = 'student') {
+        App.openModal('modal-random');
+        const targetTab = document.querySelector(`.rand-tab[data-rtab="${tabName}"]`);
+        targetTab?.click();
+        if (tabName === 'wheel') drawWheel();
+    }
+
     // ===================== MEDIA SEARCH & YOUTUBE =====================
     const imgSearchInput = document.getElementById('img-search-input');
     const imgSearchBtn = document.getElementById('img-search-btn');
@@ -1636,12 +1643,12 @@ document.addEventListener('DOMContentLoaded', () => {
             { icon: '⏱️', name: 'Timer', action: () => App.openModal('modal-timer') },
             { icon: '🙋', name: 'Name Picker', action: () => App.openModal('modal-namepick') },
             { icon: '📋', name: 'Attendance', action: () => App.openModal('modal-attendance') },
-            { icon: '👥', name: 'Group Maker', action: () => { App.openModal('modal-random'); document.querySelector('[data-rtab="group"]').click(); }},
+            { icon: '👥', name: 'Group Maker', action: () => openRandomizerTab('group') },
         ],
         randomizers: [
             { icon: '🙋', name: 'Student Picker', action: () => App.openModal('modal-namepick') },
-            { icon: '👥', name: 'Group Maker', action: () => { App.openModal('modal-random'); document.querySelector('[data-rtab="group"]').click(); }},
-            { icon: '🎡', name: 'Spin Wheel', action: () => { App.openModal('modal-random'); document.querySelector('[data-rtab="wheel"]').click(); }},
+            { icon: '👥', name: 'Group Maker', action: () => openRandomizerTab('group') },
+            { icon: '🎡', name: 'Spin Wheel', action: () => openRandomizerTab('wheel') },
         ],
         lessons: [
             { icon: '📝', name: 'QR Code', action: () => App.openModal('modal-qr') },
@@ -1650,7 +1657,7 @@ document.addEventListener('DOMContentLoaded', () => {
             { icon: '🖼️', name: 'Image Search', action: () => { App.openModal('modal-media'); document.querySelector('[data-tab="media-images"]')?.click(); }},
         ],
         games: [
-            { icon: '🎡', name: 'Spin Wheel', action: () => { App.openModal('modal-random'); document.querySelector('[data-rtab="wheel"]').click(); }},
+            { icon: '🎡', name: 'Spin Wheel', action: () => openRandomizerTab('wheel') },
             { icon: '🃏', name: 'Flash Cards', action: () => App.openModal('modal-flashcards') },
         ],
         charts: [
@@ -2145,11 +2152,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Map toolsData names that should spawn widgets vs open modals
     const WIDGET_TOOL_NAMES = new Set([
-        'Traffic Light','Timer','Stopwatch','Clock','Name Picker','Student Picker','Sound Meter','QR Code','Attendance','Text Box'
+        'Traffic Light','Timer','Countdown Timer','Stopwatch','Clock','Analog Clock','Name Picker','Student Picker','Sound Meter','QR Code','Attendance','Text Box'
     ]);
 
     function normalizeCanvasWidgetName(name) {
         if (name === 'Student Picker') return 'Name Picker';
+        if (name === 'Analog Clock') return 'Clock';
+        if (name === 'Countdown Timer') return 'Timer';
         return name;
     }
 
@@ -3309,6 +3318,37 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===================== PART 2: MORE TOOLS TOGGLE =====================
     const bbMore = document.getElementById('bb-more');
     const toolsPanel = document.getElementById('wb-tools-panel');
+    const toolsShell = document.querySelector('.wb-main-shell');
+    const toolsCollapseBtn = document.getElementById('tp-collapse-btn');
+    const toolsExpandRail = document.getElementById('tp-expand-rail');
+    const TOOLS_PANEL_COLLAPSED_KEY = 'wb-tools-panel-collapsed';
+    const syncToolsPanelState = collapsed => {
+        if (!toolsShell) return;
+        const desktopCollapsed = collapsed && window.innerWidth > 1024;
+        toolsShell.classList.toggle('tools-collapsed', desktopCollapsed);
+        if (toolsCollapseBtn) {
+            toolsCollapseBtn.setAttribute('aria-expanded', String(!desktopCollapsed));
+            toolsCollapseBtn.setAttribute('aria-label', desktopCollapsed ? 'Expand tools panel' : 'Collapse tools panel');
+            toolsCollapseBtn.title = desktopCollapsed ? 'Expand tools panel' : 'Collapse tools panel';
+        }
+        if (toolsExpandRail) {
+            toolsExpandRail.setAttribute('aria-expanded', String(!desktopCollapsed));
+        }
+    };
+
+    let toolsPanelCollapsed = localStorage.getItem(TOOLS_PANEL_COLLAPSED_KEY) === 'true';
+    syncToolsPanelState(toolsPanelCollapsed);
+
+    const setToolsPanelCollapsed = collapsed => {
+        toolsPanelCollapsed = collapsed;
+        localStorage.setItem(TOOLS_PANEL_COLLAPSED_KEY, String(collapsed));
+        syncToolsPanelState(collapsed);
+    };
+
+    toolsCollapseBtn?.addEventListener('click', () => setToolsPanelCollapsed(!toolsPanelCollapsed));
+    toolsExpandRail?.addEventListener('click', () => setToolsPanelCollapsed(false));
+    window.addEventListener('resize', () => syncToolsPanelState(toolsPanelCollapsed));
+
     if (bbMore) bbMore.addEventListener('click', () => {
         toolsPanel.classList.toggle('open');
     });
