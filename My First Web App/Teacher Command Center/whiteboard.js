@@ -1974,6 +1974,124 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderNamePicker();
             }
         },
+        'Spin Wheel': {
+            icon: '🎡', headerBg: '#7c3aed', headerColor: '#fff', width: 260,
+            render(body, el) {
+                let wheelAngle = 0;
+                let wheelSpinning = false;
+                let wheelSpinToken = 0;
+                let animationFrame = null;
+                let resultText = '';
+                body.innerHTML = `<canvas width="240" height="240" style="display:block;margin:0 auto;max-width:100%;"></canvas>
+                    <button class="primary-action-btn big" style="font-size:0.82rem;padding:8px 12px;margin-top:10px;"><i class="fa-solid fa-rotate"></i> Spin!</button>
+                    <div style="min-height:28px;margin-top:8px;text-align:center;font-size:0.95rem;font-weight:700;color:var(--accent);" data-role="result"></div>`;
+                const canvas = body.querySelector('canvas');
+                const wheelCtx = canvas?.getContext('2d');
+                const resultEl = body.querySelector('[data-role="result"]');
+                const button = body.querySelector('button');
+                const wheelColors = [
+                    App.getVar('--wheel-1', '#6366f1'), App.getVar('--wheel-2', '#a855f7'), App.getVar('--wheel-3', '#ec4899'),
+                    App.getVar('--wheel-4', '#f59e0b'), App.getVar('--wheel-5', '#10b981'), App.getVar('--wheel-6', '#3b82f6'),
+                    App.getVar('--wheel-7', '#ef4444'), App.getVar('--wheel-8', '#8b5cf6'), App.getVar('--wheel-9', '#14b8a6'),
+                    App.getVar('--wheel-10', '#f97316'), App.getVar('--wheel-11', '#06b6d4'), App.getVar('--wheel-12', '#84cc16')
+                ];
+                const persistState = () => {
+                    el._cwState = { wheelAngle, resultText };
+                };
+                const drawWheelWidget = () => {
+                    if (!wheelCtx) return;
+                    const names = getStudentNames();
+                    const cx = 120, cy = 120, radius = 104;
+                    wheelCtx.clearRect(0, 0, 240, 240);
+                    if (!names.length) return;
+                    const arc = (2 * Math.PI) / names.length;
+                    names.forEach((name, index) => {
+                        const start = wheelAngle + index * arc;
+                        wheelCtx.beginPath();
+                        wheelCtx.moveTo(cx, cy);
+                        wheelCtx.arc(cx, cy, radius, start, start + arc);
+                        wheelCtx.closePath();
+                        wheelCtx.fillStyle = wheelColors[index % wheelColors.length];
+                        wheelCtx.fill();
+                        wheelCtx.strokeStyle = App.getVar('--white', '#fff');
+                        wheelCtx.lineWidth = 2;
+                        wheelCtx.stroke();
+                        wheelCtx.save();
+                        wheelCtx.translate(cx, cy);
+                        wheelCtx.rotate(start + arc / 2);
+                        wheelCtx.fillStyle = App.getVar('--white', '#fff');
+                        wheelCtx.font = '600 10px Inter';
+                        wheelCtx.textAlign = 'right';
+                        wheelCtx.fillText(name, radius - 10, 4);
+                        wheelCtx.restore();
+                    });
+                    wheelCtx.beginPath();
+                    wheelCtx.arc(cx, cy, 16, 0, Math.PI * 2);
+                    wheelCtx.fillStyle = App.getVar('--white', '#fff');
+                    wheelCtx.fill();
+                    wheelCtx.strokeStyle = App.getVar('--grey-300', '#ddd');
+                    wheelCtx.stroke();
+                    wheelCtx.beginPath();
+                    wheelCtx.moveTo(cx, 2);
+                    wheelCtx.lineTo(cx - 10, 20);
+                    wheelCtx.lineTo(cx + 10, 20);
+                    wheelCtx.closePath();
+                    wheelCtx.fillStyle = App.getVar('--text-main', '#333');
+                    wheelCtx.fill();
+                    if (resultEl) resultEl.textContent = resultText;
+                    persistState();
+                };
+                const stopAnimation = () => {
+                    if (animationFrame) cancelAnimationFrame(animationFrame);
+                    animationFrame = null;
+                };
+                button?.addEventListener('click', () => {
+                    if (wheelSpinning) return;
+                    wheelSpinning = true;
+                    resultText = 'Spinning...';
+                    drawWheelWidget();
+                    const currentSpinToken = ++wheelSpinToken;
+                    let speed = 0.2 + Math.random() * 0.15;
+                    const decel = 0.997;
+                    const animate = () => {
+                        if (currentSpinToken !== wheelSpinToken) {
+                            wheelSpinning = false;
+                            stopAnimation();
+                            drawWheelWidget();
+                            return;
+                        }
+                        wheelAngle += speed;
+                        speed *= decel;
+                        drawWheelWidget();
+                        if (speed > 0.0025) {
+                            animationFrame = requestAnimationFrame(animate);
+                            return;
+                        }
+                        wheelSpinning = false;
+                        stopAnimation();
+                        const names = getStudentNames();
+                        const arc = (2 * Math.PI) / names.length;
+                        const pointerAngle = (2 * Math.PI) - (wheelAngle % (2 * Math.PI));
+                        const winnerIndex = Math.floor(pointerAngle / arc) % names.length;
+                        resultText = `🎉 ${names[winnerIndex]}!`;
+                        drawWheelWidget();
+                        schedulePagePersist();
+                    };
+                    animationFrame = requestAnimationFrame(animate);
+                });
+                el._cwApplyState = state => {
+                    wheelAngle = typeof state?.wheelAngle === 'number' ? state.wheelAngle : 0;
+                    resultText = typeof state?.resultText === 'string' ? state.resultText : '';
+                    drawWheelWidget();
+                };
+                el._cwCleanup = () => {
+                    wheelSpinToken++;
+                    wheelSpinning = false;
+                    stopAnimation();
+                };
+                drawWheelWidget();
+            }
+        },
         'Sound Meter': {
             icon: '🎤', headerBg: '#7c3aed', headerColor: '#fff', width: 180,
             render(body, el) {
@@ -2337,7 +2455,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Map toolsData names that should spawn widgets vs open modals
     const WIDGET_TOOL_NAMES = new Set([
-        'Traffic Light','Timer','Countdown Timer','Stopwatch','Clock','Analog Clock','Name Picker','Student Picker','Sound Meter','QR Code','Attendance','Text Box','Calculator','Ten Frame','Thermometer'
+        'Traffic Light','Timer','Countdown Timer','Stopwatch','Clock','Analog Clock','Name Picker','Student Picker','Spin Wheel','Sound Meter','QR Code','Attendance','Text Box','Calculator','Ten Frame','Thermometer'
     ]);
 
     function normalizeCanvasWidgetName(name) {
@@ -2562,6 +2680,8 @@ document.addEventListener('DOMContentLoaded', () => {
             payload.state = el._cwState ? { ...el._cwState } : null;
         } else if (name === 'Name Picker') {
             payload.state = el._cwState ? { ...el._cwState } : null;
+        } else if (name === 'Spin Wheel') {
+            payload.state = el._cwState ? { ...el._cwState } : null;
         } else if (name === 'Stopwatch') {
             payload.state = el._cwState ? { ...el._cwState } : null;
         } else if (name === 'Text Box') {
@@ -2589,6 +2709,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (name === 'Timer' && typeof el._cwApplyState === 'function') {
             el._cwApplyState(state);
         } else if (name === 'Name Picker' && typeof el._cwApplyState === 'function') {
+            el._cwApplyState(state);
+        } else if (name === 'Spin Wheel' && typeof el._cwApplyState === 'function') {
             el._cwApplyState(state);
         } else if (name === 'Stopwatch' && typeof el._cwApplyState === 'function') {
             el._cwApplyState(state);
