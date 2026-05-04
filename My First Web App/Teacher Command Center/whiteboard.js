@@ -2148,11 +2148,196 @@ document.addEventListener('DOMContentLoaded', () => {
                 syncState();
             }
         },
+        'Calculator': {
+            icon: '🧮', headerBg: '#0f172a', headerColor: '#fff', width: 240,
+            render(body, el) {
+                let expression = '';
+                body.innerHTML = `<div class="calc-display" style="margin-bottom:10px;background:var(--wb-sidebar-bg-alt);border-radius:12px;padding:10px 12px;text-align:right;">
+                        <div class="calc-expr" data-role="expr"></div>
+                        <div class="money-total" data-role="result" style="font-size:1.5rem;word-break:break-all;">0</div>
+                    </div>
+                    <div class="calc-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+                        <button class="calc-btn clear" data-calc="C">C</button>
+                        <button class="calc-btn op" data-calc="(">(</button>
+                        <button class="calc-btn op" data-calc=")">)</button>
+                        <button class="calc-btn op" data-calc="÷">÷</button>
+                        <button class="calc-btn num" data-calc="7">7</button>
+                        <button class="calc-btn num" data-calc="8">8</button>
+                        <button class="calc-btn num" data-calc="9">9</button>
+                        <button class="calc-btn op" data-calc="×">×</button>
+                        <button class="calc-btn num" data-calc="4">4</button>
+                        <button class="calc-btn num" data-calc="5">5</button>
+                        <button class="calc-btn num" data-calc="6">6</button>
+                        <button class="calc-btn op" data-calc="−">−</button>
+                        <button class="calc-btn num" data-calc="1">1</button>
+                        <button class="calc-btn num" data-calc="2">2</button>
+                        <button class="calc-btn num" data-calc="3">3</button>
+                        <button class="calc-btn op" data-calc="+">+</button>
+                        <button class="calc-btn num wide" data-calc="0">0</button>
+                        <button class="calc-btn num" data-calc=".">.</button>
+                        <button class="calc-btn equals" data-calc="=">=</button>
+                    </div>`;
+                const exprEl = body.querySelector('[data-role="expr"]');
+                const resultEl = body.querySelector('[data-role="result"]');
+                const renderCalculator = () => {
+                    if (exprEl) exprEl.textContent = expression && expression !== 'Error' ? expression : '';
+                    if (resultEl) resultEl.textContent = expression || '0';
+                    el._cwState = { expression };
+                };
+                body.querySelectorAll('[data-calc]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const value = btn.getAttribute('data-calc');
+                        if (value === 'C') {
+                            expression = '';
+                            renderCalculator();
+                            schedulePagePersist();
+                            return;
+                        }
+                        if (value === '=') {
+                            try {
+                                const normalized = expression.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
+                                const result = Function('"use strict";return (' + normalized + ')')();
+                                expression = Number.isFinite(result) ? String(parseFloat(result.toFixed(8))) : 'Error';
+                            } catch {
+                                expression = 'Error';
+                            }
+                            renderCalculator();
+                            schedulePagePersist();
+                            return;
+                        }
+                        expression = expression === 'Error' ? value : expression + value;
+                        renderCalculator();
+                        schedulePagePersist();
+                    });
+                });
+                el._cwApplyState = state => {
+                    expression = state && typeof state.expression === 'string' ? state.expression : '';
+                    renderCalculator();
+                };
+                renderCalculator();
+            }
+        },
+        'Ten Frame': {
+            icon: '🔢', headerBg: '#1f2937', headerColor: '#fff', width: 320,
+            render(body, el) {
+                let selectedColor = 'red';
+                let cells = Array(10).fill('');
+                body.innerHTML = `<div class="ten-frame-grid" style="width:100%;height:130px;">
+                        ${Array.from({ length: 10 }, (_, idx) => `<div class="tf-cell" data-idx="${idx}"></div>`).join('')}
+                    </div>
+                    <div class="tf-controls" style="justify-content:center;margin-top:10px;">
+                        <button class="tf-color-btn active" data-color="red" style="background:#ef4444;" aria-label="Red"></button>
+                        <button class="tf-color-btn" data-color="blue" style="background:#3b82f6;" aria-label="Blue"></button>
+                        <button class="tf-color-btn" data-color="yellow" style="background:#f59e0b;" aria-label="Yellow"></button>
+                        <button class="primary-action-btn" data-role="clear" style="font-size:0.78rem;padding:7px 10px;">Clear</button>
+                    </div>
+                    <div class="tf-total" style="text-align:center;margin-top:8px;">Total: <span class="money-total" data-role="count">0</span></div>`;
+                const countEl = body.querySelector('[data-role="count"]');
+                const renderTenFrame = () => {
+                    body.querySelectorAll('.tf-cell').forEach((cell, index) => {
+                        const color = cells[index];
+                        cell.classList.toggle('active', !!color);
+                        cell.innerHTML = color ? `<div class="dot" style="background:${color};transform:scale(1);"></div>` : '';
+                    });
+                    if (countEl) countEl.textContent = String(cells.filter(Boolean).length);
+                    el._cwState = { cells: [...cells], selectedColor };
+                };
+                body.querySelectorAll('.tf-color-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        body.querySelectorAll('.tf-color-btn').forEach(colorBtn => colorBtn.classList.remove('active'));
+                        btn.classList.add('active');
+                        selectedColor = btn.dataset.color || 'red';
+                        el._cwState = { cells: [...cells], selectedColor };
+                        schedulePagePersist();
+                    });
+                });
+                body.querySelectorAll('.tf-cell').forEach(cell => {
+                    cell.addEventListener('click', () => {
+                        const index = parseInt(cell.dataset.idx || '0', 10);
+                        cells[index] = cells[index] ? '' : selectedColor;
+                        renderTenFrame();
+                        schedulePagePersist();
+                    });
+                });
+                body.querySelector('[data-role="clear"]')?.addEventListener('click', () => {
+                    cells = Array(10).fill('');
+                    renderTenFrame();
+                    schedulePagePersist();
+                });
+                el._cwApplyState = state => {
+                    cells = Array.isArray(state?.cells) ? state.cells.slice(0, 10).map(color => typeof color === 'string' ? color : '') : Array(10).fill('');
+                    while (cells.length < 10) cells.push('');
+                    selectedColor = typeof state?.selectedColor === 'string' ? state.selectedColor : 'red';
+                    body.querySelectorAll('.tf-color-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.color === selectedColor));
+                    renderTenFrame();
+                };
+                renderTenFrame();
+            }
+        },
+        'Thermometer': {
+            icon: '🌡️', headerBg: '#991b1b', headerColor: '#fff', width: 240,
+            render(body, el) {
+                let value = 20;
+                let unit = 'C';
+                body.innerHTML = `<div class="therm-body" style="padding:0;gap:16px;align-items:flex-end;">
+                        <div class="therm-visual" style="width:34px;height:220px;">
+                            <div class="therm-scale" style="left:40px;height:200px;">
+                                <div class="scale-mark" style="bottom:100%"><span>100</span></div>
+                                <div class="scale-mark" style="bottom:80%"><span>80</span></div>
+                                <div class="scale-mark" style="bottom:60%"><span>60</span></div>
+                                <div class="scale-mark" style="bottom:40%"><span>40</span></div>
+                                <div class="scale-mark" style="bottom:20%"><span>20</span></div>
+                                <div class="scale-mark" style="bottom:0%"><span>0</span></div>
+                            </div>
+                            <div class="therm-mercury" data-role="liquid"></div>
+                            <div class="therm-bulb"></div>
+                        </div>
+                        <div class="therm-input-panel">
+                            <div class="money-total" style="font-size:1.6rem;text-align:center;"><span data-role="value">20</span><span data-role="unit">°C</span></div>
+                            <input type="range" min="0" max="100" value="20" class="brush-slider horizontal-range h-auto w-full" data-role="slider">
+                            <div class="modal-row gap-8" style="justify-content:center;">
+                                <button class="bg-tab unit-btn active" data-unit="C">Celsius</button>
+                                <button class="bg-tab unit-btn" data-unit="F">Fahrenheit</button>
+                            </div>
+                        </div>
+                    </div>`;
+                const liquid = body.querySelector('[data-role="liquid"]');
+                const valueEl = body.querySelector('[data-role="value"]');
+                const unitEl = body.querySelector('[data-role="unit"]');
+                const slider = body.querySelector('[data-role="slider"]');
+                const renderThermometer = () => {
+                    if (liquid) liquid.style.height = `${value}%`;
+                    if (valueEl) valueEl.textContent = unit === 'C' ? String(value) : String(Math.round((value * 9 / 5) + 32));
+                    if (unitEl) unitEl.textContent = unit === 'C' ? '°C' : '°F';
+                    if (slider) slider.value = String(value);
+                    body.querySelectorAll('.unit-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.unit === unit));
+                    el._cwState = { value, unit };
+                };
+                slider?.addEventListener('input', () => {
+                    value = parseInt(slider.value || '0', 10);
+                    renderThermometer();
+                    schedulePagePersist();
+                });
+                body.querySelectorAll('.unit-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        unit = btn.dataset.unit || 'C';
+                        renderThermometer();
+                        schedulePagePersist();
+                    });
+                });
+                el._cwApplyState = state => {
+                    value = typeof state?.value === 'number' ? state.value : 20;
+                    unit = state?.unit === 'F' ? 'F' : 'C';
+                    renderThermometer();
+                };
+                renderThermometer();
+            }
+        },
     };
 
     // Map toolsData names that should spawn widgets vs open modals
     const WIDGET_TOOL_NAMES = new Set([
-        'Traffic Light','Timer','Countdown Timer','Stopwatch','Clock','Analog Clock','Name Picker','Student Picker','Sound Meter','QR Code','Attendance','Text Box'
+        'Traffic Light','Timer','Countdown Timer','Stopwatch','Clock','Analog Clock','Name Picker','Student Picker','Sound Meter','QR Code','Attendance','Text Box','Calculator','Ten Frame','Thermometer'
     ]);
 
     function normalizeCanvasWidgetName(name) {
@@ -3318,7 +3503,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===================== PART 2: MORE TOOLS TOGGLE =====================
     const bbMore = document.getElementById('bb-more');
     const toolsPanel = document.getElementById('wb-tools-panel');
-    const toolsShell = document.querySelector('.wb-main-shell');
+    const toolsShell = document.querySelector('.wb-main');
     const toolsCollapseBtn = document.getElementById('tp-collapse-btn');
     const toolsExpandRail = document.getElementById('tp-expand-rail');
     const TOOLS_PANEL_COLLAPSED_KEY = 'wb-tools-panel-collapsed';

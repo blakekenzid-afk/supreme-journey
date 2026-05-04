@@ -432,11 +432,11 @@ body {
   align-self:stretch;display:none;flex-shrink:0;width:18px;height:auto;border-radius:14px 0 0 14px;
   margin:16px 0 16px 6px;background:rgba(99,102,241,0.12);
 }
-.wb-main-shell.tools-collapsed .wb-tools-panel{width:0;border-left:none;}
-.wb-main-shell.tools-collapsed .tp-header,
-.wb-main-shell.tools-collapsed .tp-categories,
-.wb-main-shell.tools-collapsed .tp-tools-grid{opacity:0;pointer-events:none;}
-.wb-main-shell.tools-collapsed .tp-expand-rail{display:inline-flex;}
+.wb-main.tools-collapsed .wb-tools-panel{width:0;border-left:none;}
+.wb-main.tools-collapsed .tp-header,
+.wb-main.tools-collapsed .tp-categories,
+.wb-main.tools-collapsed .tp-tools-grid{opacity:0;pointer-events:none;}
+.wb-main.tools-collapsed .tp-expand-rail{display:inline-flex;}
 .tp-categories{padding:8px;display:flex;flex-direction:column;gap:2px;border-bottom:1px solid var(--wb-border-color);}
 .tp-cat{
   display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;
@@ -1139,7 +1139,7 @@ body {
     display: none !important;
   }
 
-  .wb-main-shell.tools-collapsed .wb-tools-panel {
+  .wb-main.tools-collapsed .wb-tools-panel {
     width: 280px;
     border-left: 1px solid var(--wb-border-color);
   }
