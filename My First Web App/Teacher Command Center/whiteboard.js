@@ -319,7 +319,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Bottom bar → modals
     const bbMap = {
         'bb-background': 'modal-background',
-        'bb-random': 'modal-random',
         'bb-tts': 'modal-tts'
     };
     Object.entries(bbMap).forEach(([btnId, modalId]) => {
@@ -328,6 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const bbWidgetMap = {
+        'bb-random': 'Spin Wheel',
         'bb-timer': 'Timer',
         'bb-namepick': 'Name Picker',
         'bb-traffic': 'Traffic Light',
@@ -2092,6 +2092,75 @@ document.addEventListener('DOMContentLoaded', () => {
                 drawWheelWidget();
             }
         },
+        'Group Maker': {
+            icon: '👥', headerBg: '#2563eb', headerColor: '#fff', width: 280,
+            render(body, el) {
+                let groupCount = 4;
+                let groups = [];
+                const colors = [
+                    App.getVar('--wheel-1', '#6366f1'), App.getVar('--wheel-2', '#a855f7'), App.getVar('--wheel-3', '#ec4899'),
+                    App.getVar('--wheel-4', '#f59e0b'), App.getVar('--wheel-5', '#10b981'), App.getVar('--wheel-6', '#3b82f6'),
+                    App.getVar('--wheel-7', '#ef4444'), App.getVar('--wheel-8', '#8b5cf6'), App.getVar('--wheel-9', '#14b8a6'),
+                    App.getVar('--wheel-10', '#f97316')
+                ];
+                body.innerHTML = `<div class="modal-row center" style="gap:8px;flex-wrap:wrap;justify-content:center;">
+                        <label for="cw-group-count" style="font-size:0.8rem;font-weight:600;">Groups:</label>
+                        <input type="number" id="cw-group-count" value="4" min="2" max="10" class="field-input w-70" style="width:72px;">
+                        <button class="primary-action-btn" data-role="make" style="font-size:0.8rem;padding:8px 12px;">Make Groups</button>
+                    </div>
+                    <div class="groups-output" data-role="output" style="margin-top:10px;"></div>`;
+                const countInput = body.querySelector('#cw-group-count');
+                const output = body.querySelector('[data-role="output"]');
+                const syncState = () => {
+                    el._cwState = { groupCount, groups: groups.map(group => [...group]) };
+                };
+                const renderGroups = () => {
+                    if (!output) return;
+                    output.innerHTML = '';
+                    groups.forEach((group, index) => {
+                        const color = colors[index % colors.length];
+                        const box = document.createElement('div');
+                        box.className = 'group-box';
+                        box.style.borderLeft = `4px solid ${color}`;
+                        const title = document.createElement('div');
+                        title.className = 'group-title';
+                        title.style.color = color;
+                        title.textContent = `Group ${index + 1}`;
+                        box.appendChild(title);
+                        group.forEach(member => {
+                            const memberEl = document.createElement('div');
+                            memberEl.className = 'group-member';
+                            memberEl.textContent = member;
+                            box.appendChild(memberEl);
+                        });
+                        output.appendChild(box);
+                    });
+                    syncState();
+                };
+                body.querySelector('[data-role="make"]')?.addEventListener('click', () => {
+                    groupCount = Math.min(10, Math.max(2, parseInt(countInput?.value || '4', 10) || 4));
+                    if (countInput) countInput.value = String(groupCount);
+                    const shuffled = [...getStudentNames()].sort(() => Math.random() - 0.5);
+                    groups = Array.from({ length: groupCount }, () => []);
+                    shuffled.forEach((student, index) => groups[index % groupCount].push(student));
+                    renderGroups();
+                    schedulePagePersist();
+                });
+                countInput?.addEventListener('change', () => {
+                    groupCount = Math.min(10, Math.max(2, parseInt(countInput.value || '4', 10) || 4));
+                    countInput.value = String(groupCount);
+                    syncState();
+                    schedulePagePersist();
+                });
+                el._cwApplyState = state => {
+                    groupCount = Math.min(10, Math.max(2, parseInt(state?.groupCount, 10) || 4));
+                    groups = Array.isArray(state?.groups) ? state.groups.map(group => Array.isArray(group) ? group.filter(member => typeof member === 'string') : []) : [];
+                    if (countInput) countInput.value = String(groupCount);
+                    renderGroups();
+                };
+                syncState();
+            }
+        },
         'Sound Meter': {
             icon: '🎤', headerBg: '#7c3aed', headerColor: '#fff', width: 180,
             render(body, el) {
@@ -2455,7 +2524,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Map toolsData names that should spawn widgets vs open modals
     const WIDGET_TOOL_NAMES = new Set([
-        'Traffic Light','Timer','Countdown Timer','Stopwatch','Clock','Analog Clock','Name Picker','Student Picker','Spin Wheel','Sound Meter','QR Code','Attendance','Text Box','Calculator','Ten Frame','Thermometer'
+        'Traffic Light','Timer','Countdown Timer','Stopwatch','Clock','Analog Clock','Name Picker','Student Picker','Spin Wheel','Group Maker','Sound Meter','QR Code','Attendance','Text Box','Calculator','Ten Frame','Thermometer'
     ]);
 
     function normalizeCanvasWidgetName(name) {
@@ -2682,6 +2751,8 @@ document.addEventListener('DOMContentLoaded', () => {
             payload.state = el._cwState ? { ...el._cwState } : null;
         } else if (name === 'Spin Wheel') {
             payload.state = el._cwState ? { ...el._cwState } : null;
+        } else if (name === 'Group Maker') {
+            payload.state = el._cwState ? { ...el._cwState } : null;
         } else if (name === 'Stopwatch') {
             payload.state = el._cwState ? { ...el._cwState } : null;
         } else if (name === 'Text Box') {
@@ -2711,6 +2782,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (name === 'Name Picker' && typeof el._cwApplyState === 'function') {
             el._cwApplyState(state);
         } else if (name === 'Spin Wheel' && typeof el._cwApplyState === 'function') {
+            el._cwApplyState(state);
+        } else if (name === 'Group Maker' && typeof el._cwApplyState === 'function') {
             el._cwApplyState(state);
         } else if (name === 'Stopwatch' && typeof el._cwApplyState === 'function') {
             el._cwApplyState(state);
