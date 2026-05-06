@@ -34,7 +34,7 @@
         .lib-info { flex:1;min-width:0; }
         .lib-name { font-size:0.88rem;font-weight:700;color:#222;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
         .lib-url { font-size:0.74rem;color:#6366f1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px; }
-        .lib-desc { font-size:0.75rem;color:#888;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; }
+        .lib-desc { font-size:0.75rem;color:#888;line-height:1.4;display:-webkit-box;line-clamp:2;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; }
         .lib-card-actions { display:flex;gap:4px;flex-shrink:0;flex-direction:column; }
         .icon-btn { background:none;border:none;cursor:pointer;color:#bbb;font-size:0.85rem;padding:5px;border-radius:7px;transition:color 0.15s,background 0.15s; }
         .icon-btn:hover { color:#6366f1;background:#ede9fe; }
@@ -203,8 +203,12 @@
     function normalizeResourceUrl(url) {
         const trimmedUrl = (url || '').trim();
         if (!trimmedUrl) return '';
-        if (/^[a-z][a-z0-9+.-]*:/i.test(trimmedUrl)) return trimmedUrl;
-        return 'https://' + trimmedUrl;
+
+        if (!/^https?:\/\//i.test(trimmedUrl)) {
+            return 'https://' + trimmedUrl;
+        }
+
+        return trimmedUrl;
     }
 
     function openResourceUrl(url) {

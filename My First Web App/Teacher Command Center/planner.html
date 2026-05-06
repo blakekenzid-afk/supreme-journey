@@ -307,7 +307,15 @@
                     const del = document.createElement('div');
                     del.className = 'p-del';
                     del.innerHTML = '✕';
-                    del.addEventListener('click', (e) => { e.stopPropagation(); openEntryModal(di, si, ei); });
+                    del.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (confirm('Delete this entry?')) {
+                            plannerData[cellKey].splice(ei, 1);
+                            if (plannerData[cellKey].length === 0) delete plannerData[cellKey];
+                            saveWeek(mondayDate, plannerData);
+                            buildGrid();
+                        }
+                    });
                     div.appendChild(del);
                     div.addEventListener('click', (e) => { e.stopPropagation(); openEntryModal(di, si, ei); });
                     cell.appendChild(div);
