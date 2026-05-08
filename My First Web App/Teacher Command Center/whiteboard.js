@@ -1441,21 +1441,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     </linearGradient>
                 </defs>
                 <rect x="10" y="10" width="76" height="76" rx="24" fill="url(#g)"/>
-                <circle cx="28" cy="26" r="7" fill="rgba(255,255,255,0.9)"/>
-                <text x="48" y="59" text-anchor="middle" font-size="34" font-weight="700" font-family="Trebuchet MS, Arial, sans-serif" fill="${glyphColor}">${glyph}</text>
+                <rect x="18" y="16" width="20" height="8" rx="4" fill="rgba(255,255,255,0.72)" transform="rotate(-8 28 20)"/>
+                <circle cx="72" cy="24" r="6" fill="rgba(255,255,255,0.78)"/>
+                <path d="M72 18l1.8 3.6 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4-2.9-2.8 4-.6z" fill="rgba(255,255,255,0.96)"/>
+                <text x="48" y="60" text-anchor="middle" font-size="34" font-weight="700" font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, Trebuchet MS, Arial, sans-serif" fill="${glyphColor}">${glyph}</text>
             </svg>`;
         return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
     }
 
     const SCHEDULE_ICON_PRESETS = [
-        { label: 'Meal', url: makeScheduleStickerData('Meal', '#ffbe88', '#ff8e9f', 'PL') },
-        { label: 'Break', url: makeScheduleStickerData('Break', '#8fb7ff', '#79ddc0', 'BR') },
-        { label: 'SEL', url: makeScheduleStickerData('SEL', '#ff9bc2', '#c996ff', 'SE') },
-        { label: 'Lesson', url: makeScheduleStickerData('Lesson', '#7ea5ff', '#8c88ff', 'AB') },
-        { label: 'Art', url: makeScheduleStickerData('Art', '#ffb870', '#ffd86f', 'AR') },
-        { label: 'Movement', url: makeScheduleStickerData('Movement', '#79ddc0', '#7ec6ff', 'GO') },
-        { label: 'Math', url: makeScheduleStickerData('Math', '#8fcf7a', '#79ddc0', '12') },
-        { label: 'Reading', url: makeScheduleStickerData('Reading', '#ff9fa2', '#ffbe88', 'RD') }
+        { label: 'Meal / Breakfast', url: makeScheduleStickerData('Meal / Breakfast', '#ffbe88', '#ff8e9f', '🍽️') },
+        { label: 'Break', url: makeScheduleStickerData('Break', '#8fb7ff', '#79ddc0', '⏰') },
+        { label: 'SEL / Social-Emotional', url: makeScheduleStickerData('SEL / Social-Emotional', '#ff9bc2', '#c996ff', '❤️') },
+        { label: 'Lesson', url: makeScheduleStickerData('Lesson', '#7ea5ff', '#8c88ff', '📚') },
+        { label: 'Art / Activity', url: makeScheduleStickerData('Art / Activity', '#ffb870', '#ffd86f', '🎨') },
+        { label: 'Movement / Brain Break', url: makeScheduleStickerData('Movement / Brain Break', '#79ddc0', '#7ec6ff', '🏃') },
+        { label: 'Math', url: makeScheduleStickerData('Math', '#8fcf7a', '#79ddc0', '🧮') },
+        { label: 'Reading', url: makeScheduleStickerData('Reading', '#ff9fa2', '#ffbe88', '📖') }
     ];
 
     function formatScheduleTime(value) {
