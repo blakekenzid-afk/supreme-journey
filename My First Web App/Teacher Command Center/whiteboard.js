@@ -413,11 +413,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const ytSearchBtn = document.getElementById('yt-search-btn');
     const ytResults = document.getElementById('yt-results');
     const ytFloatWidget = document.getElementById('yt-float-widget');
+    const ytFloatTitle = document.getElementById('yt-fw-title');
     const ytPlayerContainer = document.getElementById('yt-player-container');
+    const appleMusicEmbedInput = document.getElementById('am-embed-input');
+    const appleMusicEmbedBtn = document.getElementById('am-embed-btn');
     let ytPlayer = null;
     let ytCurrentVideoId = '';
     let ytPendingVideoId = '';
     let ytFloatDragBound = false;
+    let floatingMediaKind = '';
+    let appleMusicEmbedSrc = '';
     let activeImageSource = 'search';
 
     // Load YouTube API
@@ -489,6 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (ytResults) ytResults.innerHTML = '<div class="media-hint">Search for videos — great for Brain Breaks!</div>';
         const ytUrlInput = document.getElementById('yt-url-input');
         if (ytUrlInput) ytUrlInput.value = '';
+        if (appleMusicEmbedInput) appleMusicEmbedInput.value = '';
         const mediaTabs = document.querySelectorAll('#modal-media .bg-tab');
         const mediaPanels = document.querySelectorAll('#modal-media .bg-tab-content');
         mediaTabs.forEach(tab => {
@@ -498,6 +504,65 @@ document.addEventListener('DOMContentLoaded', () => {
         mediaPanels.forEach(panel => {
             panel.classList.toggle('active', panel.id === 'media-images');
         });
+    }
+
+    function setFloatingMediaTitle(label) {
+        if (ytFloatTitle) ytFloatTitle.textContent = label;
+    }
+
+    function destroyYouTubePlayer() {
+        if (!ytPlayer) return;
+        try {
+            if (typeof ytPlayer.destroy === 'function') ytPlayer.destroy();
+            else if (typeof ytPlayer.stopVideo === 'function') ytPlayer.stopVideo();
+        } catch (e) {}
+        ytPlayer = null;
+    }
+
+    function extractAppleMusicEmbedSrc(input) {
+        const trimmedInput = (input || '').trim();
+        if (!trimmedInput) return null;
+        let candidate = trimmedInput;
+        if (trimmedInput.includes('<iframe')) {
+            const doc = new DOMParser().parseFromString(trimmedInput, 'text/html');
+            candidate = doc.querySelector('iframe')?.getAttribute('src') || '';
+        }
+        if (!candidate) return null;
+        try {
+            const url = new URL(candidate);
+            if (url.hostname === 'music.apple.com') url.hostname = 'embed.music.apple.com';
+            return url.hostname === 'embed.music.apple.com' ? url.toString() : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function ensureFloatingMediaWidget() {
+        ytFloatWidget.classList.remove('hidden');
+        if (!ytFloatDragBound) {
+            App.makeDraggable(ytFloatWidget, ytFloatWidget.querySelector('.yt-fw-header'), () => schedulePagePersist());
+            ytFloatDragBound = true;
+        }
+    }
+
+    function openAppleMusicEmbed(input, options = {}) {
+        const { persist = true } = options;
+        const embedSrc = extractAppleMusicEmbedSrc(input);
+        if (!embedSrc) {
+            alert('Paste the Apple Music embed code or an Apple Music embed link from Share > Copy Embed Code.');
+            return;
+        }
+        destroyYouTubePlayer();
+        ytPendingVideoId = '';
+        ytCurrentVideoId = '';
+        appleMusicEmbedSrc = embedSrc;
+        floatingMediaKind = 'apple-music';
+        ytPlayerContainer.classList.add('embed-audio');
+        ytPlayerContainer.innerHTML = `<iframe src="${embedSrc}" allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write" loading="lazy"></iframe>`;
+        setFloatingMediaTitle('♫ Apple Music');
+        ensureFloatingMediaWidget();
+        App.closeModal('modal-media');
+        if (persist) schedulePagePersist();
     }
 
     function renderImageResults(items) {
@@ -729,12 +794,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function playVideo(id) {
         ytCurrentVideoId = id;
-        ytFloatWidget.classList.remove('hidden');
+        appleMusicEmbedSrc = '';
+        floatingMediaKind = 'youtube';
+        ytPlayerContainer.classList.remove('embed-audio');
+        if (!ytPlayer) ytPlayerContainer.innerHTML = '';
+        setFloatingMediaTitle('▶ YouTube Player');
+        ensureFloatingMediaWidget();
         App.closeModal('modal-media');
-        if (!ytFloatDragBound) {
-            App.makeDraggable(ytFloatWidget, ytFloatWidget.querySelector('.yt-fw-header'), () => schedulePagePersist());
-            ytFloatDragBound = true;
-        }
         if (!isYouTubeApiReady()) {
             ytPendingVideoId = id;
             schedulePagePersist();
@@ -766,8 +832,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const { persist = true } = options;
         ytPendingVideoId = '';
         ytCurrentVideoId = '';
+        appleMusicEmbedSrc = '';
+        floatingMediaKind = '';
         ytFloatWidget.classList.add('hidden');
-        if (ytPlayer && ytPlayer.stopVideo) ytPlayer.stopVideo();
+        destroyYouTubePlayer();
+        ytPlayerContainer.classList.remove('embed-audio');
+        ytPlayerContainer.innerHTML = '';
+        setFloatingMediaTitle('▶ Media Player');
         if (persist) schedulePagePersist();
     }
 
@@ -783,6 +854,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (q) searchYouTube(q); else showYtSuggestions('');
     });
     ytSearchInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchYouTube(e.currentTarget.value.trim()); });
+    appleMusicEmbedBtn?.addEventListener('click', () => openAppleMusicEmbed(appleMusicEmbedInput?.value || ''));
 
     document.getElementById('yt-fw-close')?.addEventListener('click', () => closeFloatingYouTubePlayer());
     setActiveImageSource(activeImageSource);
@@ -3015,10 +3087,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function serializeVisibleYouTubeWidget() {
-        if (!ytFloatWidget || ytFloatWidget.classList.contains('hidden') || !ytCurrentVideoId) {
+    function serializeVisibleFloatingMediaWidget() {
+        if (!ytFloatWidget || ytFloatWidget.classList.contains('hidden')) {
             return null;
         }
+        if (floatingMediaKind === 'apple-music' && appleMusicEmbedSrc) {
+            return {
+                kind: 'apple-music-player',
+                embedSrc: appleMusicEmbedSrc,
+                x: parseInt(ytFloatWidget.style.left, 10) || 0,
+                y: parseInt(ytFloatWidget.style.top, 10) || 0,
+            };
+        }
+        if (floatingMediaKind !== 'youtube' || !ytCurrentVideoId) return null;
         return {
             kind: 'youtube-player',
             videoId: ytCurrentVideoId,
@@ -3057,8 +3138,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return null;
         }).filter(Boolean);
-        const youtubeWidget = serializeVisibleYouTubeWidget();
-        if (youtubeWidget) widgets.push(youtubeWidget);
+        const floatingMediaWidget = serializeVisibleFloatingMediaWidget();
+        if (floatingMediaWidget) widgets.push(floatingMediaWidget);
         return widgets;
     }
 
@@ -3088,6 +3169,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (typeof item.x === 'number') ytFloatWidget.style.left = `${item.x}px`;
                 if (typeof item.y === 'number') ytFloatWidget.style.top = `${item.y}px`;
                 playVideo(item.videoId);
+                return;
+            }
+            if (item.kind === 'apple-music-player' && item.embedSrc) {
+                if (typeof item.x === 'number') ytFloatWidget.style.left = `${item.x}px`;
+                if (typeof item.y === 'number') ytFloatWidget.style.top = `${item.y}px`;
+                openAppleMusicEmbed(item.embedSrc, { persist: false });
             }
         });
     }

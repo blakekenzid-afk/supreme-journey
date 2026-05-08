@@ -345,7 +345,8 @@
             const sorted = [...schedItems].sort((a,b)=>toMins(a.start)-toMins(b.start));
             const current = sorted.find(i=>nowMins>=toMins(i.start)&&nowMins<=toMins(i.end));
             const next = sorted.find(i=>toMins(i.start)>nowMins);
-            const item = current||next;
+            const item = next||current;
+            const isUpcoming = item === next;
             if (!item) {
                 el.innerHTML = '';
                 const empty = document.createElement('div');
@@ -370,9 +371,9 @@
             name.textContent = item.title;
             const time = document.createElement('div');
             time.className = 'up-next-time';
-            time.textContent = current ? 'Happening now' : `At ${fmt12(item.start)}`;
+            time.textContent = isUpcoming ? `At ${fmt12(item.start)}` : 'Current item, then done';
             wrapper.append(icon, name, time);
-            if (current) {
+            if (!isUpcoming && current) {
                 const bar = document.createElement('div');
                 bar.className = 'up-next-bar';
                 const fill = document.createElement('div');

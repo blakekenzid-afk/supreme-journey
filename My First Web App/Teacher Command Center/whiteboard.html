@@ -234,6 +234,17 @@
             </div>
         </div>
         <div class="bg-tab-content" id="media-audio">
+            <div class="media-audio-stack">
+                <div class="media-embed-panel">
+                    <h3>Apple Music Playlist</h3>
+                    <p class="media-hint">Paste the Apple Music embed code or an embed link to open a floating playlist player.</p>
+                    <label for="am-embed-input" class="sr-only">Paste Apple Music embed code</label>
+                    <textarea id="am-embed-input" placeholder="Paste Apple Music embed code or https://embed.music.apple.com/..." class="field-textarea media-embed-input"></textarea>
+                    <div class="modal-row">
+                        <button type="button" class="primary-action-btn" id="am-embed-btn"><i class="fa-solid fa-music"></i> Open Playlist</button>
+                    </div>
+                </div>
+            </div>
             <div class="modal-form">
                 <h3>Text to Speech</h3>
                 <textarea id="tts-text-area" placeholder="Type something to speak..." class="field-textarea"></textarea>
@@ -448,7 +459,7 @@
 <!-- YouTube Video Player Widget (floats on canvas) -->
 <div class="yt-float-widget hidden" id="yt-float-widget">
     <div class="yt-fw-header">
-        <span>▶ YouTube Player</span>
+        <span id="yt-fw-title">▶ Media Player</span>
         <button type="button" id="yt-fw-close" aria-label="Close video player">✕</button>
     </div>
     <div id="yt-player-container"></div>

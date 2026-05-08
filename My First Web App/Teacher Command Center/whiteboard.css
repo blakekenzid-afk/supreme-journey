@@ -955,6 +955,13 @@ body {
 .yt-fw-header{background:linear-gradient(135deg, #7f95ff 0%, #96acf9 35%, #f4afc8 100%);color:white;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;font-size:0.85rem;font-weight:800;letter-spacing:0.03em;}
 .yt-fw-header button{background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.22);color:white;cursor:pointer;font-size:1rem;border-radius:12px;padding:4px 8px;}
 #yt-player-container{width:100%;aspect-ratio:16/9;}
+#yt-player-container.embed-audio{aspect-ratio:auto;min-height:450px;background:linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(244, 245, 255, 0.94) 100%);}
+#yt-player-container iframe{display:block;width:100%;height:100%;border:0;}
+
+.media-audio-stack{display:flex;flex-direction:column;gap:14px;padding:18px 20px 0;}
+.media-embed-panel{padding:18px;border-radius:20px;background:linear-gradient(180deg, rgba(255, 247, 233, 0.8) 0%, rgba(245, 241, 255, 0.74) 100%);border:1px solid rgba(170, 154, 214, 0.16);display:flex;flex-direction:column;gap:12px;}
+.media-embed-panel h3{margin:0;font-size:1rem;color:var(--wb-text);}
+.media-embed-input{min-height:116px;resize:vertical;}
 
 /* MEDIA SEARCH RESULTS */
 .media-results {
