@@ -427,17 +427,19 @@
                 <label for="sw-item-end" class="sr-only">End Time</label>
                 <input type="time" id="sw-item-end" class="field-input">
             </div>
-            <label for="sw-item-icon" class="sr-only">Icon</label>
-            <select id="sw-item-icon" class="field-select">
-                <option value="🍽️">🍽️ Meal / Breakfast</option>
-                <option value="⏰">⏰ Break</option>
-                <option value="❤️">❤️ SEL / Social-Emotional</option>
-                <option value="📚">📚 Lesson</option>
-                <option value="🎨">🎨 Art / Activity</option>
-                <option value="🏃">🏃 Movement / Brain Break</option>
-                <option value="🧮">🧮 Math</option>
-                <option value="📖">📖 Reading</option>
-            </select>
+            <input type="hidden" id="sw-item-icon">
+            <input type="hidden" id="sw-item-icon-label">
+            <div class="form-group">
+                <div class="form-label">Sticker Icon</div>
+                <div class="sw-icon-selection" id="sw-icon-selection"></div>
+                <div class="sw-icon-presets" id="sw-icon-presets"></div>
+                <div class="modal-row">
+                    <label for="sw-icon-search" class="sr-only">Search Sticker Icons</label>
+                    <input type="text" id="sw-icon-search" placeholder="Search cute sticker icons" class="field-input">
+                    <button type="button" class="btn-action" id="sw-icon-search-btn">Search</button>
+                </div>
+                <div class="sw-icon-results" id="sw-icon-results"></div>
+            </div>
             <button type="button" class="primary-action-btn big" id="sw-save-btn">Add to Schedule</button>
         </div>
     </div>

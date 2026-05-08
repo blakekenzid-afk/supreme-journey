@@ -1420,6 +1420,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===================== SCHEDULE WIDGET =====================
     let schedule = Storage.readJSON('wb-schedule', []);
+    let lastScheduleActiveKey = null;
+    let scheduleAlertsInitialized = false;
+    let scheduleAlertHideTimeout = null;
+    const scheduleIconSearchInput = document.getElementById('sw-icon-search');
+    const scheduleIconSearchBtn = document.getElementById('sw-icon-search-btn');
+    const scheduleIconResults = document.getElementById('sw-icon-results');
+    const scheduleIconPresets = document.getElementById('sw-icon-presets');
+    const scheduleIconSelection = document.getElementById('sw-icon-selection');
+    const scheduleIconInput = document.getElementById('sw-item-icon');
+    const scheduleIconLabelInput = document.getElementById('sw-item-icon-label');
+
+    function makeScheduleStickerData(label, accentA, accentB, glyph, glyphColor = '#ffffff') {
+        const svg = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="${label}">
+                <defs>
+                    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="${accentA}"/>
+                        <stop offset="100%" stop-color="${accentB}"/>
+                    </linearGradient>
+                </defs>
+                <rect x="10" y="10" width="76" height="76" rx="24" fill="url(#g)"/>
+                <circle cx="28" cy="26" r="7" fill="rgba(255,255,255,0.9)"/>
+                <text x="48" y="59" text-anchor="middle" font-size="34" font-weight="700" font-family="Trebuchet MS, Arial, sans-serif" fill="${glyphColor}">${glyph}</text>
+            </svg>`;
+        return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+    }
+
+    const SCHEDULE_ICON_PRESETS = [
+        { label: 'Meal', url: makeScheduleStickerData('Meal', '#ffbe88', '#ff8e9f', 'PL') },
+        { label: 'Break', url: makeScheduleStickerData('Break', '#8fb7ff', '#79ddc0', 'BR') },
+        { label: 'SEL', url: makeScheduleStickerData('SEL', '#ff9bc2', '#c996ff', 'SE') },
+        { label: 'Lesson', url: makeScheduleStickerData('Lesson', '#7ea5ff', '#8c88ff', 'AB') },
+        { label: 'Art', url: makeScheduleStickerData('Art', '#ffb870', '#ffd86f', 'AR') },
+        { label: 'Movement', url: makeScheduleStickerData('Movement', '#79ddc0', '#7ec6ff', 'GO') },
+        { label: 'Math', url: makeScheduleStickerData('Math', '#8fcf7a', '#79ddc0', '12') },
+        { label: 'Reading', url: makeScheduleStickerData('Reading', '#ff9fa2', '#ffbe88', 'RD') }
+    ];
 
     function formatScheduleTime(value) {
         if (!value || typeof value !== 'string') return '';
@@ -1428,6 +1465,164 @@ document.addEventListener('DOMContentLoaded', () => {
         const period = rawHours >= 12 ? 'PM' : 'AM';
         const hours12 = rawHours % 12 || 12;
         return `${hours12}:${String(rawMinutes).padStart(2, '0')} ${period}`;
+    }
+
+    function getScheduleItemKey(item) {
+        if (!item) return null;
+        return [item.title, item.startTime, item.endTime, item.icon, item.iconUrl, item.iconAlt].join('|');
+    }
+
+    function setScheduleIconSelection(iconUrl, iconLabel = '') {
+        if (scheduleIconInput) scheduleIconInput.value = iconUrl || '';
+        if (scheduleIconLabelInput) scheduleIconLabelInput.value = iconLabel || '';
+        if (!scheduleIconSelection) return;
+
+        if (!iconUrl) {
+            scheduleIconSelection.className = 'sw-icon-selection is-empty';
+            scheduleIconSelection.textContent = 'Choose a sticker icon';
+        } else {
+            scheduleIconSelection.className = 'sw-icon-selection';
+            scheduleIconSelection.innerHTML = `<img class="sw-icon-selection-thumb" src="${iconUrl}" alt="${iconLabel}"><div class="sw-icon-selection-label">${iconLabel || 'Selected sticker'}</div>`;
+        }
+
+        [scheduleIconPresets, scheduleIconResults].forEach(container => {
+            container?.querySelectorAll('.sw-icon-option').forEach(button => {
+                button.classList.toggle('selected', button.dataset.iconUrl === (iconUrl || ''));
+            });
+        });
+    }
+
+    function renderScheduleIconOptions(container, items, emptyMessage = 'No sticker icons yet.') {
+        if (!container) return;
+        if (!items.length) {
+            container.className = 'sw-icon-results is-empty';
+            container.textContent = emptyMessage;
+            return;
+        }
+
+        container.className = container.id === 'sw-icon-results' ? 'sw-icon-results' : 'sw-icon-presets';
+        container.innerHTML = '';
+        items.forEach(item => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'sw-icon-option';
+            button.dataset.iconUrl = item.url;
+            button.dataset.iconLabel = item.label || item.title || 'Sticker';
+            button.innerHTML = `<img src="${item.url}" alt="${button.dataset.iconLabel}"><span>${button.dataset.iconLabel}</span>`;
+            button.addEventListener('click', () => setScheduleIconSelection(item.url, button.dataset.iconLabel));
+            container.appendChild(button);
+        });
+        const currentUrl = scheduleIconInput?.value || '';
+        if (currentUrl) {
+            container.querySelectorAll('.sw-icon-option').forEach(button => {
+                button.classList.toggle('selected', button.dataset.iconUrl === currentUrl);
+            });
+        }
+    }
+
+    function searchScheduleIcons(query) {
+        const trimmedQuery = query.trim();
+        if (!trimmedQuery || !scheduleIconResults) return;
+        renderScheduleIconOptions(scheduleIconResults, [], 'Searching sticker icons...');
+        fetch(`https://api.openverse.org/v1/images/?q=${encodeURIComponent(`${trimmedQuery} sticker clipart`)}&page_size=8&license_type=commercial,modification`) 
+            .then(r => { if (!r.ok) throw new Error('bad response'); return r.json(); })
+            .then(data => {
+                const items = (data.results || []).map(item => ({
+                    url: item.thumbnail || item.url,
+                    label: item.title || trimmedQuery
+                })).filter(item => item.url);
+                renderScheduleIconOptions(scheduleIconResults, items, 'No sticker-style icons found. Try different words.');
+            })
+            .catch(() => {
+                renderScheduleIconOptions(scheduleIconResults, [], 'Sticker search failed right now. Try again in a moment.');
+            });
+    }
+
+    function getActiveScheduleItem(nowMin) {
+        return schedule.find(item => nowMin >= item.startMin && nowMin <= item.endMin) || null;
+    }
+
+    function ensureScheduleAlertNode() {
+        const widget = document.getElementById('schedule-widget');
+        if (!widget) return null;
+        let alertNode = document.getElementById('sw-transition-alert');
+        if (alertNode) return alertNode;
+
+        alertNode = document.createElement('div');
+        alertNode.id = 'sw-transition-alert';
+        alertNode.className = 'sw-transition-alert hidden';
+        alertNode.innerHTML = [
+            '<div class="sw-transition-alert-icon" aria-hidden="true">',
+            '<i class="fa-solid fa-bell"></i>',
+            '</div>',
+            '<div class="sw-transition-alert-text">',
+            '<div class="sw-transition-alert-label">Now Starting</div>',
+            '<div class="sw-transition-alert-title"></div>',
+            '</div>'
+        ].join('');
+
+        const header = widget.querySelector('.sw-header');
+        if (header?.nextSibling) widget.insertBefore(alertNode, header.nextSibling);
+        else widget.appendChild(alertNode);
+        return alertNode;
+    }
+
+    function playScheduleTransitionAlert() {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ac = new AudioCtx();
+            const notes = [784, 988];
+            notes.forEach((freq, index) => {
+                const osc = ac.createOscillator();
+                const gain = ac.createGain();
+                osc.connect(gain);
+                gain.connect(ac.destination);
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                const startAt = ac.currentTime + index * 0.18;
+                gain.gain.setValueAtTime(0.0001, startAt);
+                gain.gain.exponentialRampToValueAtTime(0.12, startAt + 0.03);
+                gain.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.22);
+                osc.start(startAt);
+                osc.stop(startAt + 0.24);
+            });
+            if (typeof ac.close === 'function') {
+                setTimeout(() => ac.close(), 700);
+            }
+        } catch (e) {}
+    }
+
+    function showScheduleTransitionAlert(item) {
+        const alertNode = ensureScheduleAlertNode();
+        if (!alertNode || !item) return;
+        const titleNode = alertNode.querySelector('.sw-transition-alert-title');
+        if (titleNode) {
+            titleNode.textContent = item.title;
+        }
+        alertNode.classList.remove('hidden');
+        if (scheduleAlertHideTimeout) clearTimeout(scheduleAlertHideTimeout);
+        scheduleAlertHideTimeout = setTimeout(() => {
+            alertNode.classList.add('hidden');
+        }, 5000);
+        playScheduleTransitionAlert();
+    }
+
+    function syncScheduleTransitionAlert(nowMin) {
+        const activeItem = getActiveScheduleItem(nowMin);
+        const activeKey = getScheduleItemKey(activeItem);
+
+        if (!scheduleAlertsInitialized) {
+            scheduleAlertsInitialized = true;
+            lastScheduleActiveKey = activeKey;
+            return;
+        }
+
+        if (activeKey && activeKey !== lastScheduleActiveKey) {
+            showScheduleTransitionAlert(activeItem);
+        }
+
+        lastScheduleActiveKey = activeKey;
     }
 
     function renderSchedule() {
@@ -1441,16 +1636,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const nowMin = now.getHours() * 60 + now.getMinutes();
 
         schedule.sort((a,b) => a.startMin - b.startMin);
+        syncScheduleTransitionAlert(nowMin);
         schedule.forEach((item, i) => {
             const done = nowMin > item.endMin;
             const active = nowMin >= item.startMin && nowMin <= item.endMin;
-            let pct = done ? 100 : active ? Math.round(((nowMin - item.startMin)/(item.endMin - item.startMin))*100) : 0;
+            const duration = Math.max(1, item.endMin - item.startMin);
+            let pct = done ? 100 : active ? Math.round(((nowMin - item.startMin)/duration)*100) : 0;
 
             const div = document.createElement('div');
             div.className = 'schedule-item';
+            if (active) div.classList.add('active');
             const icon = document.createElement('div');
             icon.className = 'si-icon';
-            icon.textContent = item.icon;
+            if (item.iconUrl) {
+                const iconImg = document.createElement('img');
+                iconImg.src = item.iconUrl;
+                iconImg.alt = item.iconAlt || item.title || 'Schedule icon';
+                icon.appendChild(iconImg);
+            } else {
+                icon.textContent = item.icon || '📚';
+            }
             const info = document.createElement('div');
             info.className = 'si-info';
             const title = document.createElement('div');
@@ -1493,22 +1698,34 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('sw-item-title').value = '';
         document.getElementById('sw-item-start').value = '';
         document.getElementById('sw-item-end').value = '';
-        document.getElementById('sw-item-icon').value = '🍽️';
+        if (scheduleIconSearchInput) scheduleIconSearchInput.value = '';
+        renderScheduleIconOptions(scheduleIconResults, [], 'Search for cute sticker icons');
+        setScheduleIconSelection(SCHEDULE_ICON_PRESETS[0]?.url || '', SCHEDULE_ICON_PRESETS[0]?.label || 'Meal');
     }
 
     document.getElementById('sw-add-btn').addEventListener('click', () => App.openModal('modal-schedule'));
+
+    renderScheduleIconOptions(scheduleIconPresets, SCHEDULE_ICON_PRESETS);
+    renderScheduleIconOptions(scheduleIconResults, [], 'Search for cute sticker icons');
+    setScheduleIconSelection(SCHEDULE_ICON_PRESETS[0]?.url || '', SCHEDULE_ICON_PRESETS[0]?.label || 'Meal');
+
+    scheduleIconSearchBtn?.addEventListener('click', () => searchScheduleIcons(scheduleIconSearchInput?.value || ''));
+    scheduleIconSearchInput?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') searchScheduleIcons(e.currentTarget.value);
+    });
 
     document.getElementById('sw-save-btn').addEventListener('click', () => {
         const title = document.getElementById('sw-item-title').value.trim();
         const startTime = document.getElementById('sw-item-start').value;
         const endTime = document.getElementById('sw-item-end').value;
-        const icon = document.getElementById('sw-item-icon').value;
+        const iconUrl = scheduleIconInput?.value || '';
+        const iconAlt = scheduleIconLabelInput?.value || title;
         if (!title || !startTime || !endTime) return alert('Please fill all fields');
 
         const [sh,sm] = startTime.split(':').map(Number);
         const [eh,em] = endTime.split(':').map(Number);
 
-        schedule.push({ title, icon, startTime, endTime, startMin: sh*60+sm, endMin: eh*60+em });
+        schedule.push({ title, icon: '', iconUrl, iconAlt, startTime, endTime, startMin: sh*60+sm, endMin: eh*60+em });
         Storage.writeJSON('wb-schedule', schedule);
         renderSchedule();
         App.closeModal('modal-schedule');
