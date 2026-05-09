@@ -294,14 +294,56 @@
 
         // ===== SCHEDULE HELPERS =====
         const SCHED_ICONS = ['📚','🎨','🧮','📖','🏃','🍽️','⏰','🎵','🧪','💬','🌟','✏️','🖥️','🤸','🧘','📝','🔬','🌍','🎭','❤️'];
-        let schedItems = readStoredJSON('dashboard-schedule', []);
-        let schedEditIndex = -1, selectedIcon = '📚';
-        function saveSchedule() { localStorage.setItem('dashboard-schedule', JSON.stringify(schedItems)); }
+        const WHITEBOARD_SCHEDULE_KEY = 'wb-schedule';
+        const DASHBOARD_SCHEDULE_KEY = 'dashboard-schedule';
+
+        function normalizeScheduleItem(item) {
+            if (!item || typeof item !== 'object') return null;
+            const title = (item.title || '').trim();
+            const start = typeof item.start === 'string' ? item.start : item.startTime;
+            const end = typeof item.end === 'string' ? item.end : item.endTime;
+            if (!title || !start || !end) return null;
+            return {
+                title,
+                start,
+                end,
+                icon: item.icon || '',
+                iconUrl: item.iconUrl || '',
+                iconAlt: item.iconAlt || title,
+            };
+        }
+
+        function loadScheduleItems() {
+            const whiteboardItems = readStoredJSON(WHITEBOARD_SCHEDULE_KEY, null);
+            if (Array.isArray(whiteboardItems)) {
+                return whiteboardItems.map(normalizeScheduleItem).filter(Boolean);
+            }
+            return readStoredJSON(DASHBOARD_SCHEDULE_KEY, []).map(normalizeScheduleItem).filter(Boolean);
+        }
+
+        let schedItems = loadScheduleItems();
+        let schedEditIndex = -1, selectedIcon = '📚', selectedScheduleSticker = null;
+        function saveSchedule() {
+            const whiteboardSchedule = schedItems.map(item => ({
+                title: item.title,
+                icon: item.iconUrl ? '' : (item.icon || '📚'),
+                iconUrl: item.iconUrl || '',
+                iconAlt: item.iconAlt || item.title,
+                startTime: item.start,
+                endTime: item.end,
+                startMin: toMins(item.start),
+                endMin: toMins(item.end),
+            }));
+            localStorage.setItem(DASHBOARD_SCHEDULE_KEY, JSON.stringify(schedItems));
+            localStorage.setItem(WHITEBOARD_SCHEDULE_KEY, JSON.stringify(whiteboardSchedule));
+            schedItems = loadScheduleItems();
+        }
         function toMins(t) { const [h,m] = t.split(':').map(Number); return h*60+m; }
         function fmt12(t) { const [h,m] = t.split(':').map(Number); const ap = h>=12?'PM':'AM'; return ((h%12)||12)+':'+String(m).padStart(2,'0')+' '+ap; }
         function renderSchedule() {
             const list = document.getElementById('schedule-list');
             if (!list) return;
+            schedItems = loadScheduleItems();
                 if (schedItems.length === 0) {
                     list.innerHTML = '';
                     const empty = document.createElement('div');
@@ -319,12 +361,20 @@
                 list.innerHTML = '';
                 schedItems.forEach((item,i) => {
                     const sM=toMins(item.start),eM=toMins(item.end),done=nowMins>eM,active=nowMins>=sM&&nowMins<=eM;
-                    const pct=done?100:active?Math.round(((nowMins-sM)/(eM-sM))*100):0;
+                    const duration = Math.max(1, eM - sM);
+                    const pct=done?100:active?Math.round(((nowMins-sM)/duration)*100):0;
                     const div=document.createElement('div');
                     div.className='sched-item'+(active?' active':'')+(done?' done':'');
                         const icon = document.createElement('span');
                         icon.className = 'sched-icon';
-                        icon.textContent = item.icon;
+                        if (item.iconUrl) {
+                            const iconImg = document.createElement('img');
+                            iconImg.src = item.iconUrl;
+                            iconImg.alt = item.iconAlt || item.title;
+                            icon.appendChild(iconImg);
+                        } else {
+                            icon.textContent = item.icon || '📚';
+                        }
                         const info = document.createElement('div');
                         info.className = 'sched-info';
                         const name = document.createElement('div');
@@ -350,6 +400,7 @@
         function renderUpNext() {
             const el = document.getElementById('up-next-content');
             if (!el) return;
+            schedItems = loadScheduleItems();
             const nowMins = new Date().getHours()*60+new Date().getMinutes();
             const sorted = [...schedItems].sort((a,b)=>toMins(a.start)-toMins(b.start));
             const current = sorted.find(i=>nowMins>=toMins(i.start)&&nowMins<=toMins(i.end));
@@ -368,13 +419,20 @@
                 el.appendChild(empty);
                 return;
             }
-            const sM=toMins(item.start),eM=toMins(item.end),pct=current?Math.round(((nowMins-sM)/(eM-sM))*100):0;
+            const sM=toMins(item.start),eM=toMins(item.end),duration=Math.max(1, eM-sM),pct=current?Math.round(((nowMins-sM)/duration)*100):0;
             el.innerHTML = '';
             const wrapper = document.createElement('div');
             wrapper.className = 'up-next-item';
             const icon = document.createElement('div');
             icon.className = 'up-next-icon';
-            icon.textContent = item.icon;
+            if (item.iconUrl) {
+                const iconImg = document.createElement('img');
+                iconImg.src = item.iconUrl;
+                iconImg.alt = item.iconAlt || item.title;
+                icon.appendChild(iconImg);
+            } else {
+                icon.textContent = item.icon || '📚';
+            }
             const name = document.createElement('div');
             name.className = 'up-next-name';
             name.textContent = item.title;
@@ -401,12 +459,13 @@
             document.getElementById('sched-title').value=item?item.title:'';
             document.getElementById('sched-start').value=item?item.start:'';
             document.getElementById('sched-end').value=item?item.end:'';
-            selectedIcon=item?item.icon:'📚';
+            selectedIcon=item?.icon || '📚';
+            selectedScheduleSticker = item?.iconUrl ? { iconUrl: item.iconUrl, iconAlt: item.iconAlt || item.title } : null;
             const iconsEl=document.getElementById('sched-icons'); iconsEl.innerHTML='';
             SCHED_ICONS.forEach(ic=>{
                 const btn=document.createElement('button'); btn.type='button'; btn.textContent=ic;
                 btn.style.cssText='font-size:1.3rem;background:'+(ic===selectedIcon?'var(--accent-blue)':'var(--top-nav-bg)')+';border:2px solid '+(ic===selectedIcon?'var(--text-active)':'transparent')+';border-radius:8px;padding:4px 7px;cursor:pointer;';
-                btn.addEventListener('click',()=>{ selectedIcon=ic; iconsEl.querySelectorAll('button').forEach(b=>{b.style.background='var(--top-nav-bg)';b.style.borderColor='transparent';}); btn.style.background='var(--accent-blue)'; btn.style.borderColor='var(--text-active)'; });
+                btn.addEventListener('click',()=>{ selectedIcon=ic; selectedScheduleSticker = null; iconsEl.querySelectorAll('button').forEach(b=>{b.style.background='var(--top-nav-bg)';b.style.borderColor='transparent';}); btn.style.background='var(--accent-blue)'; btn.style.borderColor='var(--text-active)'; });
                 iconsEl.appendChild(btn);
             });
             document.getElementById('sched-modal').style.display='flex';
@@ -418,7 +477,9 @@
             if (!title) { document.getElementById('sched-title').focus(); return; }
             if (!start||!end) { alert('Please set a start and end time.'); return; }
             if (toMins(end)<=toMins(start)) { alert('End time must be after start time.'); return; }
-            const item={title,start,end,icon:selectedIcon};
+            const item=selectedScheduleSticker
+                ? {title,start,end,icon:'',iconUrl:selectedScheduleSticker.iconUrl,iconAlt:selectedScheduleSticker.iconAlt || title}
+                : {title,start,end,icon:selectedIcon,iconUrl:'',iconAlt:title};
             if (schedEditIndex>=0) schedItems[schedEditIndex]=item; else schedItems.push(item);
             saveSchedule(); renderSchedule(); closeSchedModal();
         }
@@ -626,6 +687,12 @@
             }, 50);
             setInterval(() => { renderSchedule(); renderUpNext(); }, 60000);
         });
+        window.addEventListener('storage', event => {
+            if (event.key === WHITEBOARD_SCHEDULE_KEY || event.key === DASHBOARD_SCHEDULE_KEY) {
+                renderSchedule();
+                renderUpNext();
+            }
+        });
     </script>
 
     <!-- Schedule Add/Edit Modal -->
@@ -668,7 +735,8 @@
                 .sched-item:hover { background:var(--accent-blue); }
                 .sched-item.active { background:var(--accent-blue);border-left:4px solid var(--text-active); }
         .sched-item.done { opacity:0.45; }
-        .sched-icon { font-size:1.3rem;flex-shrink:0; }
+        .sched-icon { width:36px;height:36px;font-size:1.3rem;flex-shrink:0;display:flex;align-items:center;justify-content:center; }
+        .sched-icon img { width:36px;height:36px;border-radius:12px;object-fit:cover;display:block; }
         .sched-info { flex:1;min-width:0; }
                 .sched-name { font-size:0.88rem;font-weight:600;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
                 .sched-time { font-size:0.76rem;color:var(--text-muted);margin-top:1px; }
@@ -680,7 +748,8 @@
         .sched-empty p { font-size:0.85rem; }
         .up-next-content { flex:1;display:flex;flex-direction:column;justify-content:center; }
                 .up-next-item { padding:20px;border-radius:14px;background:var(--accent-blue);display:flex;flex-direction:column;gap:8px; }
-        .up-next-icon { font-size:2.2rem; }
+        .up-next-icon { width:42px;height:42px;font-size:2.2rem;display:flex;align-items:center;justify-content:center; }
+        .up-next-icon img { width:42px;height:42px;border-radius:14px;object-fit:cover;display:block; }
                 .up-next-name { font-size:1.2rem;font-weight:700;color:var(--text-main); }
                 .up-next-time { font-size:0.85rem;color:var(--text-active);font-weight:500; }
                 .up-next-bar { height:6px;background:var(--border-color);border-radius:3px;margin-top:4px; }

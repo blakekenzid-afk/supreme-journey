@@ -4799,9 +4799,10 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('✅ Teacherstack Whiteboard Parts 1 & 2 Initialized');
     // Initialize draggables
     const SCHEDULE_WIDGET_POSITION_KEY = 'wb-schedule-widget-position';
+    let resetScheduleWidgetLayout = () => {};
     const scheduleWidget = document.getElementById('schedule-widget');
     if (scheduleWidget) {
-        function resetScheduleWidgetLayout() {
+        resetScheduleWidgetLayout = function() {
             scheduleWidget.style.left = '';
             scheduleWidget.style.top = '16px';
             scheduleWidget.style.right = '16px';
@@ -4809,7 +4810,7 @@ document.addEventListener('DOMContentLoaded', () => {
             scheduleWidget.style.width = '';
             scheduleWidget.style.height = '';
             try { localStorage.removeItem(SCHEDULE_WIDGET_POSITION_KEY); } catch (e) {}
-        }
+        };
 
         const savedScheduleWidgetPosition = Storage.readJSON(SCHEDULE_WIDGET_POSITION_KEY, null);
         const saveScheduleWidgetLayout = () => {
@@ -4821,6 +4822,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
 
+        const parentRect = scheduleWidget.parentElement?.getBoundingClientRect();
+        const widgetRect = scheduleWidget.getBoundingClientRect();
+        const defaultLeft = Math.max(8, Math.round(widgetRect.left - (parentRect?.left || 0)));
+        const defaultTop = Math.max(8, Math.round(widgetRect.top - (parentRect?.top || 0)));
+
         if (savedScheduleWidgetPosition && typeof savedScheduleWidgetPosition.left === 'number' && typeof savedScheduleWidgetPosition.top === 'number') {
             scheduleWidget.style.left = `${savedScheduleWidgetPosition.left}px`;
             scheduleWidget.style.top = `${savedScheduleWidgetPosition.top}px`;
@@ -4829,12 +4835,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (savedScheduleWidgetPosition.width) scheduleWidget.style.width = savedScheduleWidgetPosition.width;
             if (savedScheduleWidgetPosition.height) scheduleWidget.style.height = savedScheduleWidgetPosition.height;
         } else {
-            scheduleWidget.style.left = `${scheduleWidget.offsetLeft}px`;
-            scheduleWidget.style.top = `${scheduleWidget.offsetTop}px`;
+            scheduleWidget.style.left = `${defaultLeft}px`;
+            scheduleWidget.style.top = `${defaultTop}px`;
             scheduleWidget.style.right = 'auto';
             scheduleWidget.style.bottom = 'auto';
         }
-        App.makeDraggable(scheduleWidget, scheduleWidget.querySelector('.sw-header'), (left, top) => {
+        const scheduleWidgetHandle = scheduleWidget.querySelector('.sw-header') || scheduleWidget;
+        scheduleWidgetHandle.style.touchAction = 'none';
+        App.makeDraggable(scheduleWidget, scheduleWidgetHandle, (left, top) => {
             scheduleWidget.style.left = `${left}px`;
             scheduleWidget.style.top = `${top}px`;
             scheduleWidget.style.right = 'auto';
