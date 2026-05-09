@@ -4842,13 +4842,72 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const scheduleWidgetHandle = scheduleWidget.querySelector('.sw-header') || scheduleWidget;
         scheduleWidgetHandle.style.touchAction = 'none';
-        App.makeDraggable(scheduleWidget, scheduleWidgetHandle, (left, top) => {
+        if (typeof scheduleWidget._dragCleanup === 'function') scheduleWidget._dragCleanup();
+
+        let activePointerId = null;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
+        const clampScheduleWidgetPosition = (clientX, clientY) => {
+            const parent = scheduleWidget.parentElement;
+            if (!parent) return null;
+            const parentRect = parent.getBoundingClientRect();
+            const edgePadding = 8;
+            const maxX = Math.max(edgePadding, parentRect.width - scheduleWidget.offsetWidth - edgePadding);
+            const maxY = Math.max(edgePadding, parentRect.height - scheduleWidget.offsetHeight - edgePadding);
+            const left = Math.min(Math.max(edgePadding, clientX - parentRect.left - dragOffsetX), maxX);
+            const top = Math.min(Math.max(edgePadding, clientY - parentRect.top - dragOffsetY), maxY);
+            return { left, top };
+        };
+
+        const applyScheduleWidgetPosition = (left, top) => {
             scheduleWidget.style.left = `${left}px`;
             scheduleWidget.style.top = `${top}px`;
             scheduleWidget.style.right = 'auto';
             scheduleWidget.style.bottom = 'auto';
+        };
+
+        const stopScheduleWidgetDrag = () => {
+            activePointerId = null;
+            document.removeEventListener('pointermove', onScheduleWidgetPointerMove);
+            document.removeEventListener('pointerup', onScheduleWidgetPointerUp);
+            document.removeEventListener('pointercancel', onScheduleWidgetPointerUp);
             saveScheduleWidgetLayout();
-        });
+        };
+
+        const onScheduleWidgetPointerMove = (event) => {
+            if (event.pointerId !== activePointerId) return;
+            const nextPosition = clampScheduleWidgetPosition(event.clientX, event.clientY);
+            if (!nextPosition) return;
+            applyScheduleWidgetPosition(nextPosition.left, nextPosition.top);
+            event.preventDefault();
+        };
+
+        const onScheduleWidgetPointerUp = (event) => {
+            if (event.pointerId !== activePointerId) return;
+            stopScheduleWidgetDrag();
+        };
+
+        const startScheduleWidgetDrag = (event) => {
+            if (event.button !== undefined && event.button !== 0) return;
+            const rect = scheduleWidget.getBoundingClientRect();
+            activePointerId = event.pointerId;
+            dragOffsetX = event.clientX - rect.left;
+            dragOffsetY = event.clientY - rect.top;
+            document.addEventListener('pointermove', onScheduleWidgetPointerMove);
+            document.addEventListener('pointerup', onScheduleWidgetPointerUp);
+            document.addEventListener('pointercancel', onScheduleWidgetPointerUp);
+            if (typeof scheduleWidgetHandle.setPointerCapture === 'function') {
+                try { scheduleWidgetHandle.setPointerCapture(event.pointerId); } catch (e) {}
+            }
+            event.preventDefault();
+        };
+
+        scheduleWidgetHandle.addEventListener('pointerdown', startScheduleWidgetDrag);
+        scheduleWidget._dragCleanup = () => {
+            stopScheduleWidgetDrag();
+            scheduleWidgetHandle.removeEventListener('pointerdown', startScheduleWidgetDrag);
+        };
         if (typeof ResizeObserver !== 'undefined') {
             let resizeFrame = null;
             const resizeObserver = new ResizeObserver(() => {

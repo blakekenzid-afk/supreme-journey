@@ -262,7 +262,8 @@ body {
     radial-gradient(circle at 85% 18%, rgba(225, 240, 255, 0.9), transparent 28%),
     radial-gradient(circle at 18% 82%, rgba(255, 247, 201, 0.72), transparent 24%),
     linear-gradient(180deg, #fffaf4 0%, #fff6ef 46%, #f7f3ff 100%);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   min-height: 100dvh;
   color: var(--wb-text-main);
 }
@@ -271,9 +272,9 @@ body {
 .wb-app {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
+  min-height: max(100dvh, 920px);
   gap: 12px;
-  padding: 12px 12px 0;
+  padding: 12px;
 }
 
 /* TOP BAR */
@@ -322,7 +323,7 @@ body {
 .wb-topbar-actions{display:flex;gap:8px;}
 
 /* MAIN */
-.wb-main{display:flex;flex:1;overflow:hidden;border-radius:32px;background:rgba(255,255,255,0.52);border:1px solid var(--wb-shell-border);box-shadow:var(--wb-shell-shadow);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+.wb-main{display:flex;flex:1 0 620px;min-height:620px;overflow:hidden;border-radius:32px;background:rgba(255,255,255,0.52);border:1px solid var(--wb-shell-border);box-shadow:var(--wb-shell-shadow);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
 @media (max-width: 768px) { .wb-main { flex-direction: column; } }
 
 /* DRAW TOOLBAR */
@@ -1390,6 +1391,15 @@ body {
 }
 
 @media (max-width: 768px) {
+  .wb-app {
+    min-height: max(100dvh, 980px);
+  }
+
+  .wb-main {
+    flex-basis: 680px;
+    min-height: 680px;
+  }
+
   .brush-slider {
     appearance: auto;
     -webkit-appearance: slider-horizontal;
