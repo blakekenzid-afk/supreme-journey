@@ -798,6 +798,26 @@ body {
 .timer-display{font-size:4rem;font-weight:300;letter-spacing:4px;color:#7c5c22;font-variant-numeric:tabular-nums;line-height:1;}
 .timer-status{font-size:0.82rem;font-weight:800;color:#9d7d40;text-transform:uppercase;letter-spacing:0.14em;}
 .timer-presets{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;}
+.timer-schedule-context{
+  padding:10px 14px;
+  border-radius:18px;
+  background:rgba(255,255,255,0.72);
+  border:1px solid rgba(227, 185, 78, 0.24);
+  color:#8f7136;
+  font-size:0.8rem;
+  font-weight:700;
+  line-height:1.4;
+  box-shadow:0 8px 14px rgba(230, 178, 86, 0.08);
+}
+.timer-schedule-presets{margin-top:-4px;}
+.timer-schedule-btn:disabled{
+  cursor:not-allowed;
+  opacity:0.55;
+  transform:none;
+  background:rgba(255,255,255,0.65);
+  color:#b69f72;
+  border-color:rgba(182, 159, 114, 0.22);
+}
 .therm-unit-btn{padding:6px 12px;border-radius:999px;border:1px solid rgba(170, 154, 214, 0.16);background:rgba(255,255,255,0.84);cursor:pointer;font-size:0.75rem;font-weight:700;transition:var(--transition-base);box-shadow:0 8px 14px rgba(141, 129, 177, 0.08);}
 .preset-btn {
   padding: 9px 16px;

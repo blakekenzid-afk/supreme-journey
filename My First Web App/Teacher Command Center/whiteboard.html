@@ -281,6 +281,11 @@
                 <button type="button" class="preset-btn" data-sec="600">10 min</button>
                 <button type="button" class="preset-btn" data-sec="900">15 min</button>
             </div>
+            <div class="timer-schedule-context" id="timer-schedule-context">No schedule block active right now.</div>
+            <div class="timer-presets timer-schedule-presets">
+                <button type="button" class="preset-btn timer-schedule-btn" id="timer-current-block-btn">Current block</button>
+                <button type="button" class="preset-btn timer-schedule-btn" id="timer-next-block-btn">Next block</button>
+            </div>
             <div class="timer-custom modal-row center">
                 <label for="timer-min" class="sr-only">Minutes</label>
                 <input type="number" id="timer-min" placeholder="Min" min="0" max="59" value="5" class="field-input w-80">

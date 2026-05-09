@@ -887,6 +887,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===================== TIMER =====================
     const TIMER_STORAGE_KEY = 'wb-standalone-timer';
     let timerSeconds = 300, timerTotal = 300, timerInterval = null, timerRunning = false, timerEndsAt = null;
+    const timerScheduleContext = document.getElementById('timer-schedule-context');
+    const timerCurrentBlockBtn = document.getElementById('timer-current-block-btn');
+    const timerNextBlockBtn = document.getElementById('timer-next-block-btn');
+
+    function setTimerInputs(seconds) {
+        const timerMinInput = document.getElementById('timer-min');
+        const timerSecInput = document.getElementById('timer-sec-input');
+        if (timerMinInput) timerMinInput.value = String(Math.floor(seconds / 60));
+        if (timerSecInput) timerSecInput.value = String(seconds % 60).padStart(2, '0');
+    }
+
+    function applyStandaloneTimer(seconds) {
+        const normalizedSeconds = Math.max(0, Math.round(seconds));
+        clearTimerTick();
+        timerRunning = false;
+        timerEndsAt = null;
+        timerSeconds = timerTotal = normalizedSeconds;
+        document.getElementById('timer-display').style.color = 'var(--text-main)';
+        setTimerInputs(normalizedSeconds);
+        persistTimerState();
+        updateTimerDisplay();
+    }
 
     function persistTimerState() {
         try {
@@ -974,17 +996,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function resetStandaloneTimer(seconds = 300) {
-        clearTimerTick();
-        timerRunning = false;
-        timerEndsAt = null;
-        timerSeconds = timerTotal = seconds;
-        document.getElementById('timer-display').style.color = 'var(--text-main)';
-        const timerMinInput = document.getElementById('timer-min');
-        const timerSecInput = document.getElementById('timer-sec-input');
-        if (timerMinInput) timerMinInput.value = String(Math.floor(seconds / 60));
-        if (timerSecInput) timerSecInput.value = String(seconds % 60).padStart(2, '0');
-        persistTimerState();
-        updateTimerDisplay();
+        applyStandaloneTimer(seconds);
     }
 
     function timerFinished() {
@@ -1027,26 +1039,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.preset-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            clearTimerTick();
-            timerRunning = false;
-            timerEndsAt = null;
-            timerSeconds = timerTotal = parseInt(btn.getAttribute('data-sec'));
-            document.getElementById('timer-display').style.color = 'var(--text-main)';
-            persistTimerState();
-            updateTimerDisplay();
+            if (!btn.dataset.sec) return;
+            applyStandaloneTimer(parseInt(btn.getAttribute('data-sec'), 10) || 0);
         });
     });
 
     document.getElementById('timer-set-btn').addEventListener('click', () => {
-        clearTimerTick();
-        timerRunning = false;
-        timerEndsAt = null;
         const m = parseInt(document.getElementById('timer-min').value) || 0;
         const s = parseInt(document.getElementById('timer-sec-input').value) || 0;
-        timerSeconds = timerTotal = m * 60 + s;
-        document.getElementById('timer-display').style.color = 'var(--text-main)';
-        persistTimerState();
-        updateTimerDisplay();
+        applyStandaloneTimer(m * 60 + s);
     });
 
     document.addEventListener('visibilitychange', () => {
@@ -1520,6 +1521,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastScheduleActiveKey = null;
     let scheduleAlertsInitialized = false;
     let scheduleAlertHideTimeout = null;
+    let lastScheduleRenderedMinute = null;
     const scheduleIconSearchInput = document.getElementById('sw-icon-search');
     const scheduleIconSearchBtn = document.getElementById('sw-icon-search-btn');
     const scheduleIconResults = document.getElementById('sw-icon-results');
@@ -1641,6 +1643,88 @@ document.addEventListener('DOMContentLoaded', () => {
         return schedule.find(item => nowMin >= item.startMin && nowMin <= item.endMin) || null;
     }
 
+    function getSortedScheduleItems() {
+        return [...schedule].sort((a, b) => a.startMin - b.startMin);
+    }
+
+    function getNextScheduleItem(nowMin) {
+        return getSortedScheduleItems().find(item => item.startMin > nowMin) || null;
+    }
+
+    function getCurrentTimeMinutes(date = new Date()) {
+        return date.getHours() * 60 + date.getMinutes();
+    }
+
+    function formatScheduleCountdown(seconds) {
+        const normalizedSeconds = Math.max(0, Math.round(seconds));
+        const hours = Math.floor(normalizedSeconds / 3600);
+        const minutes = Math.floor((normalizedSeconds % 3600) / 60);
+        const secs = normalizedSeconds % 60;
+        if (hours > 0) return `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function getCurrentScheduleItemRemainingSeconds(item, now = new Date()) {
+        if (!item) return 0;
+        const nowSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+        return Math.max(0, ((item.endMin + 1) * 60) - nowSeconds);
+    }
+
+    function getNextScheduleItemStartSeconds(item, now = new Date()) {
+        if (!item) return 0;
+        const nowSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+        return Math.max(0, (item.startMin * 60) - nowSeconds);
+    }
+
+    function updateTimerScheduleContext(now = new Date()) {
+        if (!timerScheduleContext) return;
+        const nowMin = getCurrentTimeMinutes(now);
+        const currentItem = getActiveScheduleItem(nowMin);
+        const nextItem = getNextScheduleItem(nowMin);
+        const currentSeconds = getCurrentScheduleItemRemainingSeconds(currentItem, now);
+        const nextSeconds = getNextScheduleItemStartSeconds(nextItem, now);
+
+        if (timerCurrentBlockBtn) timerCurrentBlockBtn.disabled = !currentItem || currentSeconds <= 0;
+        if (timerNextBlockBtn) timerNextBlockBtn.disabled = !nextItem || nextSeconds <= 0;
+
+        if (currentItem) {
+            timerScheduleContext.textContent = `${currentItem.title} ends in ${formatScheduleCountdown(currentSeconds)}.`;
+            return;
+        }
+        if (nextItem) {
+            timerScheduleContext.textContent = `${nextItem.title} starts in ${formatScheduleCountdown(nextSeconds)} at ${formatScheduleTime(nextItem.startTime)}.`;
+            return;
+        }
+        timerScheduleContext.textContent = schedule.length > 0 ? 'All scheduled blocks are finished for today.' : 'No schedule block active right now.';
+    }
+
+    function setTimerFromSchedule(mode) {
+        const now = new Date();
+        const nowMin = getCurrentTimeMinutes(now);
+        if (mode === 'current') {
+            const currentItem = getActiveScheduleItem(nowMin);
+            const currentSeconds = getCurrentScheduleItemRemainingSeconds(currentItem, now);
+            if (!currentItem || currentSeconds <= 0) {
+                alert('No current schedule block is active right now.');
+                updateTimerScheduleContext(now);
+                return;
+            }
+            applyStandaloneTimer(currentSeconds);
+            updateTimerScheduleContext(now);
+            return;
+        }
+
+        const nextItem = getNextScheduleItem(nowMin);
+        const nextSeconds = getNextScheduleItemStartSeconds(nextItem, now);
+        if (!nextItem || nextSeconds <= 0) {
+            alert('There is no upcoming schedule block left today.');
+            updateTimerScheduleContext(now);
+            return;
+        }
+        applyStandaloneTimer(nextSeconds);
+        updateTimerScheduleContext(now);
+    }
+
     function ensureScheduleAlertNode() {
         const widget = document.getElementById('schedule-widget');
         if (!widget) return null;
@@ -1732,10 +1816,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         const now = new Date();
-        const nowMin = now.getHours() * 60 + now.getMinutes();
+        const nowMin = getCurrentTimeMinutes(now);
 
         schedule.sort((a,b) => a.startMin - b.startMin);
         syncScheduleTransitionAlert(nowMin);
+        updateTimerScheduleContext(now);
         schedule.forEach((item, i) => {
             const done = nowMin > item.endMin;
             const active = nowMin >= item.startMin && nowMin <= item.endMin;
@@ -1804,6 +1889,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('sw-add-btn').addEventListener('click', () => App.openModal('modal-schedule'));
 
+    timerCurrentBlockBtn?.addEventListener('click', () => setTimerFromSchedule('current'));
+    timerNextBlockBtn?.addEventListener('click', () => setTimerFromSchedule('next'));
+
     renderScheduleIconOptions(scheduleIconPresets, SCHEDULE_ICON_PRESETS);
     renderScheduleIconOptions(scheduleIconResults, [], 'Search for cute sticker icons');
     setScheduleIconSelection(SCHEDULE_ICON_PRESETS[0]?.url || '', SCHEDULE_ICON_PRESETS[0]?.label || 'Meal');
@@ -1840,8 +1928,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }).observe(scheduleModal, { attributes: true, attributeFilter: ['class'] });
     }
 
+    function runScheduleHeartbeat() {
+        const now = new Date();
+        const nowMin = getCurrentTimeMinutes(now);
+        syncScheduleTransitionAlert(nowMin);
+        updateTimerScheduleContext(now);
+        if (lastScheduleRenderedMinute !== nowMin) {
+            lastScheduleRenderedMinute = nowMin;
+            renderSchedule();
+        }
+    }
+
     renderSchedule();
-    setInterval(renderSchedule, 60000); // Update every minute
+    lastScheduleRenderedMinute = getCurrentTimeMinutes();
+    updateTimerScheduleContext();
+    setInterval(runScheduleHeartbeat, 1000);
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            runScheduleHeartbeat();
+        }
+    });
 
     // Auto-open modal if arriving from dashboard via hash link
     const hash = window.location.hash;
