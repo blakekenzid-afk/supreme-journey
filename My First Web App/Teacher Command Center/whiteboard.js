@@ -3174,35 +3174,39 @@ document.addEventListener('DOMContentLoaded', () => {
     function restoreWidgetsLayer(savedWidgets) {
         clearWidgetsLayer();
         (savedWidgets || []).forEach(item => {
-            if (item.kind === 'text-overlay') {
-                const overlay = createTextOverlay(item.x, item.y, {
-                    text: item.text,
-                    width: item.width,
-                    height: item.height,
-                    focus: false,
-                });
-                return overlay;
-            }
-            if (item.kind === 'image-overlay' && item.src) {
-                createImageOverlay(item.src, item.alt, item.x, item.y, {
-                    width: item.width,
-                });
-                return;
-            }
-            if (item.kind === 'canvas-widget' && item.name) {
-                spawnCanvasWidget(item.name, item.x, item.y, item);
-                return;
-            }
-            if (item.kind === 'youtube-player' && item.videoId) {
-                if (typeof item.x === 'number') ytFloatWidget.style.left = `${item.x}px`;
-                if (typeof item.y === 'number') ytFloatWidget.style.top = `${item.y}px`;
-                playVideo(item.videoId);
-                return;
-            }
-            if (item.kind === 'apple-music-player' && item.embedSrc) {
-                if (typeof item.x === 'number') ytFloatWidget.style.left = `${item.x}px`;
-                if (typeof item.y === 'number') ytFloatWidget.style.top = `${item.y}px`;
-                openAppleMusicEmbed(item, { persist: false });
+            try {
+                if (item.kind === 'text-overlay') {
+                    const overlay = createTextOverlay(item.x, item.y, {
+                        text: item.text,
+                        width: item.width,
+                        height: item.height,
+                        focus: false,
+                    });
+                    return overlay;
+                }
+                if (item.kind === 'image-overlay' && item.src) {
+                    createImageOverlay(item.src, item.alt, item.x, item.y, {
+                        width: item.width,
+                    });
+                    return;
+                }
+                if (item.kind === 'canvas-widget' && item.name) {
+                    spawnCanvasWidget(item.name, item.x, item.y, item);
+                    return;
+                }
+                if (item.kind === 'youtube-player' && item.videoId) {
+                    if (typeof item.x === 'number') ytFloatWidget.style.left = `${item.x}px`;
+                    if (typeof item.y === 'number') ytFloatWidget.style.top = `${item.y}px`;
+                    playVideo(item.videoId);
+                    return;
+                }
+                if (item.kind === 'apple-music-player' && item.embedSrc) {
+                    if (typeof item.x === 'number') ytFloatWidget.style.left = `${item.x}px`;
+                    if (typeof item.y === 'number') ytFloatWidget.style.top = `${item.y}px`;
+                    openAppleMusicEmbed(item, { persist: false });
+                }
+            } catch (error) {
+                console.error('Failed to restore whiteboard widget.', item, error);
             }
         });
     }
@@ -3257,7 +3261,12 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         canvasArea.className = normalized.bgClass || 'wb-canvas-area';
         canvasArea.style.background = normalized.bgStyle || '';
-        restoreWidgetsLayer(normalized.widgets);
+        try {
+            restoreWidgetsLayer(normalized.widgets);
+        } catch (error) {
+            console.error('Failed to restore whiteboard page widgets.', error);
+            clearWidgetsLayer();
+        }
         if (normalized.canvas) {
             const img = new Image();
             img.onload = () => {
@@ -3327,9 +3336,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (wb_currentPage < wb_pages.length - 1) navigateToPage(wb_currentPage + 1);
     });
     document.getElementById('page-add')?.addEventListener('click', () => {
-        saveCurrentPageState();
-        wb_pages.push({ canvas: null, bgStyle: '', bgClass: 'wb-canvas-area', widgets: [] });
-        navigateToPage(wb_pages.length - 1);
+        try {
+            saveCurrentPageState();
+        } catch (error) {
+            console.error('Failed to save the current whiteboard page before adding a new one.', error);
+        }
+        const blankPage = { canvas: null, bgStyle: '', bgClass: 'wb-canvas-area', widgets: [] };
+        wb_pages.push(blankPage);
+        wb_currentPage = wb_pages.length - 1;
+        try { localStorage.setItem('wb-pages', JSON.stringify(wb_pages)); } catch (e) {}
+        localStorage.setItem('wb-current-page', String(wb_currentPage));
+        const snapshot = restorePageSnapshot(blankPage);
+        undoStack = [clonePageSnapshot(snapshot)];
+        redoStack = [];
+        if (!snapshot.canvas) persistPageSnapshot(snapshot);
+        updatePageCounter();
     });
     document.getElementById('page-delete')?.addEventListener('click', () => {
         if (wb_pages.length <= 1) return;
@@ -4844,7 +4865,7 @@ document.addEventListener('DOMContentLoaded', () => {
         scheduleWidgetHandle.style.touchAction = 'none';
         if (typeof scheduleWidget._dragCleanup === 'function') scheduleWidget._dragCleanup();
 
-        let activePointerId = null;
+        let isScheduleWidgetDragging = false;
         let dragOffsetX = 0;
         let dragOffsetY = 0;
 
@@ -4867,46 +4888,62 @@ document.addEventListener('DOMContentLoaded', () => {
             scheduleWidget.style.bottom = 'auto';
         };
 
+        const getScheduleWidgetDragPoint = (event) => {
+            if (typeof event.clientX === 'number' && typeof event.clientY === 'number') {
+                return { clientX: event.clientX, clientY: event.clientY };
+            }
+            const touch = event.touches?.[0] || event.changedTouches?.[0];
+            if (!touch) return null;
+            return { clientX: touch.clientX, clientY: touch.clientY };
+        };
+
         const stopScheduleWidgetDrag = () => {
-            activePointerId = null;
-            document.removeEventListener('pointermove', onScheduleWidgetPointerMove);
-            document.removeEventListener('pointerup', onScheduleWidgetPointerUp);
-            document.removeEventListener('pointercancel', onScheduleWidgetPointerUp);
+            isScheduleWidgetDragging = false;
+            document.removeEventListener('mousemove', onScheduleWidgetPointerMove);
+            document.removeEventListener('mouseup', onScheduleWidgetPointerUp);
+            document.removeEventListener('touchmove', onScheduleWidgetPointerMove);
+            document.removeEventListener('touchend', onScheduleWidgetPointerUp);
+            document.removeEventListener('touchcancel', onScheduleWidgetPointerUp);
             saveScheduleWidgetLayout();
         };
 
         const onScheduleWidgetPointerMove = (event) => {
-            if (event.pointerId !== activePointerId) return;
-            const nextPosition = clampScheduleWidgetPosition(event.clientX, event.clientY);
+            if (!isScheduleWidgetDragging) return;
+            const point = getScheduleWidgetDragPoint(event);
+            if (!point) return;
+            const nextPosition = clampScheduleWidgetPosition(point.clientX, point.clientY);
             if (!nextPosition) return;
             applyScheduleWidgetPosition(nextPosition.left, nextPosition.top);
-            event.preventDefault();
+            if (event.cancelable) event.preventDefault();
         };
 
-        const onScheduleWidgetPointerUp = (event) => {
-            if (event.pointerId !== activePointerId) return;
+        const onScheduleWidgetPointerUp = () => {
+            if (!isScheduleWidgetDragging) return;
             stopScheduleWidgetDrag();
         };
 
         const startScheduleWidgetDrag = (event) => {
             if (event.button !== undefined && event.button !== 0) return;
+            const point = getScheduleWidgetDragPoint(event);
+            if (!point) return;
             const rect = scheduleWidget.getBoundingClientRect();
-            activePointerId = event.pointerId;
-            dragOffsetX = event.clientX - rect.left;
-            dragOffsetY = event.clientY - rect.top;
-            document.addEventListener('pointermove', onScheduleWidgetPointerMove);
-            document.addEventListener('pointerup', onScheduleWidgetPointerUp);
-            document.addEventListener('pointercancel', onScheduleWidgetPointerUp);
-            if (typeof scheduleWidgetHandle.setPointerCapture === 'function') {
-                try { scheduleWidgetHandle.setPointerCapture(event.pointerId); } catch (e) {}
-            }
-            event.preventDefault();
+            isScheduleWidgetDragging = true;
+            dragOffsetX = point.clientX - rect.left;
+            dragOffsetY = point.clientY - rect.top;
+            document.addEventListener('mousemove', onScheduleWidgetPointerMove);
+            document.addEventListener('mouseup', onScheduleWidgetPointerUp);
+            document.addEventListener('touchmove', onScheduleWidgetPointerMove, { passive: false });
+            document.addEventListener('touchend', onScheduleWidgetPointerUp);
+            document.addEventListener('touchcancel', onScheduleWidgetPointerUp);
+            if (event.cancelable) event.preventDefault();
         };
 
-        scheduleWidgetHandle.addEventListener('pointerdown', startScheduleWidgetDrag);
+        scheduleWidgetHandle.addEventListener('mousedown', startScheduleWidgetDrag);
+        scheduleWidgetHandle.addEventListener('touchstart', startScheduleWidgetDrag, { passive: false });
         scheduleWidget._dragCleanup = () => {
             stopScheduleWidgetDrag();
-            scheduleWidgetHandle.removeEventListener('pointerdown', startScheduleWidgetDrag);
+            scheduleWidgetHandle.removeEventListener('mousedown', startScheduleWidgetDrag);
+            scheduleWidgetHandle.removeEventListener('touchstart', startScheduleWidgetDrag);
         };
         if (typeof ResizeObserver !== 'undefined') {
             let resizeFrame = null;
