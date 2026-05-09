@@ -422,7 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let ytPendingVideoId = '';
     let ytFloatDragBound = false;
     let floatingMediaKind = '';
-    let appleMusicEmbedSrc = '';
+    let appleMusicEmbedData = null;
     let activeImageSource = 'search';
 
     // Load YouTube API
@@ -519,19 +519,41 @@ document.addEventListener('DOMContentLoaded', () => {
         ytPlayer = null;
     }
 
-    function extractAppleMusicEmbedSrc(input) {
+    function extractAppleMusicEmbedData(input) {
+        const APPLE_MUSIC_SANDBOX = 'allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation-by-user-activation';
+        const APPLE_MUSIC_ALLOW = 'autoplay *; encrypted-media *; fullscreen *; clipboard-write';
+        if (input && typeof input === 'object' && input.src) {
+            return {
+                src: input.src,
+                height: Number.parseInt(input.height, 10) || 450,
+                sandbox: input.sandbox || APPLE_MUSIC_SANDBOX,
+                allow: input.allow || APPLE_MUSIC_ALLOW,
+            };
+        }
+
         const trimmedInput = (input || '').trim();
         if (!trimmedInput) return null;
+
+        let iframeNode = null;
         let candidate = trimmedInput;
         if (trimmedInput.includes('<iframe')) {
             const doc = new DOMParser().parseFromString(trimmedInput, 'text/html');
-            candidate = doc.querySelector('iframe')?.getAttribute('src') || '';
+            iframeNode = doc.querySelector('iframe');
+            candidate = iframeNode?.getAttribute('src') || '';
         }
         if (!candidate) return null;
+
         try {
             const url = new URL(candidate);
             if (url.hostname === 'music.apple.com') url.hostname = 'embed.music.apple.com';
-            return url.hostname === 'embed.music.apple.com' ? url.toString() : null;
+            if (url.hostname !== 'embed.music.apple.com') return null;
+
+            return {
+                src: url.toString(),
+                height: Number.parseInt(iframeNode?.getAttribute('height'), 10) || 450,
+                sandbox: iframeNode?.getAttribute('sandbox') || APPLE_MUSIC_SANDBOX,
+                allow: iframeNode?.getAttribute('allow') || APPLE_MUSIC_ALLOW,
+            };
         } catch (e) {
             return null;
         }
@@ -547,18 +569,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function openAppleMusicEmbed(input, options = {}) {
         const { persist = true } = options;
-        const embedSrc = extractAppleMusicEmbedSrc(input);
-        if (!embedSrc) {
+        const embedData = extractAppleMusicEmbedData(input);
+        if (!embedData) {
             alert('Paste the Apple Music embed code or an Apple Music embed link from Share > Copy Embed Code.');
             return;
         }
         destroyYouTubePlayer();
         ytPendingVideoId = '';
         ytCurrentVideoId = '';
-        appleMusicEmbedSrc = embedSrc;
+        appleMusicEmbedData = embedData;
         floatingMediaKind = 'apple-music';
         ytPlayerContainer.classList.add('embed-audio');
-        ytPlayerContainer.innerHTML = `<iframe src="${embedSrc}" allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write" loading="lazy"></iframe>`;
+        ytPlayerContainer.style.minHeight = `${embedData.height}px`;
+        ytPlayerContainer.innerHTML = `<iframe src="${embedData.src}" allow="${embedData.allow}" sandbox="${embedData.sandbox}" loading="lazy" height="${embedData.height}"></iframe>`;
         setFloatingMediaTitle('♫ Apple Music');
         ensureFloatingMediaWidget();
         App.closeModal('modal-media');
@@ -794,9 +817,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function playVideo(id) {
         ytCurrentVideoId = id;
-        appleMusicEmbedSrc = '';
+        appleMusicEmbedData = null;
         floatingMediaKind = 'youtube';
         ytPlayerContainer.classList.remove('embed-audio');
+        ytPlayerContainer.style.minHeight = '';
         if (!ytPlayer) ytPlayerContainer.innerHTML = '';
         setFloatingMediaTitle('▶ YouTube Player');
         ensureFloatingMediaWidget();
@@ -832,11 +856,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const { persist = true } = options;
         ytPendingVideoId = '';
         ytCurrentVideoId = '';
-        appleMusicEmbedSrc = '';
+        appleMusicEmbedData = null;
         floatingMediaKind = '';
         ytFloatWidget.classList.add('hidden');
         destroyYouTubePlayer();
         ytPlayerContainer.classList.remove('embed-audio');
+        ytPlayerContainer.style.minHeight = '';
         ytPlayerContainer.innerHTML = '';
         setFloatingMediaTitle('▶ Media Player');
         if (persist) schedulePagePersist();
@@ -3091,10 +3116,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!ytFloatWidget || ytFloatWidget.classList.contains('hidden')) {
             return null;
         }
-        if (floatingMediaKind === 'apple-music' && appleMusicEmbedSrc) {
+        if (floatingMediaKind === 'apple-music' && appleMusicEmbedData?.src) {
             return {
                 kind: 'apple-music-player',
-                embedSrc: appleMusicEmbedSrc,
+                embedSrc: appleMusicEmbedData.src,
+                height: appleMusicEmbedData.height,
+                sandbox: appleMusicEmbedData.sandbox,
+                allow: appleMusicEmbedData.allow,
                 x: parseInt(ytFloatWidget.style.left, 10) || 0,
                 y: parseInt(ytFloatWidget.style.top, 10) || 0,
             };
@@ -3174,7 +3202,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (item.kind === 'apple-music-player' && item.embedSrc) {
                 if (typeof item.x === 'number') ytFloatWidget.style.left = `${item.x}px`;
                 if (typeof item.y === 'number') ytFloatWidget.style.top = `${item.y}px`;
-                openAppleMusicEmbed(item.embedSrc, { persist: false });
+                openAppleMusicEmbed(item, { persist: false });
             }
         });
     }
