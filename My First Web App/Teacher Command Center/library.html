@@ -176,6 +176,15 @@
         if (email) document.querySelectorAll('.user-email').forEach(el => el.textContent = email);
     })();
 
+    function readStoredJSON(key, fallback) {
+        try {
+            const value = localStorage.getItem(key);
+            return value ? JSON.parse(value) : fallback;
+        } catch (e) {
+            return fallback;
+        }
+    }
+
     // Preloaded starter resources
     const STARTER_RESOURCES = [
         {id:'s1',name:'Starfall',url:'https://www.starfall.com',desc:'Free phonics and reading games for K-2.',category:'reading',created:new Date().toISOString()},
@@ -188,7 +197,7 @@
         {id:'s8',name:'National Geographic Kids',url:'https://kids.nationalgeographic.com',desc:'Science and nature articles for kids.',category:'science',created:new Date().toISOString()},
     ];
 
-    let resources = JSON.parse(localStorage.getItem('teacherstack-library') || 'null');
+    let resources = readStoredJSON('teacherstack-library', null);
     if (!resources) {
         resources = STARTER_RESOURCES;
         saveResources();

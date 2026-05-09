@@ -223,8 +223,17 @@
         return formatLocalDateKey(monday);
     }
 
+    function readStoredJSON(key, fallback) {
+        try {
+            const value = localStorage.getItem(key);
+            return value ? JSON.parse(value) : fallback;
+        } catch (e) {
+            return fallback;
+        }
+    }
+
     function loadWeek(monday) {
-        return JSON.parse(localStorage.getItem('planner-' + weekKey(monday)) || '{}');
+        return readStoredJSON('planner-' + weekKey(monday), {});
     }
 
     function saveWeek(monday, data) {

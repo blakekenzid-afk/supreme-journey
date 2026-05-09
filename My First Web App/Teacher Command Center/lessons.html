@@ -230,7 +230,16 @@
         if (email) document.querySelectorAll('.user-email').forEach(el => el.textContent = email);
     })();
 
-    let lessons = JSON.parse(localStorage.getItem('teacherstack-lessons') || '[]');
+    function readStoredJSON(key, fallback) {
+        try {
+            const value = localStorage.getItem(key);
+            return value ? JSON.parse(value) : fallback;
+        } catch (e) {
+            return fallback;
+        }
+    }
+
+    let lessons = readStoredJSON('teacherstack-lessons', []);
     let editingId = null;
     let viewingId = null;
     let selectedSubject = 'other';

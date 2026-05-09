@@ -3208,7 +3208,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ===================== MULTI-PAGE SYSTEM =====================
-    let wb_pages = JSON.parse(localStorage.getItem('wb-pages') || 'null');
+    let wb_pages = Storage.readJSON('wb-pages', null);
     let wb_currentPage = parseInt(localStorage.getItem('wb-current-page') || '0');
     if (!wb_pages || wb_pages.length === 0) {
         wb_pages = [{ canvas: null, bgStyle: '', bgClass: 'wb-canvas-area', widgets: [] }];

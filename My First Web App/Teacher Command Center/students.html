@@ -172,6 +172,15 @@
             return typeof getContrastColor === 'function' ? getContrastColor(color) : '#ffffff';
         }
 
+        function readStoredJSON(key, fallback) {
+            try {
+                const value = localStorage.getItem(key);
+                return value ? JSON.parse(value) : fallback;
+            } catch (e) {
+                return fallback;
+            }
+        }
+
         // ===== Render student grid =====
         const grid = document.getElementById('student-grid');
         const studentList = getStudentList();
@@ -233,7 +242,7 @@
         ];
         let selectedBehavior = null;
 
-        function getStudentLog(name) { return JSON.parse(localStorage.getItem('slog-' + name) || '[]'); }
+        function getStudentLog(name) { return readStoredJSON('slog-' + name, []); }
         function saveStudentLog(name, log) { localStorage.setItem('slog-' + name, JSON.stringify(log)); }
 
         // ===== Student detail modal =====

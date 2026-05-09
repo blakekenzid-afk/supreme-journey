@@ -197,9 +197,18 @@
         return typeof getContrastColor === 'function' ? getContrastColor(color) : '#ffffff';
     }
 
+    function readStoredJSON(key, fallback) {
+        try {
+            const value = localStorage.getItem(key);
+            return value ? JSON.parse(value) : fallback;
+        } catch (e) {
+            return fallback;
+        }
+    }
+
     let activeAttendanceDate = new Date();
     let activeAttendanceKey = formatLocalDateKey(activeAttendanceDate);
-    let attState = JSON.parse(localStorage.getItem('att-' + activeAttendanceKey) || '{}');
+    let attState = readStoredJSON('att-' + activeAttendanceKey, {});
     const studentList = getStudentList();
 
     function updateAttendanceHeader() {
@@ -212,16 +221,9 @@
     }
 
     function syncAttendanceSession() {
-        const nextDate = new Date();
-        const nextKey = formatLocalDateKey(nextDate);
+        const nextKey = formatLocalDateKey(new Date());
         if (nextKey === activeAttendanceKey) return false;
-        activeAttendanceDate = nextDate;
-        activeAttendanceKey = nextKey;
-        attState = JSON.parse(localStorage.getItem('att-' + activeAttendanceKey) || '{}');
-        updateAttendanceHeader();
-        studentList.forEach(s => applyStatus(s.name));
-        updateCounts();
-        renderHistory();
+        showToast('A new day has started. Reload the page to begin today\'s attendance.');
         return true;
     }
 
@@ -311,7 +313,7 @@
         syncAttendanceSession();
         const record = { date: activeAttendanceKey, state: { ...attState }, saved: new Date().toISOString() };
         // Keep rolling history (last 60 days)
-        let history = JSON.parse(localStorage.getItem('att-history') || '[]');
+        let history = readStoredJSON('att-history', []);
         history = history.filter(r => r.date !== activeAttendanceKey);
         history.unshift(record);
         if (history.length > 60) history = history.slice(0, 60);
@@ -344,7 +346,7 @@
     }
 
     function renderHistory() {
-        const history = JSON.parse(localStorage.getItem('att-history') || '[]');
+        const history = readStoredJSON('att-history', []);
         const rows = document.getElementById('history-rows');
         if (history.length === 0) {
             rows.innerHTML = '<div style="padding:16px;color:#aaa;font-size:0.85rem;text-align:center;">No saved records yet</div>';

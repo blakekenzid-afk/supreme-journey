@@ -283,9 +283,18 @@
             });
         });
 
+        function readStoredJSON(key, fallback) {
+            try {
+                const value = localStorage.getItem(key);
+                return value ? JSON.parse(value) : fallback;
+            } catch (e) {
+                return fallback;
+            }
+        }
+
         // ===== SCHEDULE HELPERS =====
         const SCHED_ICONS = ['📚','🎨','🧮','📖','🏃','🍽️','⏰','🎵','🧪','💬','🌟','✏️','🖥️','🤸','🧘','📝','🔬','🌍','🎭','❤️'];
-        let schedItems = JSON.parse(localStorage.getItem('dashboard-schedule') || '[]');
+        let schedItems = readStoredJSON('dashboard-schedule', []);
         let schedEditIndex = -1, selectedIcon = '📚';
         function saveSchedule() { localStorage.setItem('dashboard-schedule', JSON.stringify(schedItems)); }
         function toMins(t) { const [h,m] = t.split(':').map(Number); return h*60+m; }
@@ -416,7 +425,7 @@
         function deleteSchedItem() { if (schedEditIndex<0) return; schedItems.splice(schedEditIndex,1); saveSchedule(); renderSchedule(); closeSchedModal(); }
 
         // ===== TO-DO HELPERS =====
-        let todos = JSON.parse(localStorage.getItem('dashboard-todos') || '[]');
+        let todos = readStoredJSON('dashboard-todos', []);
         function saveTodos() { localStorage.setItem('dashboard-todos', JSON.stringify(todos)); }
         function renderTodos() {
             const list = document.getElementById('todo-list');
@@ -537,14 +546,14 @@
                     const emojis=['😊','😎','🤩','😴','😤','😢','🤔','😁','🥱','😰'], labels=['Happy','Cool','Excited','Tired','Frustrated','Sad','Thinking','Great','Bored','Anxious'];
                     body.style.cssText='padding:12px;';
                     body.innerHTML=`<div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:10px;text-align:center;">How are you feeling today, Ms. Young?</div><div class="checkin-emojis">${emojis.map((e,i)=>`<button class="checkin-emoji" title="${labels[i]}" onclick="checkinPick('${labels[i]}',this)">${e}</button>`).join('')}</div><div id="checkin-result" style="text-align:center;font-size:0.85rem;color:var(--text-active);min-height:20px;margin-top:8px;"></div>`;
-                    const saved=JSON.parse(localStorage.getItem('dashboard-checkin')||'null');
+                    const saved=readStoredJSON('dashboard-checkin', null);
                     if (saved&&saved.date===new Date().toDateString()) { const r=document.getElementById('checkin-result'); if(r)r.textContent=`Feeling ${saved.label} today 🌟`; }
                 }
             }
         };
 
         let widgetEls = {};
-        let widgetPositions = JSON.parse(localStorage.getItem('dash-widget-pos') || '{}');
+        let widgetPositions = readStoredJSON('dash-widget-pos', {});
 
         function savePositions() {
             const pos = {};
@@ -606,7 +615,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const savedLayout = localStorage.getItem('dash-widget-pos');
-            const saved = JSON.parse(savedLayout || '{}');
+            const saved = readStoredJSON('dash-widget-pos', {});
             const open = Object.keys(saved).filter(w => saved[w].open !== false && WIDGET_DEFS[w]);
             setTimeout(() => {
                 if (!savedLayout) {
@@ -831,7 +840,7 @@
         {label:'Out of seat',icon:'🪑'}
     ];
     let selectedBehavior = null;
-    function getStudentLog(name) { return JSON.parse(localStorage.getItem('slog-' + name) || '[]'); }
+    function getStudentLog(name) { return readStoredJSON('slog-' + name, []); }
     function saveStudentLog(name, log) { localStorage.setItem('slog-' + name, JSON.stringify(log)); }
     function populateStudentSelect(id, preselect) {
         const sel = document.getElementById(id);
@@ -945,7 +954,7 @@
 
     // ===== Stations Modal =====
     const STATION_GROUPS = ['Group 1','Group 2','Group 3','Group 4','Group 5','Group 6'];
-    let stationGroups = JSON.parse(localStorage.getItem('station-groups') || 'null');
+    let stationGroups = readStoredJSON('station-groups', null);
     if (!stationGroups) {
         const names = getDashboardStudents().map(s => s.name);
         stationGroups = STATION_GROUPS.map((label, i) => ({
